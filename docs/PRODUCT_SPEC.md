@@ -30,17 +30,16 @@ Biến kho tài liệu hiện có thành một research copilot có workflow, gi
 - Người dùng cá nhân muốn áp dụng phương pháp sáng tạo vào quyết định đời sống.
 
 ## 5. Jobs To Be Done
-- Khi tôi có một vấn đề phức tạp nhưng chưa biết bắt đầu từ đâu, tôi muốn hệ thống ép vấn đề về dạng có cấu trúc để tôi nhìn rõ bản chất.
-- Khi tôi không biết nên dùng nguyên tắc hay công cụ nào, tôi muốn hệ thống đề xuất phương pháp phù hợp với loại bài toán.
-- Khi tôi tìm ý tưởng mới, tôi muốn xem các case tương tự để suy luận theo phép loại suy.
-- Khi tôi học TRIZ, tôi muốn vừa học vừa thực hành trên vấn đề thực tế của mình.
-- Khi tôi đã nghiên cứu một lần, tôi muốn lưu lại reasoning trail để tái sử dụng sau này.
+- Khi tôi có một vấn đề phức tạp nhưng chưa biết bắt đầu từ đâu → hệ thống ép vấn đề về dạng có cấu trúc.
+- Khi tôi không biết nên dùng nguyên tắc hay công cụ nào → hệ thống đề xuất phương pháp phù hợp.
+- Khi tôi tìm ý tưởng mới → xem các case tương tự để suy luận theo phép loại suy.
+- Khi tôi học TRIZ → vừa học vừa thực hành trên vấn đề thực tế.
+- Khi tôi đã nghiên cứu một lần → lưu lại reasoning trail để tái sử dụng.
 
 ## 6. Core Value Proposition
 Một không gian làm việc nghiên cứu sáng tạo kết hợp tri thức TRIZ với workflow phân tích vấn đề, giúp biến "đọc tài liệu" thành "tạo phương án hành động".
 
-## 7. Scope
-### 7.1 In Scope for MVP
+## 7. Scope — MVP In Scope
 - Nhập và quản lý research session.
 - Problem intake theo biểu mẫu có cấu trúc.
 - Phân tích contradiction, function, cause-effect.
@@ -50,19 +49,12 @@ Một không gian làm việc nghiên cứu sáng tạo kết hợp tri thức T
 - Lưu notes, hypothesis, candidate solutions và decision log.
 - Chế độ học theo chủ đề từ kho tri thức sẵn có.
 
-### 7.2 Out of Scope for MVP
-- Collaboration thời gian thực đa người dùng.
-- Tự động hóa ARIZ hoàn chỉnh ở mức chuyên gia.
-- Tích hợp email, calendar, Jira, Notion ở giai đoạn đầu.
-- Fine-tuned model riêng.
-- Hệ thống chấm điểm tự động độ sáng tạo có độ tin cậy cao.
-
 ## 8. Product Principles
-- Read-before-write: luôn phân tích tài liệu nguồn trước khi đưa ra gợi ý.
-- Structured over vague: ép người dùng làm rõ ràng mục tiêu, ràng buộc, xung đột.
-- Evidence-backed: mọi gợi ý đều kèm nguồn từ kho tri thức.
-- Human-in-the-loop: hệ thống hỗ trợ tư duy, không thay thế phán đoán của chuyên gia.
-- Reusable reasoning: mỗi phiên nghiên cứu phải để lại dấu vết tư duy tái sử dụng được.
+- **Read-before-write**: luôn phân tích tài liệu nguồn trước khi đưa ra gợi ý.
+- **Structured over vague**: ép người dùng làm rõ mục tiêu, ràng buộc, xung đột.
+- **Evidence-backed**: mọi gợi ý đều kèm nguồn từ kho tri thức.
+- **Human-in-the-loop**: hệ thống hỗ trợ tư duy, không thay thế phán đoán.
+- **Reusable reasoning**: mỗi phiên nghiên cứu để lại dấu vết tư duy tái sử dụng được.
 
 ## 9. Main User Journey
 1. Tạo một research session mới.

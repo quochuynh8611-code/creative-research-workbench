@@ -1,8 +1,5 @@
 # API CONTRACTS — Creative Research Workbench MVP
 
-## Purpose
-Xác định API contract mức MVP giữa frontend workspace và backend workflow engine.
-
 ## Conventions
 - Base path: `/api/v1`
 - Content type: `application/json`
@@ -20,61 +17,71 @@ Xác định API contract mức MVP giữa frontend workspace và backend workfl
 ## 1. Sessions
 
 ### POST /api/v1/sessions
-```json
-// Request
-{ "title": "Cải thiện năng suất nghiên cứu", "domain": "research", "tags": ["triz"] }
-
-// Response 201
-{ "data": { "id": "ses_001", "title": "...", "status": "draft", "created_at": "..." } }
-```
+Tạo research session mới.
 
 ### GET /api/v1/sessions
-Query params: `status`, `domain`, `q`, `limit`, `cursor`
+Liệt kê sessions (filter: status, domain, q, limit, cursor).
 
-### GET /api/v1/sessions/{session_id}
-### PATCH /api/v1/sessions/{session_id}
-### DELETE /api/v1/sessions/{session_id}
+### GET /api/v1/sessions/:sessionId
+Lấy chi tiết session.
 
-## 2. Problem Frames
+### PATCH /api/v1/sessions/:sessionId
+Cập nhật metadata session.
 
-### POST /api/v1/sessions/{session_id}/problem-frames
-```json
-{ "raw_problem_statement": "Làm thế nào để tăng retention của sản phẩm?" }
-```
+## 2. Problem Intake
 
-### GET /api/v1/sessions/{session_id}/problem-frames/{frame_id}
-### PATCH /api/v1/sessions/{session_id}/problem-frames/{frame_id}
+### POST /api/v1/sessions/:sessionId/problem-frames
+Tạo version mới của problem frame.
 
-## 3. Workflow Stages
+### POST /api/v1/sessions/:sessionId/problem-frames/clarify
+Nhận raw statement, trả về câu hỏi làm rõ.
 
-### POST /api/v1/sessions/{session_id}/advance
-```json
-{ "to_stage": "structuring" }
-```
+### GET /api/v1/sessions/:sessionId/problem-frames/:frameId
+Lấy chi tiết problem frame.
 
-## 4. Retrieval
+## 3. Structuring
 
-### POST /api/v1/search
-```json
-{ "query": "technical contradiction resolution", "session_id": "ses_001", "limit": 10 }
-```
+### POST /api/v1/sessions/:sessionId/contradictions
+Tạo contradiction từ problem frame.
 
-### Response
+### POST /api/v1/sessions/:sessionId/function-models
+Tạo function model.
+
+### POST /api/v1/sessions/:sessionId/cause-effect-chains
+Tạo chuỗi nhân quả.
+
+## 4. Knowledge Retrieval
+
+### POST /api/v1/retrieve
+Truy xuất đoạn tài liệu liên quan.
+
+Request:
 ```json
 {
-  "results": [
-    { "chunk_id": "...", "excerpt": "...", "source": "TRIZ_40_Principles.md", "score": 0.87 }
-  ]
+  "query": "contradiction in resource allocation",
+  "session_id": "ses_001",
+  "top_k": 5,
+  "filters": { "topic": ["contradictions", "triz-40-principles"] }
 }
 ```
 
-## 5. Methods
+## 5. Method Recommendation
 
-### GET /api/v1/sessions/{session_id}/method-suggestions
-Trả về danh sách công cụ TRIZ được đề xuất dựa trên ProblemFrame hiện tại.
+### POST /api/v1/sessions/:sessionId/method-suggestions
+Đề xuất công cụ TRIZ phù hợp.
 
-## 6. Candidate Solutions
+## 6. Ideation
 
-### POST /api/v1/sessions/{session_id}/solutions
-### GET /api/v1/sessions/{session_id}/solutions
-### PATCH /api/v1/sessions/{session_id}/solutions/{solution_id}
+### POST /api/v1/sessions/:sessionId/candidate-solutions
+Sinh candidate solutions.
+
+### GET /api/v1/sessions/:sessionId/candidate-solutions
+Liệt kê và so sánh.
+
+## 7. Research Notebook
+
+### POST /api/v1/sessions/:sessionId/notes
+Thêm note vào bất kỳ stage nào.
+
+### GET /api/v1/sessions/:sessionId/notes
+Lấy notes với filter theo stage và type.
