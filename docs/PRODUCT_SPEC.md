@@ -1,62 +1,68 @@
 ---
 title: "PRODUCT SPEC — Creative Research Workbench"
-topic: product
-source_type: spec
-language: vi
-tags: [triz, problem-framing, mvp, user-story, product-vision]
+topic: "product"
+source_type: "spec"
+language: "vi"
+tags: ["triz", "problem-framing", "mvp", "user-story", "research-tool"]
+phase: "1"
+status: "canonical"
 golden: true
-phase: 0
-created_at: 2026-07-03
+created: "2026-07-03"
 ---
 
 # PRODUCT SPEC — Creative Research Workbench
 
-## 1. Product Intent
-Xây dựng một **workbench nghiên cứu sáng tạo** giúp người dùng chuyển hóa bài toán mơ hồ thành insight có cấu trúc, được hỗ trợ bởi kho tài liệu TRIZ và tư duy sáng tạo.
+## Tầm nhìn sản phẩm
 
-Sản phẩm **không phải** một chatbot hỏi đáp. Sản phẩm **là** một công cụ workflow có bước, có citation, có persistence.
+Một công cụ hỗ trợ tư duy sáng tạo dựa trên phương pháp luận TRIZ, giúp người dùng:
+1. Cấu trúc hóa bài toán phức tạp
+2. Xác định mâu thuẫn kỹ thuật và vật lý
+3. Tìm kiếm nguyên tắc sáng tạo phù hợp từ kho tài liệu
+4. Lưu trữ và quản lý các phiên nghiên cứu
 
-## 2. Problem Statement
-Nhà nghiên cứu và người giải quyết vấn đề phức tạp thường gặp:
-- Không biết cách cấu trúc hóa bài toán trước khi tìm giải pháp.
-- Tìm kiếm tài liệu liên quan mất nhiều thời gian, thiếu context.
-- Không có công cụ lưu lại quá trình suy nghĩ và reasoning.
-- Thiếu gợi ý về phương pháp phù hợp với từng loại bài toán.
+## Người dùng mục tiêu
 
-## 3. Product Goal
-Giúp người dùng:
-1. **Frame** — Cấu trúc hóa bài toán thành ProblemFrame có contradiction, cause-effect, function model.
-2. **Retrieve** — Tìm tài liệu liên quan từ kho TRIZ với citation rõ ràng.
-3. **Ideate** — Sinh candidate solutions có provenance.
-4. **Evaluate** — Đánh giá giải pháp theo multi-axis scoring.
-5. **Synthesize** — Xuất research report có thể tái sử dụng.
+- **Primary:** Kỹ sư, nhà nghiên cứu, product manager cần giải quyết bài toán có mâu thuẫn
+- **Secondary:** Giảng viên/học viên học phương pháp TRIZ
 
-## 4. Target Users
-- **Primary**: Kỹ sư, nhà nghiên cứu, product manager giải quyết bài toán kỹ thuật/kinh doanh phức tạp.
-- **Secondary**: Giảng viên, sinh viên học TRIZ và tư duy sáng tạo.
+## MVP Scope (Phase 1-3)
 
-## 5. Jobs To Be Done
-- "Khi tôi có một bài toán mơ hồ, tôi muốn công cụ giúp tôi đặt câu hỏi đúng."
-- "Khi tôi cần tìm phương pháp TRIZ phù hợp, tôi muốn gợi ý có lý do rõ ràng."
-- "Khi tôi sinh ra giải pháp, tôi muốn biết nó dựa trên tài liệu nào."
+### Phải có (Must Have)
+- [ ] Tạo và quản lý Research Session
+- [ ] Nhập bài toán dạng văn bản tự do
+- [ ] Normalize + cấu trúc hóa problem statement
+- [ ] Phát hiện contradiction type (technical/physical)
+- [ ] Tìm kiếm tài liệu liên quan (hybrid search)
+- [ ] Gợi ý inventive principles từ TRIZ matrix
 
-## 6. MVP Scope
+### Nên có (Should Have)
+- [ ] Cause-Effect analysis (5-Why / Fishbone)
+- [ ] Export session thành PDF/Markdown
+- [ ] History + versioning cho problem frame
 
-### Trong scope
-- Research session management (CRUD)
-- Problem intake và clarification questions
-- ProblemFrame extraction (goal, constraints, contradiction)
-- Hybrid retrieval từ kho markdown
-- Method suggestion với citation
-- Basic evaluation matrix
-
-### Ngoài scope (v1)
-- Real-time collaboration
-- Export PDF/Word
-- Integration với công cụ bên ngoài (Notion, Jira)
+### Không có trong MVP (Out of Scope)
+- Multi-user collaboration
+- Real-time co-editing
 - Mobile app
 
-## 7. Success Metrics
-- User có thể tạo ProblemFrame đầy đủ trong < 10 phút.
-- Retrieval trả về kết quả liên quan (Recall@5 >= 0.75).
-- Method suggestion có citation rõ ràng 100% trường hợp.
+## User Stories
+
+```
+US-01: Là kỹ sư cơ khí, tôi muốn nhập mô tả bài toán bằng tiếng Việt
+       để hệ thống giúp tôi xác định loại mâu thuẫn.
+
+US-02: Là người dùng, tôi muốn xem danh sách các nguyên tắc sáng tạo
+       phù hợp với mâu thuẫn của tôi, kèm ví dụ minh họa.
+
+US-03: Là nhà nghiên cứu, tôi muốn tìm kiếm trong kho tài liệu TRIZ
+       bằng câu hỏi tự nhiên và nhận được đoạn trích có liên quan.
+
+US-04: Là người dùng, tôi muốn lưu phiên làm việc và tiếp tục sau.
+```
+
+## Acceptance Criteria tổng quát
+
+- Latency search < 200ms (p95)
+- Problem normalization accuracy > 80% (human eval)
+- Recall@5 trên golden set >= 0.75
+- Session persistence 100% (không mất data khi reload)

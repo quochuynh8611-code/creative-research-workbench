@@ -1,91 +1,126 @@
 ---
 title: "FAILING INTEGRATION TEST SPEC — Creative Research Workbench MVP"
-topic: testing
-source_type: spec
-language: vi
-tags: [integration-test, failing, tdd, red-green, pytest, fixtures]
+topic: "testing"
+source_type: "spec"
+language: "vi"
+tags: ["integration-test", "failing", "tdd", "red-green", "pytest", "testcontainers"]
+phase: "2"
+status: "canonical"
 golden: true
-phase: 0
-created_at: 2026-07-03
+created: "2026-07-03"
 ---
 
-# FAILING INTEGRATION TEST SPEC — Creative Research Workbench MVP
+# FAILING INTEGRATION TEST SPEC — MVP
 
-## Purpose
-Đặc tả integration tests theo phong cách TDD. Viết tests này TRƯỚC khi code. Tất cả tests phải fail đỏ ban đầu.
+> Đây là các integration test CẦN VIẾT TRƯỚC khi implement Phase 2.
+> Tất cả tests bên dưới phải ở trạng thái **RED (failing)** khi chưa có implementation.
+> Mục tiêu: đưa về **GREEN** sau khi implement xong Phase 2.
 
-## Test Harness Assumptions
-- Framework: `pytest` + `httpx.AsyncClient`
-- Database: PostgreSQL test instance (Docker)
-- Fixtures: `test_session`, `test_problem_frame`, `golden_docs_loaded`
+---
 
-## IT-001: Create session
+## Setup
+
 ```python
-async def test_create_session_returns_201_with_id(client):
-    response = await client.post("/api/v1/sessions", json={
-        "title": "Test session",
-        "domain": "technical"
-    })
-    assert response.status_code == 201
-    data = response.json()
-    assert "id" in data
-    assert data["status"] == "draft"
-    assert "slug" in data
+# conftest.py
+import pytest
+from testcontainers.postgres import PostgresContainer
+from sqlalchemy import create_engine
+from app.domain.models import Base
+
+@pytest.fixture(scope="session")
+def db_engine():
+    with PostgresContainer("pgvector/pgvector:pg16") as pg:
+        engine = create_engine(pg.get_connection_url())
+        Base.metadata.create_all(engine)
+        yield engine
 ```
 
-## IT-002: Clarify vague problem
+---
+
+## Test 1: Ingest golden document
+
 ```python
-async def test_vague_problem_returns_clarifying_questions(client, test_session):
-    response = await client.post(
-        f"/api/v1/sessions/{test_session.id}/problem-frames",
-        json={"raw_statement": "Mọi thứ không ổn"}
-    )
-    assert response.status_code == 200
-    data = response.json()
-    assert "clarifying_questions" in data
-    assert len(data["clarifying_questions"]) >= 2
-    assert "problem_frame" not in data
+def test_ingest_golden_document(db_engine):
+    """RED: IngestionService chưa tồn tại — sẽ ImportError"""
+    from app.services.ingestion_service import IngestionService
+    
+    service = IngestionService(db_engine)
+    result = service.ingest("docs/ADR-001-architecture.md")
+    
+    assert result.status == "success"
+    assert result.document_id is not None
+    assert result.chunks_created >= 1
+    assert result.embeddings_created >= 1
 ```
 
-## IT-003: Create problem frame version 1
+---
+
+## Test 2: Chặn duplicate ingest
+
 ```python
-async def test_structured_problem_returns_problem_frame(client, test_session):
-    response = await client.post(
-        f"/api/v1/sessions/{test_session.id}/problem-frames",
-        json={"raw_statement": "Hệ thống xử lý đơn hàng bị chậm khi có hơn 100 đơn đồng thời"}
-    )
-    assert response.status_code == 201
-    frame = response.json()
-    assert frame["completeness_score"] >= 0.6
-    assert frame["goal"] != ""
-    assert len(frame["constraints"]) >= 1
+def test_duplicate_ingest_rejected(db_engine):
+    """RED: chưa có content_hash dedup logic"""
+    from app.services.ingestion_service import IngestionService
+    
+    service = IngestionService(db_engine)
+    service.ingest("docs/ADR-001-architecture.md")
+    result2 = service.ingest("docs/ADR-001-architecture.md")
+    
+    assert result2.status == "already_exists"
 ```
 
-## IT-004: Search returns excerpts
+---
+
+## Test 3: Hybrid search trả kết quả
+
 ```python
-async def test_search_returns_results_with_excerpts(client, golden_docs_loaded):
-    response = await client.post("/api/v1/search", json={
-        "query": "TRIZ technical contradiction",
-        "top_k": 5
-    })
-    assert response.status_code == 200
-    results = response.json()["results"]
+def test_hybrid_search_returns_results(db_engine):
+    """RED: RetrievalService chưa tồn tại"""
+    from app.services.ingestion_service import IngestionService
+    from app.services.retrieval_service import RetrievalService
+    
+    # Ingest golden docs trước
+    ingestor = IngestionService(db_engine)
+    for doc in GOLDEN_DOCS:
+        ingestor.ingest(doc)
+    
+    retriever = RetrievalService(db_engine)
+    results = retriever.search("mâu thuẫn kỹ thuật", top_k=5)
+    
     assert len(results) >= 1
-    for r in results:
-        assert "excerpt" in r
-        assert "source_file" in r
-        assert r["score_hybrid"] > 0
+    assert results[0].excerpt is not None
+    assert results[0].source_ref is not None
+    assert results[0].score > 0
 ```
 
-## IT-005: Advance workflow stage
+---
+
+## Test 4: Search latency < 200ms
+
 ```python
-async def test_advance_session_to_structuring(client, test_session_with_frame):
-    response = await client.post(
-        f"/api/v1/sessions/{test_session_with_frame.id}/advance",
-        json={"to_stage": "structuring"}
-    )
-    assert response.status_code == 200
-    data = response.json()
-    assert data["current_stage"] == "structuring"
-    assert data["previous_stage"] == "intake"
+import time
+
+def test_search_latency(db_engine):
+    """RED: chưa có index và optimization"""
+    from app.services.retrieval_service import RetrievalService
+    
+    retriever = RetrievalService(db_engine)
+    
+    start = time.perf_counter()
+    retriever.search("nguyên tắc sáng tạo TRIZ", top_k=5)
+    elapsed_ms = (time.perf_counter() - start) * 1000
+    
+    assert elapsed_ms < 200
+```
+
+---
+
+## Chạy tests
+
+```bash
+# Chạy tất cả integration tests (expect RED khi chưa implement)
+pytest backend/tests/integration/ -v --tb=short
+
+# Sau khi implement Phase 2 — expect GREEN
+pytest backend/tests/integration/ -v
 ```

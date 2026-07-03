@@ -1,66 +1,59 @@
 ---
 title: "TEST PLAN — Creative Research Workbench MVP"
-topic: testing
-source_type: plan
-language: vi
-tags: [pytest, acceptance, integration, unit, tdd, golden-set]
+topic: "testing"
+source_type: "plan"
+language: "vi"
+tags: ["pytest", "acceptance", "integration", "unit", "vitest", "playwright"]
+phase: "1"
+status: "canonical"
 golden: true
-phase: 0
-created_at: 2026-07-03
+created: "2026-07-03"
 ---
 
 # TEST PLAN — Creative Research Workbench MVP
 
-## Purpose
-Xác định chiến lược test và acceptance gate cho từng phase của MVP.
+---
 
-## Test Strategy
-- **TDD**: Viết failing test trước, code sau.
-- **Test Pyramid**: Unit (70%) → Integration (20%) → E2E (10%).
-- **Golden Set**: 10 tài liệu benchmark dùng để đánh giá retrieval quality.
+## Chiến lược kiểm thử
 
-## Test Pyramid
+| Layer | Tool | Coverage target |
+|---|---|---|
+| Unit (backend) | pytest | >= 80% |
+| Integration (backend) | pytest + testcontainers | Tất cả service |
+| Unit (frontend) | Vitest + Testing Library | >= 70% |
+| E2E | Playwright | Happy path per screen |
+| Performance | Locust | Search < 200ms p95 |
 
-### Unit Tests
-- Domain logic thuần (ProblemFrame, Contradiction extraction)
-- Service methods độc lập với database
-- Prompt template rendering
+---
 
-### Integration Tests
-- API endpoint → Service → Database
-- IngestionService → PostgreSQL + pgvector
-- RetrievalService: query → hybrid search → ranked results
-- WorkflowEngine: stage transition
+## Acceptance Gates per Phase
 
-### E2E Tests (Playwright)
-- Tạo session → nhập problem → nhận ProblemFrame
-- Search → nhận kết quả có citation
-- Advance workflow → stage chuyển đúng
+### Phase 2 — Ingestion & Retrieval
+- [ ] Ingest 10 golden docs thành công, không có lỗi
+- [ ] Full-text search `"mâu thuẫn kỹ thuật"` → trả kết quả trong 200ms
+- [ ] Vector search Recall@5 >= 0.75 trên golden set
+- [ ] Mọi result có `excerpt` (>= 50 chars) và `source_ref`
+- [ ] Duplicate ingest bị chặn (content_hash unique)
 
-## Test Environments
-- **Local**: Docker Compose (PostgreSQL + pgvector + backend + frontend)
-- **CI**: GitHub Actions (pytest + playwright headless)
+### Phase 3 — Problem Structuring
+- [ ] 10/10 Gherkin scenarios Phase 3 pass
+- [ ] `normalize_problem()` không crash trên input rỗng
+- [ ] Contradiction type detected với accuracy >= 80% (manual eval 20 samples)
 
-## Acceptance Gates by Phase
+### Phase 4 — Reasoning Workflow
+- [ ] WorkflowEngine FSM transition hợp lệ cho mọi state
+- [ ] MethodRecommender trả về >= 1 principle cho mọi contradiction
+- [ ] E2E: problem → contradiction → principles < 3 seconds tổng
 
-### Phase 0 ✅
-- 21 files markdown có metadata
-- 10 golden documents được chọn và documented
-- `knowledge-inventory.md` committed
+### Phase 5 — UI
+- [ ] Playwright: tạo session → nhập problem → xem principles (happy path)
+- [ ] Không có TypeScript error
+- [ ] Lighthouse score >= 80
 
-### Phase 2
-- `pytest` benchmark: Recall@5 >= 0.75 trên golden set
-- `/search` API trả về < 200ms
-- Mọi kết quả có `excerpt` + `source_file`
+---
 
-### Phase 3
-- ProblemFrame có `completeness_score > 0.6` cho 3 sample problems
-- Contradiction gắn `suggested_principles` từ TRIZ matrix
+## Test Data
 
-### Phase 4
-- MethodRecommender trả về >= 3 gợi ý có citation
-- WorkflowEngine chuyển stage không mất data
-
-### Phase 5
-- User tạo ProblemFrame trong < 10 phút (usability test)
-- Không có lỗi console trên Chrome + Safari
+- Golden set: 10 docs trong `docs/` với frontmatter
+- Sample problems: 5 bài toán TRIZ mẫu (bánh răng, nhiệt độ, cánh quạt...)
+- Edge cases: input rỗng, input quá dài (> 5000 chars), Unicode đặc biệt

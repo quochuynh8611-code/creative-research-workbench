@@ -1,88 +1,84 @@
 ---
 title: "GHERKIN SCENARIOS — Creative Research Workbench"
-topic: testing
-source_type: bdd
-language: vi
-tags: [gherkin, scenario, feature, bdd, acceptance-test]
+topic: "testing"
+source_type: "bdd"
+language: "vi"
+tags: ["gherkin", "scenario", "feature", "bdd", "acceptance", "triz"]
+phase: "1"
+status: "canonical"
 golden: true
-phase: 0
-created_at: 2026-07-03
+created: "2026-07-03"
 ---
 
 # GHERKIN SCENARIOS — Creative Research Workbench
 
-## Feature 1: Tạo research session
+---
+
+## Feature: Ingestion Pipeline
 
 ```gherkin
-Feature: Research session management
+Feature: Ingestion Pipeline
+  Để có thể tìm kiếm tài liệu
+  Là backend service
+  Tôi cần parse và lưu trữ markdown documents vào database
 
-  Scenario: Tạo session mới thành công
-    Given người dùng ở màn hình Session List
-    When người dùng nhập title "Cải thiện năng suất nghiên cứu" và domain "research"
-    And người dùng nhấn "Tạo session"
-    Then hệ thống tạo session với status "draft"
-    And người dùng được chuyển đến Session Workspace
+  Scenario: Ingest một golden document thành công
+    Given file "docs/ADR-001-architecture.md" có YAML frontmatter hợp lệ
+    When IngestionService.ingest(filepath) được gọi
+    Then Document record được tạo trong database
+    And ít nhất 1 Chunk record được tạo
+    And mỗi Chunk có embedding vector không null
 
-  Scenario: Tạo session với title trống
-    Given người dùng ở màn hình Session List
-    When người dùng để trống title và nhấn "Tạo session"
-    Then hệ thống hiển thị lỗi "Title is required"
-    And không có session nào được tạo
+  Scenario: Chặn duplicate ingest
+    Given document "ADR-001-architecture.md" đã được ingest
+    When IngestionService.ingest(filepath) được gọi lần 2
+    Then không có Document record mới được tạo
+    And system trả về status "already_exists"
 ```
 
-## Feature 2: Chuẩn hóa bài toán
+---
+
+## Feature: Hybrid Search
 
 ```gherkin
-Feature: Problem intake
+Feature: Hybrid Search
+  Để tìm thông tin liên quan
+  Là người dùng
+  Tôi cần tìm kiếm trong kho tài liệu bằng câu hỏi tự nhiên
 
-  Scenario: Nhận ProblemFrame từ raw statement
-    Given người dùng đang ở stage Intake
-    When người dùng nhập "Máy của tôi chạy chậm khi có nhiều người dùng cùng lúc"
-    And người dùng nhấn "Phân tích"
-    Then hệ thống trả về ProblemFrame với goal, constraints và affected_entities
-    And completeness_score >= 0.6
+  Scenario: Tìm kiếm full-text cơ bản
+    Given kho tài liệu đã có 10 golden documents được ingest
+    When POST /api/v1/search với query "mâu thuẫn kỹ thuật"
+    Then response trả về trong < 200ms
+    And ít nhất 1 result có excerpt chứa từ khóa liên quan
+    And mỗi result có "source_ref" hợp lệ
 
-  Scenario: Bài toán quá mơ hồ
-    Given người dùng đang ở stage Intake
-    When người dùng nhập "Mọi thứ không ổn"
-    Then hệ thống trả về clarifying questions
-    And không tạo ProblemFrame cho đến khi câu hỏi được trả lời
+  Scenario: Vector search Recall@5
+    Given kho tài liệu đã có 10 golden documents
+    When chạy benchmark 10 golden queries
+    Then Recall@5 >= 0.75
 ```
 
-## Feature 3: Nhận diện mâu thuẫn
+---
+
+## Feature: Problem Structuring
 
 ```gherkin
-Feature: Contradiction analysis
+Feature: Problem Structuring
+  Để xác định loại mâu thuẫn
+  Là người dùng
+  Tôi cần nhập bài toán và nhận phân tích có cấu trúc
 
-  Scenario: Extract technical contradiction
-    Given đã có ProblemFrame với goal và constraints
-    When hệ thống phân tích mâu thuẫn
-    Then trả về ít nhất 1 technical contradiction
-    And mỗi contradiction có improving_parameter và worsening_parameter
-    And có suggested_principles từ TRIZ matrix
-```
+  Scenario: Tạo ProblemFrame từ input tự do
+    Given session "abc-123" đang ở trạng thái active
+    When POST /sessions/abc-123/problem-frame với raw_statement hợp lệ
+    Then ProblemFrame record được tạo
+    And contradiction_type không phải null
+    And normalized_statement không rỗng
 
-## Feature 4: Dựng chuỗi nhân quả
-
-```gherkin
-Feature: Cause-effect analysis
-
-  Scenario: Xây 5-Why chain
-    Given đã có ProblemFrame với failure_signals
-    When người dùng chọn phương pháp "5-Why"
-    Then hệ thống trả về CauseEffectChain với ít nhất 3 levels
-    And root_causes được xác định
-```
-
-## Feature 5: Đề xuất phương pháp phù hợp
-
-```gherkin
-Feature: Method recommendation
-
-  Scenario: Gợi ý TRIZ method từ contradiction type
-    Given đã có Contradiction với type "technical"
-    When hệ thống generate method suggestions
-    Then trả về >= 3 method suggestions
-    And mỗi suggestion có rationale và citation_ids
-    And citation_ids trỏ về tài liệu trong knowledge base
+  Scenario: Xử lý input rỗng
+    Given session hợp lệ đang tồn tại
+    When POST /sessions/{id}/problem-frame với raw_statement = ""
+    Then response trả về 422 Unprocessable Entity
+    And error message giải thích lý do
 ```

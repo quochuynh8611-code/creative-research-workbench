@@ -1,72 +1,61 @@
 ---
 title: "ADR-001 — Kiến trúc cho Creative Research Workbench"
-topic: architecture
-source_type: decision-record
-language: vi
-tags: [adr, workflow-engine, retrieval, reasoning, mvp]
+topic: "architecture"
+source_type: "decision-record"
+language: "vi"
+tags: ["adr", "workflow-engine", "retrieval", "reasoning", "pgvector", "fastapi"]
+phase: "1"
+status: "canonical"
 golden: true
-phase: 0
-created_at: 2026-07-03
+created: "2026-07-03"
 ---
 
 # ADR-001 — Kiến trúc cho Creative Research Workbench
 
-## Status
-Proposed
+## Bối cảnh
 
-## Context
-Sản phẩm cần chuyển một kho tài liệu TRIZ và tư duy sáng tạo thành một công cụ hỗ trợ nghiên cứu có workflow. Bài toán không chỉ là hỏi đáp trên tài liệu, mà là hỗ trợ problem framing, method recommendation, case retrieval và reasoning persistence.
+Hệ thống cần hỗ trợ người dùng giải quyết các bài toán sáng tạo phức tạp theo phương pháp luận TRIZ. Yêu cầu cốt lõi:
+- Tìm kiếm tài liệu kết hợp full-text + semantic vector
+- Hướng dẫn người dùng qua từng bước của quy trình TRIZ
+- Lưu trữ trạng thái phiên làm việc (session state)
 
-## Decision Drivers
-- Cần citation rõ ràng từ tài liệu nguồn.
-- Cần hỗ trợ workflow nghiên cứu theo bước.
-- Cần blast radius thấp ở giai đoạn MVP.
-- Cần dễ thay thế từng thành phần nếu chất lượng chưa đạt.
-- Cần phù hợp với dữ liệu markdown hiện có.
+## Quyết định
 
-## Decision
-Chọn kiến trúc module theo hướng **Workflow Engine + Retrieval Layer + Reasoning Assist Layer**, thay vì chỉ xây một chatbot RAG đơn thuần.
+Sử dụng kiến trúc **Workflow Engine + Retrieval Layer** thay vì RAG thuần túy.
 
-## Architecture Overview
+### Lý do từ chối RAG thuần
+- RAG thuần không kiểm soát được thứ tự bước trong quy trình TRIZ
+- Không có state management cho session
+- Khó enforce business rules (ví dụ: phải xác định contradiction trước khi đề xuất inventive principles)
 
-### 1. Knowledge Ingestion Layer
-- Nguồn vào là các file markdown trong thư mục hiện tại.
-- Mỗi file được chuẩn hóa metadata: title, topic, source_type, language, tags.
-- Chunk theo semantic section thay vì chunk theo số ký tự thuần túy.
+### Kiến trúc được chọn
 
-### 2. Retrieval Layer
-- Full-text search để recall cao.
-- Vector search để tăng semantic relevance.
-- Hybrid ranking để cân bằng precision và recall.
-- Kết quả retrieval phải trả về excerpt + source reference.
+```
+┌─────────────────────────────────────────┐
+│            Frontend (Next.js 14)        │
+│  Session List │ Problem Canvas │ Panel  │
+└─────────────────┬───────────────────────┘
+                  │ REST API
+┌─────────────────▼───────────────────────┐
+│           Backend (FastAPI)             │
+│  WorkflowEngine → MethodRecommender     │
+│  IngestionService │ RetrievalService     │
+│  ProblemStructuringService              │
+└─────────────────┬───────────────────────┘
+                  │
+┌─────────────────▼───────────────────────┐
+│        PostgreSQL 16 + pgvector         │
+│  documents │ chunks │ embeddings        │
+│  sessions  │ problem_frames             │
+└─────────────────────────────────────────┘
+```
 
-### 3. Problem Structuring Layer
-- Nhận raw problem statement từ người dùng.
-- Rewrite, normalize và extract ProblemFrame có cấu trúc.
-- Identify contradiction (technical/physical), cause-effect chain, function model.
+## Hệ quả
 
-### 4. Workflow Engine
-- State machine điều phối các stage: intake → structuring → retrieval → ideation → evaluation → synthesis.
-- Mỗi stage có input schema, output schema và transition condition rõ ràng.
-- Trạng thái workflow được persist trong database.
+- **Tích cực:** Kiểm soát flow TRIZ rõ ràng, dễ test từng bước, state persistent
+- **Rủi ro:** Phức tạp hơn RAG đơn giản — cần WorkflowEngine đủ linh hoạt
+- **Giảm thiểu:** Bắt đầu với finite state machine đơn giản, mở rộng sau
 
-### 5. Reasoning Assist Layer
-- LLM được gọi theo từng stage, không gọi tự do.
-- Prompt được template hóa, có version control.
-- Output LLM phải có provenance và review_status.
+## Trạng thái
 
-### 6. API Layer
-- JSON-over-HTTP, versioned (`/api/v1`).
-- Mọi response có error envelope chuẩn.
-- Frontend workspace giao tiếp hoàn toàn qua API.
-
-## Consequences
-- **Tốt**: Mỗi layer có thể test và thay thế độc lập.
-- **Tốt**: Citation rõ ràng vì retrieval tách biệt với reasoning.
-- **Chấp nhận được**: Phức tạp hơn RAG thuần — nhưng đây là tradeoff có chủ ý.
-- **Rủi ro**: Workflow engine cần thiết kế state machine cẩn thận.
-
-## Alternatives Considered
-1. **Pure RAG chatbot** — Đơn giản hơn nhưng không hỗ trợ workflow có cấu trúc.
-2. **LangGraph agent** — Powerful nhưng khó debug và blast radius cao.
-3. **Notion-like document editor** — Không phải công cụ nghiên cứu có reasoning.
+**Accepted** — 2026-07-03

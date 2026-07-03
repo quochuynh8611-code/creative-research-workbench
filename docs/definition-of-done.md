@@ -1,60 +1,62 @@
 ---
 title: "Definition of Done — Creative Research Workbench"
-topic: process
-source_type: definition
-language: vi
-tags: [dod, acceptance-criteria, quality-gate, phase-checklist]
+topic: "process"
+source_type: "definition"
+language: "vi"
+tags: ["dod", "acceptance-criteria", "quality-gate", "checklist", "phase"]
+phase: "1"
+status: "canonical"
 golden: true
-phase: 0
-created_at: 2026-07-03
+created: "2026-07-03"
 ---
 
 # Definition of Done — Creative Research Workbench
 
-## Nguyên tắc chung
-Một task được coi là **Done** khi:
-- [ ] Code được review (hoặc self-review có checklist)
-- [ ] Tests pass (unit + integration liên quan)
-- [ ] Không có linting error
-- [ ] Tài liệu liên quan được cập nhật
-- [ ] PR được merge vào `develop`
+> Một feature/task chỉ được coi là **DONE** khi đáp ứng TẤT CẢ tiêu chí bên dưới tương ứng với layer của nó.
 
-## Phase 0 — Discovery ✅
-- [x] 21 file markdown được kiểm kê
-- [x] Taxonomy gắn nhãn hoàn tất
-- [x] 10 golden documents được chọn với lý do rõ ràng
-- [x] `knowledge-inventory.md` committed
-- [x] YAML frontmatter trên 10 golden docs
+---
 
-## Phase 1 — Domain & Spec
-- [ ] DOMAIN_SCHEMA.md được khóa (không thay đổi entity name)
-- [ ] API_CONTRACTS.md được khóa (endpoint + payload shape)
-- [ ] GHERKIN scenarios cover 5 user flows chính
-- [ ] FAILING_INTEGRATION_TEST_SPEC có >= 5 tests
+## Backend Feature
 
-## Phase 2 — Ingestion & Retrieval
-- [ ] IngestionService parse đúng frontmatter của 10 golden docs
-- [ ] Chunk theo heading boundary (h2/h3)
-- [ ] pgvector index tạo thành công
-- [ ] `/search` trả về kết quả trong < 200ms
-- [ ] Recall@5 >= 0.75 trên golden set
-- [ ] Mọi result có `excerpt` + `source_file`
+- [ ] Code đã được review (tự review hoặc PR review)
+- [ ] Unit tests viết và pass (coverage >= 80% cho module mới)
+- [ ] Integration test liên quan pass (GREEN)
+- [ ] Không có linting error (`ruff check`)
+- [ ] Không có type error (`mypy`)
+- [ ] API endpoint có request/response validation (Pydantic)
+- [ ] Không có N+1 query (kiểm tra với `sqlalchemy-utils` hoặc log)
+- [ ] Migration script tạo nếu có thay đổi schema
+- [ ] Documented trong `API_CONTRACTS.md` nếu là endpoint mới
 
-## Phase 3 — Problem Structuring
-- [ ] ProblemFrame Pydantic model validate đúng
-- [ ] `completeness_score` > 0.6 cho 3 sample problems
-- [ ] ContradictionExtractor có unit tests pass
-- [ ] API endpoints có integration tests pass
+---
 
-## Phase 4 — Reasoning Workflow
-- [ ] WorkflowEngine chuyển stage không mất data
-- [ ] MethodRecommender trả về >= 3 suggestions có citation
-- [ ] Prompt templates có version control
-- [ ] LLM output có `provenance` field
+## Frontend Feature
 
-## Phase 5 — UI Workspace
-- [ ] Session List render đúng trên mobile + desktop
-- [ ] Workspace Canvas hiển thị đúng module theo stage
-- [ ] Evidence Panel cập nhật realtime khi search
-- [ ] Không có console error trên Chrome + Safari
-- [ ] Usability: tạo ProblemFrame trong < 10 phút
+- [ ] Component render đúng trên Chrome + Firefox
+- [ ] Không có TypeScript error
+- [ ] Unit test với Vitest (coverage >= 70%)
+- [ ] Loading state và error state được xử lý
+- [ ] Responsive: mobile (375px) và desktop (1280px)
+- [ ] Không có console error khi chạy bình thường
+
+---
+
+## Database / Schema Change
+
+- [ ] Alembic migration tạo và test rollback
+- [ ] Constraints (NOT NULL, UNIQUE, FK) đúng theo DOMAIN_SCHEMA.md
+- [ ] Index tạo cho các trường query thường xuyên
+- [ ] Seed data hoặc fixture test data có sẵn
+
+---
+
+## Phase Completion Gate
+
+| Phase | Gate |
+|---|---|
+| Phase 0 | `knowledge-inventory.md` hoàn chỉnh, 10 golden docs có frontmatter |
+| Phase 1 | Tất cả spec docs reviewed và approved |
+| Phase 2 | Search pipeline GREEN, Recall@5 >= 0.75 |
+| Phase 3 | Gherkin Phase 3 pass 100%, contradiction detection >= 80% |
+| Phase 4 | E2E workflow problem → principles hoạt động |
+| Phase 5 | Playwright happy path pass, Lighthouse >= 80 |

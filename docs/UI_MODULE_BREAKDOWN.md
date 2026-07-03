@@ -1,70 +1,86 @@
 ---
 title: "UI MODULE BREAKDOWN — Creative Research Workbench"
-topic: frontend
-source_type: design
-language: vi
-tags: [react, components, screens, workspace, nextjs, typescript]
+topic: "frontend"
+source_type: "design"
+language: "vi"
+tags: ["react", "components", "screens", "workspace", "nextjs", "shadcn"]
+phase: "1"
+status: "canonical"
 golden: true
-phase: 0
-created_at: 2026-07-03
+created: "2026-07-03"
 ---
 
 # UI MODULE BREAKDOWN — Creative Research Workbench
 
-## Product Surface
-Single Page App với 2 màn hình chính và 6 stage module trong workspace.
+> Stack: Next.js 14 + TypeScript + TailwindCSS + shadcn/ui + Zustand + TanStack Query
 
-## Screen 1 — Session List
-- **Header**: app name, quick search, nút tạo session mới
-- **Left filter**: domain, tags, status
-- **Session cards**: title, domain, updated_at, progress stage badge
-- **Empty state**: CTA "Tạo session đầu tiên" + minh họa
+---
 
-## Screen 2 — Session Workspace
-- **Left sidebar**: workflow stages (intake → synthesis), stage progress indicator
-- **Center canvas**: module theo stage hiện tại (xem Stage Modules)
-- **Right panel**: source excerpts + citations từ retrieval
-- **Top bar**: session title, save state indicator, status badge
+## Screen 1 — Session List (`/`)
 
-## Stage Modules (Center Canvas)
+**Mục đích:** Trang chủ — hiển thị danh sách phiên nghiên cứu
 
-### Stage 1 — Intake
-- Raw problem input (textarea lớn)
-- Clarifying questions (LLM-generated, user answers)
-- Structured preview của ProblemFrame
+| Component | Mô tả |
+|---|---|
+| `SessionCard` | Hiển thị title, status badge, last updated |
+| `NewSessionButton` | Mở modal tạo session mới |
+| `SessionFilter` | Lọc theo status: active / paused / completed |
+| `EmptyState` | UI khi chưa có session nào |
 
-### Stage 2 — Structuring
-- ProblemFrame card: goal, constraints, affected_entities, failure_signals
-- Contradiction board: technical vs physical
-- Function map (basic)
+---
 
-### Stage 3 — Retrieval
-- Search box
-- Results list với excerpt preview
-- Source reference chips
+## Screen 2 — Problem Canvas (`/sessions/[id]`)
 
-### Stage 4 — Methods
-- Method suggestion cards
-- Rationale text
-- Citation chips trỏ về tài liệu nguồn
+**Mục đích:** Màn hình làm việc chính — nhập và phân tích bài toán
 
-### Stage 5 — Ideation
-- Candidate solution board
-- Compare mode (side-by-side)
-- Provenance indicator
+| Component | Mô tả |
+|---|---|
+| `ProblemInputArea` | Textarea nhập problem statement tự do |
+| `NormalizedView` | Hiển thị kết quả normalize từ backend |
+| `ContradictionBadge` | Badge hiển thị loại contradiction phát hiện được |
+| `WorkflowStepper` | Progress bar các bước TRIZ (step 1/5, 2/5...) |
+| `PrincipleSuggestions` | Grid các inventive principles được gợi ý |
+| `EvidencePanel` | Panel bên phải — kết quả search liên quan |
 
-### Stage 6 — Evaluation
-- Multi-axis scoring matrix (feasibility, impact, originality, resource_cost)
-- Score visualization (radar chart)
+---
 
-## Supporting Surfaces
-- **Evidence Panel** (right): persistent, shows excerpts từ bất kỳ stage nào
-- **History Panel**: version history của ProblemFrame
-- **Export**: synthesis report (Markdown)
+## Screen 3 — Search Overlay
 
-## Tech Stack
-- React 18 + TypeScript
-- Next.js 14 (App Router)
-- TailwindCSS + shadcn/ui
-- Zustand (state management)
-- TanStack Query (API calls)
+**Mục đích:** Tìm kiếm trong kho tài liệu
+
+| Component | Mô tả |
+|---|---|
+| `SearchInput` | Command palette style (Cmd+K) |
+| `SearchResultItem` | Excerpt + source_ref + relevance score |
+| `FilterChips` | Lọc theo topic, phase, status |
+
+---
+
+## State Management (Zustand)
+
+```typescript
+interface AppStore {
+  sessions: Session[]
+  activeSession: Session | null
+  problemFrame: ProblemFrame | null
+  searchResults: SearchResult[]
+  workflowStep: number
+  // actions
+  setActiveSession: (s: Session) => void
+  updateProblemFrame: (pf: ProblemFrame) => void
+  setSearchResults: (r: SearchResult[]) => void
+}
+```
+
+---
+
+## Data Fetching (TanStack Query)
+
+```typescript
+// Key conventions
+useQuery({ queryKey: ['sessions'] })
+useQuery({ queryKey: ['session', id] })
+useQuery({ queryKey: ['search', query, filters] })
+useMutation({ mutationFn: createSession })
+useMutation({ mutationFn: updateProblemFrame })
+```
