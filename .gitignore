@@ -29,3 +29,7 @@ Thumbs.db
 .vscode/
 .idea/
 *.swp
+
+# Knowledge data — raw markdown files (copy manually, do not commit)
+backend/data/knowledge/
+!backend/data/knowledge/.gitkeep
