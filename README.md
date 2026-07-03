@@ -1,135 +1,82 @@
 # Creative Research Workbench
 
-> Biến kho tài liệu TRIZ thành một **research copilot có workflow** — hỗ trợ phân tích vấn đề, gợi ý phương pháp sáng tạo, truy xuất case và lưu lại tiến trình tư duy.
-
----
-
-## Tổng quan sản phẩm
-
-Creative Research Workbench là phần mềm hỗ trợ nhà nghiên cứu, kỹ sư, product manager và người học áp dụng phương pháp luận sáng tạo (TRIZ, Design Thinking, ...) vào thực tiễn. Sản phẩm không chỉ là kho tài liệu mà là hệ thống workflow hỗ trợ:
-
-- **Chuẩn hóa vấn đề** từ ngôn ngữ tự nhiên → ProblemFrame có cấu trúc
-- **Phát hiện mâu thuẫn**, function map, cause-effect chain
-- **Gợi ý công cụ TRIZ** phù hợp với loại bài toán
-- **Semantic retrieval** trên kho tài liệu nội bộ với citation
-- **Lưu reasoning trail** để tái sử dụng sau này
-
----
+Một workspace nghiên cứu sáng tạo kết hợp tri thức TRIZ với AI workflow — giúp biến vấn đề phức tạp thành phương án hành động rõ ràng.
 
 ## Tech Stack
 
-| Layer | Công nghệ |
+| Layer | Technology |
 |---|---|
-| Backend | Python 3.11+, FastAPI, SQLAlchemy |
-| Database | PostgreSQL + pgvector |
-| AI / Retrieval | OpenAI API hoặc Ollama (local) |
-| Frontend | React 18 + Vite + TailwindCSS |
-| Infra (dev) | Docker Compose |
-| Testing | pytest (backend), Vitest (frontend) |
+| Backend | Python 3.11 + FastAPI + Pydantic v2 |
+| Database | PostgreSQL 16 + pgvector |
+| Frontend | Next.js 14 + TypeScript + Tailwind CSS + shadcn/ui |
+| AI Layer | OpenAI API / Ollama (local) |
+| Infra | Docker Compose |
+| Testing | pytest + pytest-asyncio |
 
----
-
-## Cấu trúc thư mục
+## Architecture
 
 ```
 creative-research-workbench/
-├── docs/                     # Tài liệu thiết kế
-│   ├── PRODUCT_SPEC.md
-│   ├── DOMAIN_SCHEMA.md
-│   ├── API_CONTRACTS.md
-│   ├── UI_MODULE_BREAKDOWN.md
-│   ├── IMPLEMENTATION_ROADMAP.md
-│   ├── TEST_PLAN.md
-│   └── adr/
-│       └── ADR-001-architecture.md
-├── backend/
-│   ├── pyproject.toml
-│   ├── alembic/
-│   └── src/app/
-│       ├── api/v1/
-│       ├── domain/
-│       ├── services/
-│       └── infra/
-├── frontend/
-│   ├── package.json
-│   └── src/
-│       ├── components/
-│       ├── pages/
-│       ├── store/
-│       └── api/
-├── docker-compose.yml
-└── .github/
-    └── workflows/ci.yml
+├── apps/
+│   ├── api/              # FastAPI backend
+│   │   ├── domain/       # Core entities & business rules
+│   │   ├── services/     # Orchestration logic
+│   │   ├── api/          # Routes & controllers
+│   │   ├── infrastructure/ # DB, retrieval, embeddings
+│   │   └── tests/
+│   └── web/              # Next.js frontend
+│       ├── features/     # Session, intake, structuring, retrieval
+│       └── components/
+├── docs/                 # All specs, ADRs, contracts
+└── docker-compose.yml
 ```
 
----
+## Quick Start
 
-## Chạy local (dev)
-
-### Yêu cầu
-- Docker & Docker Compose
-- Python 3.11+
-- Node.js 20+
-
-### Khởi động
-
+### 1. Clone & setup environment
 ```bash
-# Clone repo
 git clone https://github.com/quochuynh8611-code/creative-research-workbench.git
 cd creative-research-workbench
-
-# Khởi động toàn bộ services
-docker compose up -d
-
-# Backend chạy tại http://localhost:8000
-# Frontend chạy tại http://localhost:5173
-# API docs tại http://localhost:8000/docs
+cp .env.example .env
+# Edit .env with your values
 ```
 
-### Backend dev (không dùng Docker)
-
+### 2. Start services
 ```bash
-cd backend
-pip install -e ".[dev]"
-uvicorn src.app.main:app --reload
+docker compose up -d db
 ```
 
-### Frontend dev
-
+### 3. Run API locally
 ```bash
-cd frontend
-npm install
-npm run dev
+cd apps/api
+pip install uv
+uv pip install -e .
+uvicorn main:app --reload
 ```
 
----
+### 4. Run tests
+```bash
+cd apps/api
+pytest tests/ -v
+```
 
-## Roadmap
+## Documentation
 
-Xem chi tiết tại [`docs/IMPLEMENTATION_ROADMAP.md`](docs/IMPLEMENTATION_ROADMAP.md)
+| File | Nội dung |
+|---|---|
+| [PRODUCT_SPEC.md](docs/PRODUCT_SPEC.md) | Mục tiêu sản phẩm |
+| [ADR-001-architecture.md](docs/ADR-001-architecture.md) | Quyết định kiến trúc |
+| [DOMAIN_SCHEMA.md](docs/DOMAIN_SCHEMA.md) | Schema domain |
+| [IMPLEMENTATION_ROADMAP.md](docs/IMPLEMENTATION_ROADMAP.md) | Roadmap thực thi |
+| [GHERKIN_SCENARIOS.md](docs/GHERKIN_SCENARIOS.md) | Test scenarios |
+| [UI_MODULE_BREAKDOWN.md](docs/UI_MODULE_BREAKDOWN.md) | UI modules |
+| [TEST_PLAN.md](docs/TEST_PLAN.md) | Kế hoạch test |
 
-| Phase | Nội dung | Trạng thái |
-|---|---|---|
-| Phase 0 | Discovery — kiểm kê tài liệu | ⬜ |
-| Phase 1 | Domain & Spec | ✅ |
-| Phase 2 | Ingestion & Retrieval | ⬜ |
-| Phase 3 | Problem Structuring | ⬜ |
-| Phase 4 | Reasoning Workflow | ⬜ |
-| Phase 5 | UI Workspace | ⬜ |
-| Phase 6 | Verification | ⬜ |
+## Workflow Stages
 
----
-
-## Tài liệu thiết kế
-
-- [Product Spec](docs/PRODUCT_SPEC.md)
-- [Domain Schema](docs/DOMAIN_SCHEMA.md)
-- [API Contracts](docs/API_CONTRACTS.md)
-- [UI Module Breakdown](docs/UI_MODULE_BREAKDOWN.md)
-- [ADR-001 Architecture](docs/adr/ADR-001-architecture.md)
-
----
+```
+Intake → Structuring → Retrieval → Ideation → Evaluation → Synthesis
+```
 
 ## License
-
-MIT
+Private repository — all rights reserved.
