@@ -5,23 +5,21 @@
 
 ---
 
-## 📅 Phiên làm việc: 2026-07-03
+## 📅 Phiên làm việc: 2026-07-03 (Phiên 2 — 17:00 +07)
 
-### ✅ Đã hoàn thành hôm nay
+### ✅ Đã hoàn thành trong phiên này
 
-| # | Commit | Mô tả |
-|---|--------|--------|
-| 1 | `Initial commit` | Tạo repo GitHub |
-| 2 | `chore: initial scaffold` | Scaffold đầy đủ: `/docs`, `/backend`, `/frontend`, `/apps`, CI workflow, `.github/` |
-| 3 | `docs: push full Obsidian vault docs` | Push toàn bộ tài liệu từ Obsidian vault → `/docs` |
-| 4 | `feat(phase0): add knowledge data dir` | Tạo cấu trúc thư mục `/data/knowledge/` + setup guide |
-| 5 | `feat: backend domain scaffold + docker-compose + pgvector` | Backend Python/FastAPI skeleton + docker-compose với PostgreSQL 16 + pgvector |
-| 6 | `feat: Next.js 14 frontend scaffold` | Frontend Next.js 14 + TypeScript + TailwindCSS + shadcn/ui skeleton |
-| 7 | `docs: knowledge-inventory.md Phase 0 v2` | File inventory 21 files markdown từ vault Sang-Tao với metadata phân loại |
+| # | Task | Kết quả |
+|---|------|---------|
+| 1 | Xác nhận YAML frontmatter trên 10 Golden Docs | ✅ Tất cả đã có frontmatter chuẩn trong `/docs` |
+| 2 | Đóng Issue #6 | ✅ Closed as duplicate of #1 |
+| 3 | Đóng Issue #8 | ✅ Closed as duplicate of #1 |
+| 4 | Đóng Issue #1 | ✅ Closed as completed — Phase 0 100% DONE |
+| 5 | Cập nhật SESSION_LOG.md | ✅ File này |
 
 ---
 
-### 🗂️ Cấu trúc repo hiện tại
+## 🗂️ Cấu trúc repo hiện tại
 
 ```
 creative-research-workbench/
@@ -34,17 +32,17 @@ creative-research-workbench/
 │   ├── workflows/ci.yml    ← GitHub Actions CI
 │   └── ISSUE_TEMPLATE/
 ├── docs/                   ← Toàn bộ tài liệu từ Obsidian vault
-│   ├── ADR-001-architecture.md
-│   ├── API_CONTRACTS.md
-│   ├── DOMAIN_SCHEMA.md
-│   ├── PRODUCT_SPEC.md
-│   ├── IMPLEMENTATION_ROADMAP.md
-│   ├── TEST_PLAN.md
-│   ├── UI_MODULE_BREAKDOWN.md
-│   ├── GHERKIN_SCENARIOS.md
-│   ├── FAILING_INTEGRATION_TEST_SPEC.md
-│   ├── Definition of Done.md
-│   └── knowledge-inventory.md   ← Phase 0 output
+│   ├── ADR-001-architecture.md       ← ⭐ GOLDEN + frontmatter ✅
+│   ├── API_CONTRACTS.md              ← ⭐ GOLDEN + frontmatter ✅
+│   ├── DOMAIN_SCHEMA.md              ← ⭐ GOLDEN + frontmatter ✅
+│   ├── PRODUCT_SPEC.md               ← ⭐ GOLDEN + frontmatter ✅
+│   ├── IMPLEMENTATION_ROADMAP.md     ← ⭐ GOLDEN + frontmatter ✅
+│   ├── UI_MODULE_BREAKDOWN.md        ← ⭐ GOLDEN + frontmatter ✅
+│   ├── TEST_PLAN.md                  ← ⭐ GOLDEN + frontmatter ✅
+│   ├── GHERKIN_SCENARIOS.md          ← ⭐ GOLDEN + frontmatter ✅
+│   ├── FAILING_INTEGRATION_TEST_SPEC.md ← ⭐ GOLDEN + frontmatter ✅
+│   ├── definition-of-done.md         ← ⭐ GOLDEN + frontmatter ✅
+│   └── knowledge-inventory.md        ← Phase 0 output ✅
 ├── backend/                ← Python FastAPI (skeleton)
 │   ├── pyproject.toml
 │   └── src/app/
@@ -62,15 +60,15 @@ creative-research-workbench/
 
 ---
 
-### 🐛 8 GitHub Issues đang OPEN
+## 🐛 GitHub Issues — Trạng thái mới nhất
 
 | Issue | Phase | Tiêu đề | Trạng thái |
 |-------|-------|---------|------------|
-| #1 | Phase 0 | Discovery — Kiểm kê & chuẩn hóa kho tài liệu | 🟡 Gần xong — inventory đã có, cần gắn frontmatter |
-| #6 | Phase 0 | Discovery — Kiểm kê & chuẩn hóa kho markdown | 🟡 Duplicate của #1 — cần đóng |
-| #8 | Phase 0 | Kiểm kê và gắn nhãn toàn bộ kho markdown | 🟡 Duplicate của #1 — cần đóng |
-| #2 | Phase 2 | Ingestion & Retrieval — Pipeline parse markdown + pgvector | 🔴 Chưa bắt đầu |
-| #7 | Phase 2 | Ingestion & Retrieval Pipeline | 🔴 Chưa bắt đầu |
+| #1 | Phase 0 | Discovery — Kiểm kê & chuẩn hóa kho tài liệu | ✅ CLOSED — Completed |
+| #6 | Phase 0 | Discovery — Kiểm kê & chuẩn hóa kho markdown | ✅ CLOSED — Duplicate |
+| #8 | Phase 0 | Kiểm kê và gắn nhãn toàn bộ kho markdown | ✅ CLOSED — Duplicate |
+| #2 | Phase 2 | Ingestion & Retrieval — Pipeline parse markdown + pgvector | 🔴 **NEXT TASK** |
+| #7 | Phase 2 | Ingestion & Retrieval Pipeline | 🔴 Cần đóng/merge với #2 |
 | #3 | Phase 3 | Problem Structuring — ProblemFrame, Contradiction, Cause-Effect | 🔴 Chưa bắt đầu |
 | #4 | Phase 4 | Reasoning Workflow — WorkflowEngine, Method Recommender | 🔴 Chưa bắt đầu |
 | #5 | Phase 5 | UI Workspace — Session List, Canvas, Evidence Panel | 🔴 Chưa bắt đầu |
@@ -81,90 +79,60 @@ creative-research-workbench/
 
 | Phase | Tên | Trạng thái | Ghi chú |
 |-------|-----|-----------|---------|
-| **Phase 0** | Discovery — Knowledge Inventory | 🟡 85% | Còn: gắn frontmatter YAML cho 21 files, chọn 10 golden docs, đóng #1/#6/#8 |
+| **Phase 0** | Discovery — Knowledge Inventory | ✅ **100% DONE** | 21 files kiểm kê, 10 Golden Docs, frontmatter ✅, Issues #1/#6/#8 closed |
 | **Phase 1** | Domain & Spec | ✅ Hoàn thành | Tất cả tài liệu spec đã có trong `/docs` |
-| **Phase 2** | Ingestion & Retrieval Pipeline | 🔴 Chưa bắt đầu | Next task |
+| **Phase 2** | Ingestion & Retrieval Pipeline | 🔴 **NEXT — Bắt đầu ngay** | Issues #2, #7 |
 | **Phase 3** | Problem Structuring | 🔴 Chưa bắt đầu | — |
 | **Phase 4** | Reasoning Workflow | 🔴 Chưa bắt đầu | — |
 | **Phase 5** | UI Workspace | 🔴 Chưa bắt đầu | — |
 
 ---
 
-## ⏭️ VIỆC CẦN LÀM TIẾP THEO (theo thứ tự ưu tiên)
+## ⏭️ VIỆC CẦN LÀM TIẾP THEO
 
-### Bước 1 — Hoàn tất Phase 0 (ưu tiên cao)
-
-**Goal:** Đóng Issues #1, #6, #8
-
-**Tasks cụ thể:**
-- [ ] Gắn YAML frontmatter chuẩn vào 12 files markdown chính trong vault:
-  ```yaml
-  ---
-  title: "..."
-  topic: "architecture|api|domain|product|testing|roadmap|ui|planning"
-  source_type: "internal-spec|adr|contract|scenario|plan|checklist"
-  language: "vi"
-  tags: ["triz", "workflow", "retrieval", "problem-structuring", ...]
-  phase: "0|1|2|3|4|5"
-  status: "canonical|draft|deprecated"
-  ---
-  ```
-- [ ] Chọn **10 golden documents** làm benchmark retrieval (danh sách đề xuất bên dưới)
-- [ ] Cập nhật `docs/knowledge-inventory.md` với danh sách 10 golden docs
-- [ ] Đóng Issues #1, #6, #8 trên GitHub
-
-**10 Golden Documents đề xuất:**
-1. `ADR-001-architecture.md` — kiến trúc tổng thể
-2. `DOMAIN_SCHEMA.md` — schema domain entities
-3. `API_CONTRACTS.md` — API endpoints
-4. `PRODUCT_SPEC.md` — product intent + user goals
-5. `IMPLEMENTATION_ROADMAP.md` — thứ tự ưu tiên
-6. `GHERKIN_SCENARIOS.md` — acceptance scenarios
-7. `UI_MODULE_BREAKDOWN.md` — UI screens + modules
-8. `TEST_PLAN.md` — test strategy
-9. `FAILING_INTEGRATION_TEST_SPEC.md` — integration tests
-10. `Definition of Done.md` — DoD per phase
-
----
-
-### Bước 2 — Bắt đầu Phase 2: Ingestion & Retrieval (sau Phase 0)
+### Phase 2 — Ingestion & Retrieval Pipeline
 
 **Goal:** Đóng Issues #2, #7
 
-**Files cần tạo:**
+**Files cần tạo (theo thứ tự):**
+
 ```
 backend/src/app/
-├── services/
-│   ├── ingestion_service.py     ← parse markdown + frontmatter + chunk
-│   └── retrieval_service.py     ← hybrid search (FTS + vector)
 ├── domain/
-│   └── models.py                ← SQLAlchemy models (Document, Chunk, Embedding)
+│   └── models.py                ← 1. SQLAlchemy models: Document, Chunk, Embedding
+├── services/
+│   ├── ingestion_service.py     ← 2. Parse markdown + frontmatter + chunk
+│   └── retrieval_service.py     ← 3. Hybrid search (FTS + vector)
 └── api/
     └── routes/
-        └── search.py            ← POST /api/v1/search
+        └── search.py            ← 4. POST /api/v1/search
 ```
 
-**Tech stack cần setup:**
+**Dependencies cần thêm vào `pyproject.toml`:**
 - `python-frontmatter` — parse YAML frontmatter
 - `pgvector` — vector index trên PostgreSQL
-- `openai` hoặc `ollama` — embedding model
+- `openai` — embedding model (text-embedding-3-small)
 - `alembic` — database migrations
+- `tiktoken` — đếm tokens cho chunking
 
-**Acceptance criteria:**
+**Acceptance Criteria (từ FAILING_INTEGRATION_TEST_SPEC.md):**
 - Full-text search trả về kết quả < 200ms
-- Vector search Recall@5 >= 0.75 trên golden set
-- Mọi kết quả có `excerpt` + `source_ref`
+- Vector search Recall@5 >= 0.75 trên 10 Golden Documents
+- Mọi kết quả có `excerpt` + `source_ref` + `score`
+- `POST /api/v1/search` trả về HTTP 200 với payload đúng schema API_CONTRACTS.md
 
----
+**Failing tests cần viết trước (TDD):**
+```python
+# tests/integration/test_ingestion.py
+def test_ingest_golden_doc_creates_document_record(): ...
+def test_ingest_creates_chunks_with_embeddings(): ...
+def test_duplicate_ingest_skipped_by_content_hash(): ...
 
-### Bước 3 — Phase 3: Problem Structuring (sau Phase 2)
-
-**Goal:** Đóng Issue #3
-
-**Core services cần viết:**
-- `ProblemStructuringService` — rewrite + normalize problem statement
-- `ContradictionExtractor` — extract technical + physical contradiction
-- `CauseEffectBuilder` — 5-Why / fishbone
+# tests/integration/test_retrieval.py  
+def test_search_returns_results_under_200ms(): ...
+def test_vector_search_recall_at_5_on_golden_set(): ...
+def test_search_response_has_excerpt_and_source_ref(): ...
+```
 
 ---
 
@@ -178,7 +146,7 @@ backend/src/app/
 | UI | TailwindCSS + shadcn/ui | 3.4 / latest |
 | State | Zustand | 4+ |
 | API Client | TanStack Query | 5+ |
-| AI/LLM | OpenAI API hoặc Ollama (local) | — |
+| AI/LLM | OpenAI API (text-embedding-3-small) | — |
 | Container | Docker Compose | — |
 | CI | GitHub Actions | — |
 
@@ -193,6 +161,7 @@ backend/src/app/
 | `docs/DOMAIN_SCHEMA.md` | Entity schema — nguồn truth cho database |
 | `docs/API_CONTRACTS.md` | API endpoints — nguồn truth cho backend/frontend |
 | `docs/IMPLEMENTATION_ROADMAP.md` | Thứ tự phase + criteria |
+| `docs/FAILING_INTEGRATION_TEST_SPEC.md` | Integration tests cần viết cho Phase 2 |
 | `docs/knowledge-inventory.md` | Inventory 21 files Phase 0 |
 
 ---
@@ -203,12 +172,13 @@ Nếu bạn là AI assistant được yêu cầu tiếp tục dự án này:
 
 1. **Đọc `docs/ADR-001-architecture.md`** để hiểu kiến trúc tổng thể
 2. **Đọc `docs/DOMAIN_SCHEMA.md`** để hiểu entities và relationships
-3. **Xem Issues đang OPEN** trên GitHub để biết việc cần làm
-4. **Phase hiện tại là Phase 0 (85%)** — cần hoàn tất frontmatter và golden docs
-5. **Bước tiếp theo ngay** là Phase 2: `IngestionService` trong `backend/src/app/services/ingestion_service.py`
-6. **Owner:** quochuynh8611-code | **Repo:** creative-research-workbench
-7. **Ngôn ngữ làm việc:** Tiếng Việt
+3. **Đọc `docs/FAILING_INTEGRATION_TEST_SPEC.md`** để biết failing tests cần implement
+4. **Phase hiện tại là Phase 2** — Ingestion & Retrieval Pipeline
+5. **Bước tiếp theo ngay:** Viết failing integration tests → sau đó implement `models.py` → `ingestion_service.py` → `retrieval_service.py` → `search.py`
+6. **Quy trình bắt buộc:** TDD — viết test thất bại trước, implement sau
+7. **Owner:** quochuynh8611-code | **Repo:** creative-research-workbench
+8. **Ngôn ngữ làm việc:** Tiếng Việt
 
 ---
 
-*Last updated: 2026-07-03 13:00 +07 — Session với Perplexity AI*
+*Last updated: 2026-07-03 17:07 +07 — Session 2 với Perplexity AI*
