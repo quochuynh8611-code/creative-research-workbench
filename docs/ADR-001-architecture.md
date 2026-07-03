@@ -1,3 +1,14 @@
+---
+title: "ADR-001 — Kiến trúc cho Creative Research Workbench"
+topic: architecture
+source_type: decision-record
+language: vi
+tags: [adr, workflow-engine, retrieval, reasoning, mvp]
+golden: true
+phase: 0
+created_at: 2026-07-03
+---
+
 # ADR-001 — Kiến trúc cho Creative Research Workbench
 
 ## Status
@@ -30,70 +41,32 @@ Chọn kiến trúc module theo hướng **Workflow Engine + Retrieval Layer + R
 - Kết quả retrieval phải trả về excerpt + source reference.
 
 ### 3. Problem Structuring Layer
-- Chuẩn hóa input người dùng thành ProblemFrame.
-- Tạo các object: contradiction, functions, cause-effect nodes, resources.
+- Nhận raw problem statement từ người dùng.
+- Rewrite, normalize và extract ProblemFrame có cấu trúc.
+- Identify contradiction (technical/physical), cause-effect chain, function model.
 
-### 4. Reasoning Assist Layer
-- LLM được dùng để viết lại problem statement, đề xuất câu hỏi làm rõ, gợi ý công cụ.
-- LLM không được là nguồn chân lý duy nhất.
+### 4. Workflow Engine
+- State machine điều phối các stage: intake → structuring → retrieval → ideation → evaluation → synthesis.
+- Mỗi stage có input schema, output schema và transition condition rõ ràng.
+- Trạng thái workflow được persist trong database.
 
-### 5. Workflow Engine
-- Điều phối tiến trình theo stage: intake → structuring → retrieval → ideation → evaluation → synthesis.
-- Mỗi stage có input/output contract rõ ràng.
+### 5. Reasoning Assist Layer
+- LLM được gọi theo từng stage, không gọi tự do.
+- Prompt được template hóa, có version control.
+- Output LLM phải có provenance và review_status.
 
-### 6. Persistence Layer
-- Lưu research sessions, notes, snapshots, decision log.
-- MVP dùng PostgreSQL + pgvector.
+### 6. API Layer
+- JSON-over-HTTP, versioned (`/api/v1`).
+- Mọi response có error envelope chuẩn.
+- Frontend workspace giao tiếp hoàn toàn qua API.
 
-## Data Contracts
+## Consequences
+- **Tốt**: Mỗi layer có thể test và thay thế độc lập.
+- **Tốt**: Citation rõ ràng vì retrieval tách biệt với reasoning.
+- **Chấp nhận được**: Phức tạp hơn RAG thuần — nhưng đây là tradeoff có chủ ý.
+- **Rủi ro**: Workflow engine cần thiết kế state machine cẩn thận.
 
-### ProblemFrame
-```json
-{
-  "problem_statement": "string",
-  "goal": "string",
-  "constraints": ["string"],
-  "affected_entities": ["string"],
-  "failure_signals": ["string"],
-  "success_criteria": ["string"],
-  "domain": "string"
-}
-```
-
-### MethodSuggestion
-```json
-{
-  "method_name": "string",
-  "rationale": "string",
-  "preconditions": ["string"],
-  "expected_output": "string",
-  "cited_sources": ["string"]
-}
-```
-
-### CandidateSolution
-```json
-{
-  "title": "string",
-  "mechanism": "string",
-  "linked_methods": ["string"],
-  "cited_sources": ["string"],
-  "novelty_score": "float",
-  "feasibility_score": "float",
-  "risk_notes": "string"
-}
-```
-
-## Why Not Pure Chatbot RAG
-- Chatbot RAG tốt cho hỏi đáp nhưng yếu ở việc ép người dùng đi qua quy trình nghiên cứu.
-- Khó duy trì domain state như contradiction map, function map, rejected ideas.
-
-## Chosen Trade-off
-- Dùng rule/schema để khóa cấu trúc dữ liệu quan trọng.
-- Dùng retrieval để cung cấp bằng chứng.
-- Dùng LLM như reasoning assistant trong phạm vi được ràng buộc.
-
-## Next Decisions Needed
-- Chọn stack frontend.
-- Chọn DB và vector store.
-- Quyết định local-first hay web-first cho bản đầu.
+## Alternatives Considered
+1. **Pure RAG chatbot** — Đơn giản hơn nhưng không hỗ trợ workflow có cấu trúc.
+2. **LangGraph agent** — Powerful nhưng khó debug và blast radius cao.
+3. **Notion-like document editor** — Không phải công cụ nghiên cứu có reasoning.

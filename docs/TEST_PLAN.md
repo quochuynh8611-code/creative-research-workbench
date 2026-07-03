@@ -1,40 +1,66 @@
-# TEST PLAN — Creative Research Workbench
+---
+title: "TEST PLAN — Creative Research Workbench MVP"
+topic: testing
+source_type: plan
+language: vi
+tags: [pytest, acceptance, integration, unit, tdd, golden-set]
+golden: true
+phase: 0
+created_at: 2026-07-03
+---
+
+# TEST PLAN — Creative Research Workbench MVP
+
+## Purpose
+Xác định chiến lược test và acceptance gate cho từng phase của MVP.
 
 ## Test Strategy
+- **TDD**: Viết failing test trước, code sau.
+- **Test Pyramid**: Unit (70%) → Integration (20%) → E2E (10%).
+- **Golden Set**: 10 tài liệu benchmark dùng để đánh giá retrieval quality.
 
-### Level 1: Unit Tests
-- Domain entities: ProblemFrame, Contradiction, CandidateSolution
-- Schema validation: Pydantic models
-- Business rules: contradiction types, scoring logic
+## Test Pyramid
 
-### Level 2: Integration Tests
-- API endpoints theo API_CONTRACTS.md
-- Workflow stage transitions
-- Retrieval pipeline: parse → chunk → embed → search
-- Database CRUD operations
+### Unit Tests
+- Domain logic thuần (ProblemFrame, Contradiction extraction)
+- Service methods độc lập với database
+- Prompt template rendering
 
-### Level 3: Gherkin/BDD Tests
-- Các scenario trong GHERKIN_SCENARIOS.md
-- Happy path + edge cases
-- Error handling flows
+### Integration Tests
+- API endpoint → Service → Database
+- IngestionService → PostgreSQL + pgvector
+- RetrievalService: query → hybrid search → ranked results
+- WorkflowEngine: stage transition
 
-### Level 4: Retrieval Quality Tests
-- Golden-set: 10 tài liệu benchmark
-- Metrics: Recall@5, Precision@5, MRR
-- Threshold: Recall@5 >= 0.80
+### E2E Tests (Playwright)
+- Tạo session → nhập problem → nhận ProblemFrame
+- Search → nhận kết quả có citation
+- Advance workflow → stage chuyển đúng
 
-### Level 5: QA End-to-End
-- 5 bài toán thật: kỹ thuật, kinh doanh, giáo dục, cá nhân, nghiên cứu
-- Đo citation accuracy
-- Đo task completion rate
+## Test Environments
+- **Local**: Docker Compose (PostgreSQL + pgvector + backend + frontend)
+- **CI**: GitHub Actions (pytest + playwright headless)
 
-## Test Environment
-- Unit + Integration: pytest + SQLite in-memory
-- E2E: Docker Compose + PostgreSQL
-- LLM calls: mock responses cho deterministic tests
+## Acceptance Gates by Phase
 
-## Definition of Done
-- Unit test coverage >= 80% cho domain layer
-- Tất cả Gherkin scenarios có test tương ứng
-- Retrieval Recall@5 >= 0.80 trên golden-set
-- Không có critical bug trong 5 QA sessions
+### Phase 0 ✅
+- 21 files markdown có metadata
+- 10 golden documents được chọn và documented
+- `knowledge-inventory.md` committed
+
+### Phase 2
+- `pytest` benchmark: Recall@5 >= 0.75 trên golden set
+- `/search` API trả về < 200ms
+- Mọi kết quả có `excerpt` + `source_file`
+
+### Phase 3
+- ProblemFrame có `completeness_score > 0.6` cho 3 sample problems
+- Contradiction gắn `suggested_principles` từ TRIZ matrix
+
+### Phase 4
+- MethodRecommender trả về >= 3 gợi ý có citation
+- WorkflowEngine chuyển stage không mất data
+
+### Phase 5
+- User tạo ProblemFrame trong < 10 phút (usability test)
+- Không có lỗi console trên Chrome + Safari

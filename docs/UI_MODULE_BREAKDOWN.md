@@ -1,56 +1,70 @@
+---
+title: "UI MODULE BREAKDOWN — Creative Research Workbench"
+topic: frontend
+source_type: design
+language: vi
+tags: [react, components, screens, workspace, nextjs, typescript]
+golden: true
+phase: 0
+created_at: 2026-07-03
+---
+
 # UI MODULE BREAKDOWN — Creative Research Workbench
 
-## Module 1: Dashboard / Session List
-- List all research sessions
-- Filter by status, domain, tags
-- Search by keyword
-- Create new session button
-- Session card: title, domain, status, last updated
+## Product Surface
+Single Page App với 2 màn hình chính và 6 stage module trong workspace.
 
-## Module 2: Session Detail
-- Session header: title, domain, status, tags
-- Tab navigation: Problem → Structuring → Retrieval → Ideas → Notebook
-- Progress indicator theo workflow stage
+## Screen 1 — Session List
+- **Header**: app name, quick search, nút tạo session mới
+- **Left filter**: domain, tags, status
+- **Session cards**: title, domain, updated_at, progress stage badge
+- **Empty state**: CTA "Tạo session đầu tiên" + minh họa
 
-## Module 3: Problem Intake Canvas
-- Form fields: goal, constraints, affected entities, failure signals, success criteria
-- Auto-save on change
-- AI clarification prompts (optional)
-- Submit → trigger structuring
+## Screen 2 — Session Workspace
+- **Left sidebar**: workflow stages (intake → synthesis), stage progress indicator
+- **Center canvas**: module theo stage hiện tại (xem Stage Modules)
+- **Right panel**: source excerpts + citations từ retrieval
+- **Top bar**: session title, save state indicator, status badge
 
-## Module 4: Problem Structuring Panel
-- Contradiction map: visual card layout
-- Cause-effect chain: collapsible tree
-- Function model: actor-object pairs
-- Available resources list
+## Stage Modules (Center Canvas)
 
-## Module 5: Source Panel / Knowledge Retrieval
-- Search bar với filter topic
-- Result cards: excerpt, source file, relevance score
-- Bookmark chunk to session
-- View full document
+### Stage 1 — Intake
+- Raw problem input (textarea lớn)
+- Clarifying questions (LLM-generated, user answers)
+- Structured preview của ProblemFrame
 
-## Module 6: Method Recommender
-- Suggested methods list
-- Each card: method name, rationale, preconditions
-- Expand để xem cited sources
-- Apply method → open Idea Studio
+### Stage 2 — Structuring
+- ProblemFrame card: goal, constraints, affected_entities, failure_signals
+- Contradiction board: technical vs physical
+- Function map (basic)
 
-## Module 7: Idea Studio
-- Candidate solution cards
-- Create solution manually or AI-assisted
-- Comparison matrix: novelty, feasibility, risk, cost, effort
-- Accept/reject solution
+### Stage 3 — Retrieval
+- Search box
+- Results list với excerpt preview
+- Source reference chips
 
-## Module 8: Research Notebook
-- Timeline of notes
-- Note types: insight, hypothesis, decision, question, action
-- Filter by note type
-- Export session as markdown report
+### Stage 4 — Methods
+- Method suggestion cards
+- Rationale text
+- Citation chips trỏ về tài liệu nguồn
 
-## Design Principles
-- Single scroll region per screen
-- Left sidebar: session context
-- Right panel: sources and references
-- Center: main working area
-- Mobile: collapse sidebar to tabs
+### Stage 5 — Ideation
+- Candidate solution board
+- Compare mode (side-by-side)
+- Provenance indicator
+
+### Stage 6 — Evaluation
+- Multi-axis scoring matrix (feasibility, impact, originality, resource_cost)
+- Score visualization (radar chart)
+
+## Supporting Surfaces
+- **Evidence Panel** (right): persistent, shows excerpts từ bất kỳ stage nào
+- **History Panel**: version history của ProblemFrame
+- **Export**: synthesis report (Markdown)
+
+## Tech Stack
+- React 18 + TypeScript
+- Next.js 14 (App Router)
+- TailwindCSS + shadcn/ui
+- Zustand (state management)
+- TanStack Query (API calls)

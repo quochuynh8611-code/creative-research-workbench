@@ -1,79 +1,88 @@
+---
+title: "GHERKIN SCENARIOS — Creative Research Workbench"
+topic: testing
+source_type: bdd
+language: vi
+tags: [gherkin, scenario, feature, bdd, acceptance-test]
+golden: true
+phase: 0
+created_at: 2026-07-03
+---
+
 # GHERKIN SCENARIOS — Creative Research Workbench
 
-## Feature: Research Session Management
+## Feature 1: Tạo research session
 
 ```gherkin
-Feature: Research Session Management
+Feature: Research session management
 
-  Scenario: Create a new research session
-    Given I am on the dashboard
-    When I click "New Session"
-    And I enter title "Improve delivery time for medical equipment"
-    And I select domain "business"
-    Then a new session is created with status "draft"
-    And I am redirected to the session detail page
+  Scenario: Tạo session mới thành công
+    Given người dùng ở màn hình Session List
+    When người dùng nhập title "Cải thiện năng suất nghiên cứu" và domain "research"
+    And người dùng nhấn "Tạo session"
+    Then hệ thống tạo session với status "draft"
+    And người dùng được chuyển đến Session Workspace
 
-  Scenario: Search sessions by keyword
-    Given I have 5 sessions in the system
-    When I search for "delivery time"
-    Then I see only sessions matching the keyword
+  Scenario: Tạo session với title trống
+    Given người dùng ở màn hình Session List
+    When người dùng để trống title và nhấn "Tạo session"
+    Then hệ thống hiển thị lỗi "Title is required"
+    And không có session nào được tạo
 ```
 
-## Feature: Problem Intake
+## Feature 2: Chuẩn hóa bài toán
 
 ```gherkin
-Feature: Problem Intake
+Feature: Problem intake
 
-  Scenario: Complete problem intake form
-    Given I have an active session
-    When I fill in goal: "Reduce delivery time by 30%"
-    And I add constraint: "Budget under 50M VND"
-    And I add affected entity: "Warehouse team"
-    And I add failure signal: "Customer complaints about delay"
-    Then the ProblemFrame is saved
-    And the system proceeds to structuring stage
+  Scenario: Nhận ProblemFrame từ raw statement
+    Given người dùng đang ở stage Intake
+    When người dùng nhập "Máy của tôi chạy chậm khi có nhiều người dùng cùng lúc"
+    And người dùng nhấn "Phân tích"
+    Then hệ thống trả về ProblemFrame với goal, constraints và affected_entities
+    And completeness_score >= 0.6
+
+  Scenario: Bài toán quá mơ hồ
+    Given người dùng đang ở stage Intake
+    When người dùng nhập "Mọi thứ không ổn"
+    Then hệ thống trả về clarifying questions
+    And không tạo ProblemFrame cho đến khi câu hỏi được trả lời
 ```
 
-## Feature: Problem Structuring
+## Feature 3: Nhận diện mâu thuẫn
 
 ```gherkin
-Feature: Problem Structuring
+Feature: Contradiction analysis
 
-  Scenario: Extract contradiction from problem frame
-    Given I have a completed ProblemFrame
-    When the system runs contradiction extraction
-    Then I see at least one Contradiction with improving_parameter and worsening_parameter
-    And each contradiction has a context explanation
-
-  Scenario: Build cause-effect chain
-    Given I have identified failure signals
-    When the system builds cause-effect chain
-    Then I see a tree of cause nodes
-    And each node links to potential root causes
+  Scenario: Extract technical contradiction
+    Given đã có ProblemFrame với goal và constraints
+    When hệ thống phân tích mâu thuẫn
+    Then trả về ít nhất 1 technical contradiction
+    And mỗi contradiction có improving_parameter và worsening_parameter
+    And có suggested_principles từ TRIZ matrix
 ```
 
-## Feature: Knowledge Retrieval
+## Feature 4: Dựng chuỗi nhân quả
 
 ```gherkin
-Feature: Knowledge Retrieval
+Feature: Cause-effect analysis
 
-  Scenario: Retrieve relevant chunks for a contradiction
-    Given I have a Contradiction object
-    When the system runs hybrid retrieval
-    Then I see at least 3 relevant knowledge chunks
-    And each chunk shows excerpt and source file
-    And chunks are ranked by relevance_score
+  Scenario: Xây 5-Why chain
+    Given đã có ProblemFrame với failure_signals
+    When người dùng chọn phương pháp "5-Why"
+    Then hệ thống trả về CauseEffectChain với ít nhất 3 levels
+    And root_causes được xác định
 ```
 
-## Feature: Method Recommendation
+## Feature 5: Đề xuất phương pháp phù hợp
 
 ```gherkin
-Feature: Method Recommendation
+Feature: Method recommendation
 
-  Scenario: Get TRIZ method suggestions
-    Given I have a structured ProblemFrame
-    When I request method recommendations
-    Then I see at least 2 MethodSuggestion objects
-    And each suggestion includes rationale and cited_sources
-    And suggestions are ranked by ranking_score
+  Scenario: Gợi ý TRIZ method từ contradiction type
+    Given đã có Contradiction với type "technical"
+    When hệ thống generate method suggestions
+    Then trả về >= 3 method suggestions
+    And mỗi suggestion có rationale và citation_ids
+    And citation_ids trỏ về tài liệu trong knowledge base
 ```

@@ -1,50 +1,57 @@
+---
+title: "IMPLEMENTATION ROADMAP — Creative Research Workbench"
+topic: roadmap
+source_type: planning
+language: vi
+tags: [sprint, phase, checklist, milestone, mvp]
+golden: true
+phase: 0
+created_at: 2026-07-03
+---
+
 # IMPLEMENTATION ROADMAP — Creative Research Workbench
 
+## Goal
+Xây dựng MVP theo từng phase có Definition of Done rõ ràng. Mỗi phase độc lập và có thể test được.
+
 ## Phase 0 — Discovery
-- [ ] Kiểm kê và gắn nhãn toàn bộ kho markdown.
-- [ ] Chuẩn hóa taxonomy: contradiction, function, evolution, business, case-study, learning.
-- [ ] Chọn 10 tài liệu vàng để làm benchmark retrieval.
+- [x] Kiểm kê và gắn nhãn toàn bộ kho markdown
+- [x] Chuẩn hóa taxonomy: contradiction, function, evolution, business, case-study, learning
+- [x] Chọn 10 tài liệu vàng làm benchmark retrieval
+- [x] Tạo `docs/knowledge-inventory.md`
+- [x] Thêm YAML frontmatter vào 10 golden documents
 
 ## Phase 1 — Domain & Spec
-- [ ] Chốt PRODUCT SPEC.
-- [ ] Chốt ADR-001.
-- [ ] Chốt domain model.
-- [ ] Chốt 10 kịch bản Gherkin đầu tiên.
+- [ ] Khóa DOMAIN_SCHEMA.md (entity + field)
+- [ ] Khóa API_CONTRACTS.md (endpoint + payload)
+- [ ] Viết GHERKIN scenarios cho các user flow chính
+- [ ] Viết FAILING_INTEGRATION_TEST_SPEC
+- [ ] Định nghĩa Definition of Done cho mỗi phase
 
 ## Phase 2 — Ingestion & Retrieval
-- [ ] Xây pipeline parse markdown.
-- [ ] Chunk theo section.
-- [ ] Tạo metadata và index full-text.
-- [ ] Tạo vector index.
-- [ ] Viết benchmark retrieval offline.
+- [ ] Viết IngestionService: đọc markdown → parse frontmatter → chunk theo heading
+- [ ] Tạo PostgreSQL schema với pgvector
+- [ ] Tạo vector embeddings (OpenAI hoặc Ollama)
+- [ ] Viết RetrievalService: hybrid search (full-text + vector)
+- [ ] Expose endpoint POST /api/v1/search
+- [ ] Benchmark offline: Recall@5 >= 0.75 trên golden set
 
 ## Phase 3 — Problem Structuring
-- [ ] Thiết kế schema cho ProblemFrame.
-- [ ] Thiết kế contradiction extractor.
-- [ ] Thiết kế cause-effect builder.
-- [ ] Thiết kế function model representation.
+- [ ] Implement ProblemFrame Pydantic model
+- [ ] Viết ProblemStructuringService
+- [ ] Implement ContradictionExtractor
+- [ ] Implement CauseEffectBuilder
+- [ ] API endpoints: POST/GET /problem-frames
 
 ## Phase 4 — Reasoning Workflow
-- [ ] Thiết kế workflow stages và state machine.
-- [ ] Tạo method recommender.
-- [ ] Tạo idea studio.
-- [ ] Tạo evaluation matrix.
+- [ ] Thiết kế WorkflowEngine state machine
+- [ ] Viết MethodRecommender
+- [ ] Viết IdeaStudio
+- [ ] Viết EvaluationMatrix
+- [ ] API: POST /sessions/{id}/advance
 
 ## Phase 5 — UI Workspace
-- [ ] Session list.
-- [ ] Session detail.
-- [ ] Problem framing canvas.
-- [ ] Source panel.
-- [ ] Idea comparison board.
-- [ ] Research notebook timeline.
-
-## Phase 6 — Verification
-- [ ] Viết integration tests theo Gherkin.
-- [ ] Chạy golden-set evaluation cho retrieval.
-- [ ] Chạy QA với 5 bài toán thật.
-- [ ] Đo citation accuracy và task completion.
-
-## Trade-off Notes
-- Làm nhanh nhất: chatbot + vector search.
-- Làm đúng hơn: workflow engine + structured state + hybrid retrieval.
-- **Hướng đề xuất**: ưu tiên phương án thứ hai vì phù hợp bản chất sản phẩm nghiên cứu.
+- [ ] Screen: Session List
+- [ ] Screen: Session Workspace (sidebar + canvas + evidence panel)
+- [ ] Stage modules: Intake, Structuring, Retrieval, Methods, Ideation, Evaluation
+- [ ] Integration với backend API
