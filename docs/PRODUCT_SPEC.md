@@ -30,30 +30,35 @@ Biến kho tài liệu hiện có thành một research copilot có workflow, gi
 - Người dùng cá nhân muốn áp dụng phương pháp sáng tạo vào quyết định đời sống.
 
 ## 5. Jobs To Be Done
-- Khi tôi có một vấn đề phức tạp nhưng chưa biết bắt đầu từ đâu → hệ thống ép vấn đề về dạng có cấu trúc.
-- Khi tôi không biết nên dùng nguyên tắc hay công cụ nào → hệ thống đề xuất phương pháp phù hợp.
-- Khi tôi tìm ý tưởng mới → xem các case tương tự để suy luận theo phép loại suy.
-- Khi tôi học TRIZ → vừa học vừa thực hành trên vấn đề thực tế.
-- Khi tôi đã nghiên cứu một lần → lưu lại reasoning trail để tái sử dụng.
+- Khi tôi có một vấn đề phức tạp nhưng chưa biết bắt đầu từ đâu, tôi muốn hệ thống ép vấn đề về dạng có cấu trúc.
+- Khi tôi không biết nên dùng nguyên tắc hay công cụ nào, tôi muốn hệ thống đề xuất phương pháp phù hợp.
+- Khi tôi tìm ý tưởng mới, tôi muốn xem các case tương tự.
+- Khi tôi học TRIZ, tôi muốn vừa học vừa thực hành.
+- Khi tôi đã nghiên cứu một lần, tôi muốn lưu reasoning trail để tái sử dụng.
 
 ## 6. Core Value Proposition
-Một không gian làm việc nghiên cứu sáng tạo kết hợp tri thức TRIZ với workflow phân tích vấn đề, giúp biến "đọc tài liệu" thành "tạo phương án hành động".
+Một không gian làm việc nghiên cứu sáng tạo kết hợp tri thức TRIZ với workflow phân tích vấn đề.
 
-## 7. Scope — MVP In Scope
-- Nhập và quản lý research session.
+## 7. Scope
+### 7.1 In Scope for MVP
+- Research session management.
 - Problem intake theo biểu mẫu có cấu trúc.
 - Phân tích contradiction, function, cause-effect.
-- Gợi ý công cụ hoặc nguyên tắc TRIZ phù hợp.
+- Gợi ý công cụ TRIZ phù hợp.
 - Semantic retrieval trên kho tài liệu nội bộ.
-- Gắn citation/source về đúng tài liệu.
-- Lưu notes, hypothesis, candidate solutions và decision log.
-- Chế độ học theo chủ đề từ kho tri thức sẵn có.
+- Citation/source rõ ràng.
+- Research notebook.
+
+### 7.2 Out of Scope for MVP
+- Collaboration thời gian thực đa người dùng.
+- Tự động hóa ARIZ hoàn chỉnh.
+- Fine-tuned model riêng.
 
 ## 8. Product Principles
 - **Read-before-write**: luôn phân tích tài liệu nguồn trước khi đưa ra gợi ý.
 - **Structured over vague**: ép người dùng làm rõ mục tiêu, ràng buộc, xung đột.
 - **Evidence-backed**: mọi gợi ý đều kèm nguồn từ kho tri thức.
-- **Human-in-the-loop**: hệ thống hỗ trợ tư duy, không thay thế phán đoán.
+- **Human-in-the-loop**: hệ thống hỗ trợ tư duy, không thay thế phán đoán chuyên gia.
 - **Reusable reasoning**: mỗi phiên nghiên cứu để lại dấu vết tư duy tái sử dụng được.
 
 ## 9. Main User Journey

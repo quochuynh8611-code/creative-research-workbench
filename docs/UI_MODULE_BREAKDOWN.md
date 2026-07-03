@@ -1,31 +1,56 @@
 # UI MODULE BREAKDOWN — Creative Research Workbench
 
-## Product Surface
-Ứng dụng theo mô hình web app workspace, không phải landing page hay chatbot đơn màn hình.
+## Module 1: Dashboard / Session List
+- List all research sessions
+- Filter by status, domain, tags
+- Search by keyword
+- Create new session button
+- Session card: title, domain, status, last updated
 
-## Screen 1 — Session List
-- Header: app name, quick search, create session.
-- Left filter rail: domain, tags, status.
-- Main list: session cards với title, domain, updated_at, progress stage.
-- Right summary panel: recently opened, suggested next actions.
+## Module 2: Session Detail
+- Session header: title, domain, status, tags
+- Tab navigation: Problem → Structuring → Retrieval → Ideas → Notebook
+- Progress indicator theo workflow stage
 
-## Screen 2 — Session Workspace
-### Layout
-- Left sidebar: stages của workflow.
-- Center canvas: nội dung stage hiện tại.
-- Right evidence panel: source excerpts, citations, linked notes.
-- Top bar: session title, save state, domain, status.
+## Module 3: Problem Intake Canvas
+- Form fields: goal, constraints, affected entities, failure signals, success criteria
+- Auto-save on change
+- AI clarification prompts (optional)
+- Submit → trigger structuring
 
-## Stage Modules
-1. **Intake**: Raw problem input, clarifying questions, structured form preview.
-2. **Structuring**: ProblemFrame card, contradiction board, function map, cause-effect graph.
-3. **Retrieval**: Search box, results list, filters, excerpt preview.
-4. **Methods**: Method suggestion cards, rationale, preconditions, citation chips.
-5. **Ideation**: Candidate solution board, compare mode, mechanism summary.
-6. **Evaluation**: Multi-axis scoring matrix, decision notes, shortlist vs reject.
-7. **Synthesis**: Session summary, action plan, open questions, export-ready note.
+## Module 4: Problem Structuring Panel
+- Contradiction map: visual card layout
+- Cause-effect chain: collapsible tree
+- Function model: actor-object pairs
+- Available resources list
 
-## Supporting Surfaces
-- **Research Notebook Drawer**: Chronological notes, filter by type, quick add.
-- **Timeline / Version History**: ProblemFrame versions, major decisions, snapshot restore.
-- **Learning Mode**: Study path từ kho tri thức theo chủ đề.
+## Module 5: Source Panel / Knowledge Retrieval
+- Search bar với filter topic
+- Result cards: excerpt, source file, relevance score
+- Bookmark chunk to session
+- View full document
+
+## Module 6: Method Recommender
+- Suggested methods list
+- Each card: method name, rationale, preconditions
+- Expand để xem cited sources
+- Apply method → open Idea Studio
+
+## Module 7: Idea Studio
+- Candidate solution cards
+- Create solution manually or AI-assisted
+- Comparison matrix: novelty, feasibility, risk, cost, effort
+- Accept/reject solution
+
+## Module 8: Research Notebook
+- Timeline of notes
+- Note types: insight, hypothesis, decision, question, action
+- Filter by note type
+- Export session as markdown report
+
+## Design Principles
+- Single scroll region per screen
+- Left sidebar: session context
+- Right panel: sources and references
+- Center: main working area
+- Mobile: collapse sidebar to tabs

@@ -47,4 +47,4 @@
 ## Trade-off Notes
 - Làm nhanh nhất: chatbot + vector search.
 - Làm đúng hơn: workflow engine + structured state + hybrid retrieval.
-- Hướng đề xuất: ưu tiên phương án thứ hai vì phù hợp bản chất sản phẩm nghiên cứu.
+- **Hướng đề xuất**: ưu tiên phương án thứ hai vì phù hợp bản chất sản phẩm nghiên cứu.

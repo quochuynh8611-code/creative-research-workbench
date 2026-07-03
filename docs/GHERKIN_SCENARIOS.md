@@ -6,15 +6,17 @@
 Feature: Research Session Management
 
   Scenario: Create a new research session
-    Given I am a logged-in researcher
-    When I create a session with title "Cải thiện năng suất nghiên cứu" and domain "research"
-    Then the session should be created with status "draft"
-    And the session should have a unique ID
+    Given I am on the dashboard
+    When I click "New Session"
+    And I enter title "Improve delivery time for medical equipment"
+    And I select domain "business"
+    Then a new session is created with status "draft"
+    And I am redirected to the session detail page
 
-  Scenario: List sessions with filter
-    Given I have 5 sessions (3 active, 2 archived)
-    When I filter by status "active"
-    Then I should see exactly 3 sessions
+  Scenario: Search sessions by keyword
+    Given I have 5 sessions in the system
+    When I search for "delivery time"
+    Then I see only sessions matching the keyword
 ```
 
 ## Feature: Problem Intake
@@ -22,17 +24,32 @@ Feature: Research Session Management
 ```gherkin
 Feature: Problem Intake
 
-  Scenario: Submit a problem frame with complete data
+  Scenario: Complete problem intake form
     Given I have an active session
-    When I submit a problem frame with goal, constraints and success criteria
-    Then the system returns a completeness_score >= 0.80
-    And the system returns a normalized_problem_statement
+    When I fill in goal: "Reduce delivery time by 30%"
+    And I add constraint: "Budget under 50M VND"
+    And I add affected entity: "Warehouse team"
+    And I add failure signal: "Customer complaints about delay"
+    Then the ProblemFrame is saved
+    And the system proceeds to structuring stage
+```
 
-  Scenario: Request clarifying questions
-    Given I submit only a raw_problem_statement
-    When I call the clarify endpoint
-    Then the system returns 3-5 targeted questions
-    And each question targets a missing field
+## Feature: Problem Structuring
+
+```gherkin
+Feature: Problem Structuring
+
+  Scenario: Extract contradiction from problem frame
+    Given I have a completed ProblemFrame
+    When the system runs contradiction extraction
+    Then I see at least one Contradiction with improving_parameter and worsening_parameter
+    And each contradiction has a context explanation
+
+  Scenario: Build cause-effect chain
+    Given I have identified failure signals
+    When the system builds cause-effect chain
+    Then I see a tree of cause nodes
+    And each node links to potential root causes
 ```
 
 ## Feature: Knowledge Retrieval
@@ -40,17 +57,12 @@ Feature: Problem Intake
 ```gherkin
 Feature: Knowledge Retrieval
 
-  Scenario: Retrieve relevant documents for a query
-    Given the knowledge base is indexed
-    When I query "contradiction in technical systems"
-    Then I receive at least 3 results
-    And each result has excerpt, source_title and source_ref
-    And at least 1 result is from the TRIZ-40-principles document
-
-  Scenario: Filter retrieval by topic
-    Given the knowledge base is indexed
-    When I query with filter topic "business"
-    Then all results have topic tag "business"
+  Scenario: Retrieve relevant chunks for a contradiction
+    Given I have a Contradiction object
+    When the system runs hybrid retrieval
+    Then I see at least 3 relevant knowledge chunks
+    And each chunk shows excerpt and source file
+    And chunks are ranked by relevance_score
 ```
 
 ## Feature: Method Recommendation
@@ -58,9 +70,10 @@ Feature: Knowledge Retrieval
 ```gherkin
 Feature: Method Recommendation
 
-  Scenario: Recommend methods for a technical contradiction
-    Given I have a contradiction of type "technical"
-    When I request method suggestions
-    Then the system returns at least 2 TRIZ principles
-    And each suggestion has a rationale and cited_sources
+  Scenario: Get TRIZ method suggestions
+    Given I have a structured ProblemFrame
+    When I request method recommendations
+    Then I see at least 2 MethodSuggestion objects
+    And each suggestion includes rationale and cited_sources
+    And suggestions are ranked by ranking_score
 ```

@@ -1,32 +1,40 @@
 # TEST PLAN — Creative Research Workbench
 
 ## Test Strategy
-Test theo từng layer: unit tests cho domain logic, integration tests theo Gherkin scenarios, và golden-set evaluation cho retrieval quality.
 
-## Layer 1 — Unit Tests
-- ProblemFrame validation logic.
-- Contradiction extractor.
-- Completeness score calculator.
-- Method recommender mapping.
+### Level 1: Unit Tests
+- Domain entities: ProblemFrame, Contradiction, CandidateSolution
+- Schema validation: Pydantic models
+- Business rules: contradiction types, scoring logic
 
-## Layer 2 — Integration Tests (theo Gherkin)
-- Session creation và intake flow.
-- Problem structuring pipeline.
-- Retrieval với known queries.
-- Method suggestion cho từng loại contradiction.
+### Level 2: Integration Tests
+- API endpoints theo API_CONTRACTS.md
+- Workflow stage transitions
+- Retrieval pipeline: parse → chunk → embed → search
+- Database CRUD operations
 
-## Layer 3 — Golden-Set Retrieval Evaluation
-- 10 tài liệu vàng được chọn làm benchmark.
-- Đo Recall@5, Precision@5 cho hybrid retrieval.
-- So sánh full-text vs vector vs hybrid.
+### Level 3: Gherkin/BDD Tests
+- Các scenario trong GHERKIN_SCENARIOS.md
+- Happy path + edge cases
+- Error handling flows
 
-## Layer 4 — End-to-End QA
-- 5 bài toán thật: kỹ thuật, kinh doanh, giáo dục, cá nhân, nghiên cứu.
-- Đo: citation accuracy, task completion rate, user satisfaction.
+### Level 4: Retrieval Quality Tests
+- Golden-set: 10 tài liệu benchmark
+- Metrics: Recall@5, Precision@5, MRR
+- Threshold: Recall@5 >= 0.80
 
-## Definition of Done cho MVP
-- [ ] Tất cả Gherkin scenarios PASS.
-- [ ] Retrieval Recall@5 >= 0.80.
-- [ ] Citation accuracy >= 0.90.
-- [ ] Task completion >= 0.75 trên 5 bài toán thật.
-- [ ] Không có lỗi P0/P1 mở trong production.
+### Level 5: QA End-to-End
+- 5 bài toán thật: kỹ thuật, kinh doanh, giáo dục, cá nhân, nghiên cứu
+- Đo citation accuracy
+- Đo task completion rate
+
+## Test Environment
+- Unit + Integration: pytest + SQLite in-memory
+- E2E: Docker Compose + PostgreSQL
+- LLM calls: mock responses cho deterministic tests
+
+## Definition of Done
+- Unit test coverage >= 80% cho domain layer
+- Tất cả Gherkin scenarios có test tương ứng
+- Retrieval Recall@5 >= 0.80 trên golden-set
+- Không có critical bug trong 5 QA sessions
