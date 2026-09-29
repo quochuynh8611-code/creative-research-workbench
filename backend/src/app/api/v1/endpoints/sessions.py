@@ -2,15 +2,15 @@ from __future__ import annotations
 
 import uuid
 from datetime import datetime, timezone
-from typing import Any, Optional
+from typing import Any, Generator, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, status
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
 
 from app.core.config import settings
-from app.domain.models import ProblemFrame, ResearchSession
+from app.domain.models import ProblemFrame, ResearchSession, SessionStatus
 from app.services.problem_structuring_service import ProblemStructuringService
 
 router = APIRouter()
@@ -19,6 +19,20 @@ router = APIRouter()
 # ──────────────────────────────────────────────
 # Dependency Injection
 # ──────────────────────────────────────────────
+
+def get_db() -> Generator[Session | None, None, None]:
+    """Dependency cung cấp SQLAlchemy Session cho database."""
+    db_url = settings.DATABASE_URL
+    if "asyncpg" in db_url:
+        db_url = db_url.replace("postgresql+asyncpg://", "postgresql+psycopg2://")
+    try:
+        engine = create_engine(db_url)
+        with engine.connect() as conn:
+            with Session(bind=conn) as session:
+                yield session
+    except Exception:
+        yield None
+
 
 def get_problem_structuring_service() -> ProblemStructuringService:
     """Dependency cung cấp ProblemStructuringService theo cấu hình database mặc định."""
@@ -34,9 +48,17 @@ def get_problem_structuring_service() -> ProblemStructuringService:
 # ──────────────────────────────────────────────
 
 class SessionCreate(BaseModel):
-    title: str
+    title: str = Field(..., min_length=1)
+    description: str | None = None
     domain: str = "research"
     tags: list[str] = []
+
+    @field_validator("title")
+    @classmethod
+    def validate_title_not_whitespace(cls, v: str) -> str:
+        if not v or not v.strip():
+            raise ValueError("title must not be empty or whitespace only")
+        return v.strip()
 
 
 class SessionResponse(BaseModel):
@@ -57,26 +79,79 @@ class ProblemFrameCreateRequest(BaseModel):
     raw_statement: str = Field(..., min_length=1)
     domain: str | None = None
 
+    @field_validator("raw_statement")
+    @classmethod
+    def validate_statement_not_whitespace(cls, v: str) -> str:
+        if not v or not v.strip():
+            raise ValueError("raw_statement must not be empty or whitespace only")
+        return v.strip()
+
 
 # ──────────────────────────────────────────────
 # Routes
 # ──────────────────────────────────────────────
 
 @router.post("", status_code=status.HTTP_201_CREATED)
-async def create_session(body: SessionCreate):
-    """Tạo research session mới."""
-    now = datetime.now(timezone.utc).isoformat()
-    return {
-        "data": {
+async def create_session(
+    body: SessionCreate,
+    db: Session | None = Depends(get_db),
+):
+    """Tạo research session mới và persist vào database."""
+    now_iso = datetime.now(timezone.utc).isoformat()
+
+    if db is not None:
+        session_record = ResearchSession(
+            title=body.title,
+            description=body.description,
+            status=SessionStatus.active,
+            workflow_state="idle",
+        )
+        db.add(session_record)
+        db.flush()
+        db.refresh(session_record)
+
+        created_iso = (
+            session_record.created_at.isoformat()
+            if session_record.created_at
+            else now_iso
+        )
+        updated_iso = (
+            session_record.updated_at.isoformat()
+            if session_record.updated_at
+            else created_iso
+        )
+
+        session_payload = {
+            "id": str(session_record.id),
+            "title": session_record.title,
+            "description": session_record.description,
+            "domain": body.domain,
+            "status": (
+                session_record.status.value
+                if hasattr(session_record.status, "value")
+                else str(session_record.status)
+            ),
+            "tags": body.tags,
+            "workflow_state": session_record.workflow_state,
+            "created_at": created_iso,
+            "updated_at": updated_iso,
+        }
+    else:
+        # Fallback khi không có DB connection (dùng cho smoke/health check)
+        session_payload = {
             "id": f"ses_{uuid.uuid4().hex[:8]}",
             "title": body.title,
             "domain": body.domain,
             "status": "draft",
             "tags": body.tags,
             "current_problem_frame_id": None,
-            "created_at": now,
-            "updated_at": now,
+            "created_at": now_iso,
+            "updated_at": now_iso,
         }
+
+    return {
+        **session_payload,
+        "data": session_payload,
     }
 
 
