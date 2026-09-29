@@ -38,9 +38,7 @@ from app.domain.models import (
     SearchResult,
 )
 
-# RetrievalService chưa tồn tại — import sẽ raise ImportError (RED state)
-# Khi implement xong, uncomment dòng dưới:
-# from app.services.retrieval_service import RetrievalService
+from app.services.retrieval_service import RetrievalService
 
 
 # ──────────────────────────────────────────────
@@ -243,10 +241,9 @@ class TestRetrievalServiceIT006:
         When: search("mâu thuẫn tốc độ độ tin cậy TRIZ", top_k=5)
         Then: ít nhất 1 kết quả được trả về
         """
-        pytest.skip("RED: RetrievalService not implemented yet — Phase 2 Step 3")
-        # service = RetrievalService(db_session)
-        # results = service.search("mâu thuẫn tốc độ độ tin cậy TRIZ", top_k=5)
-        # assert len(results) >= 1
+        service = RetrievalService(db_session)
+        results = service.search("mâu thuẫn tốc độ độ tin cậy TRIZ", top_k=5)
+        assert len(results) >= 1
 
     def test_search_results_have_required_fields(
         self,
@@ -259,14 +256,13 @@ class TestRetrievalServiceIT006:
         When: search() trả về kết quả
         Then: mỗi SearchResult phải có source_ref và excerpt không rỗng
         """
-        pytest.skip("RED: RetrievalService not implemented yet — Phase 2 Step 3")
-        # service = RetrievalService(db_session)
-        # results = service.search("triz speed reliability", top_k=3)
-        # for r in results:
-        #     assert isinstance(r, SearchResult)
-        #     assert r.source_ref != ""
-        #     assert len(r.excerpt) > 0
-        #     assert 0.0 <= r.score <= 1.0
+        service = RetrievalService(db_session)
+        results = service.search("triz speed reliability", top_k=3)
+        for r in results:
+            assert isinstance(r, SearchResult)
+            assert r.source_ref != ""
+            assert len(r.excerpt) > 0
+            assert 0.0 <= r.score <= 1.0
 
     def test_search_results_sorted_by_score(
         self,
@@ -278,11 +274,10 @@ class TestRetrievalServiceIT006:
         Given: kết quả có nhiều hơn 1 item
         Then: score giảm dần (kết quả tốt nhất đứng đầu)
         """
-        pytest.skip("RED: RetrievalService not implemented yet — Phase 2 Step 3")
-        # service = RetrievalService(db_session)
-        # results = service.search("triz", top_k=5)
-        # scores = [r.score for r in results]
-        # assert scores == sorted(scores, reverse=True)
+        service = RetrievalService(db_session)
+        results = service.search("triz", top_k=5)
+        scores = [r.score for r in results]
+        assert scores == sorted(scores, reverse=True)
 
     def test_search_metadata_includes_golden_flag(
         self,
@@ -296,12 +291,11 @@ class TestRetrievalServiceIT006:
         When: search trả về chunk từ document đó
         Then: result.metadata["golden"] == True
         """
-        pytest.skip("RED: RetrievalService not implemented yet — Phase 2 Step 3")
-        # service = RetrievalService(db_session)
-        # results = service.search("mâu thuẫn", top_k=5)
-        # hit = next((r for r in results if r.document_id == sample_document.id), None)
-        # assert hit is not None
-        # assert hit.metadata.get("golden") is True
+        service = RetrievalService(db_session)
+        results = service.search("mâu thuẫn", top_k=5)
+        hit = next((r for r in results if r.document_id == sample_document.id), None)
+        assert hit is not None
+        assert hit.metadata.get("golden") is True
 
     def test_search_empty_corpus_returns_empty_list(
         self,
@@ -313,10 +307,9 @@ class TestRetrievalServiceIT006:
         When: search() được gọi
         Then: trả về [] không raise exception
         """
-        pytest.skip("RED: RetrievalService not implemented yet — Phase 2 Step 3")
-        # service = RetrievalService(db_session)
-        # results = service.search("bất kỳ truy vấn nào", top_k=5)
-        # assert results == []
+        service = RetrievalService(db_session)
+        results = service.search("bất kỳ truy vấn nào", top_k=5)
+        assert results == []
 
     def test_search_top_k_respected(
         self,
@@ -329,7 +322,6 @@ class TestRetrievalServiceIT006:
         When: search(top_k=2)
         Then: trả về tối đa 2 kết quả
         """
-        pytest.skip("RED: RetrievalService not implemented yet — Phase 2 Step 3")
-        # service = RetrievalService(db_session)
-        # results = service.search("triz", top_k=2)
-        # assert len(results) <= 2
+        service = RetrievalService(db_session)
+        results = service.search("triz", top_k=2)
+        assert len(results) <= 2

@@ -69,11 +69,21 @@ class RetrievalService:
 
     def __init__(
         self,
-        engine: Engine,
+        bind: Engine | Session,
         embedding_client: EmbeddingClient | None = None,
     ) -> None:
-        self.engine = engine
+        if isinstance(bind, Session):
+            self._session: Session | None = bind
+            self._engine: Engine | None = None
+        else:
+            self._session = None
+            self._engine = bind
         self.embedding_client = embedding_client or MockEmbeddingClient()
+
+    @property
+    def engine(self) -> Engine | None:
+        """Thuộc tính engine hỗ trợ backward compatibility."""
+        return self._engine
 
     # ──────────────────────────────────────────
     # Public API
@@ -104,34 +114,59 @@ class RetrievalService:
 
         n_candidates = max(top_k * _CANDIDATE_MULTIPLIER, 20)
 
-        with Session(self.engine) as session:
-            # Leg 1: Full-Text Search
-            fts_rows = self._fts_search(
-                session, query, limit=n_candidates, filters=filters
-            )
-
-            # Leg 2: Vector Search
-            query_vector = self.embedding_client.embed([query])[0]
-            vec_rows = self._vector_search(
-                session, query_vector, limit=n_candidates, filters=filters
-            )
-
-            # RRF Fusion
-            fused_ids = self._rrf_fuse(
-                fts_rows=fts_rows,
-                vec_rows=vec_rows,
-                top_k=top_k,
-            )
-
-            if not fused_ids:
-                return []
-
-            # Hydrate SearchResult objects
-            return self._hydrate(
-                session=session,
-                ranked_ids=fused_ids,
+        if self._session is not None:
+            return self._execute_search(
+                session=self._session,
                 query=query,
+                top_k=top_k,
+                n_candidates=n_candidates,
+                filters=filters,
             )
+
+        with Session(self._engine) as session:
+            return self._execute_search(
+                session=session,
+                query=query,
+                top_k=top_k,
+                n_candidates=n_candidates,
+                filters=filters,
+            )
+
+    def _execute_search(
+        self,
+        session: Session,
+        query: str,
+        top_k: int,
+        n_candidates: int,
+        filters: dict[str, Any] | None,
+    ) -> list[SearchResult]:
+        # Leg 1: Full-Text Search
+        fts_rows = self._fts_search(
+            session, query, limit=n_candidates, filters=filters
+        )
+
+        # Leg 2: Vector Search
+        query_vector = self.embedding_client.embed([query])[0]
+        vec_rows = self._vector_search(
+            session, query_vector, limit=n_candidates, filters=filters
+        )
+
+        # RRF Fusion
+        fused_ids = self._rrf_fuse(
+            fts_rows=fts_rows,
+            vec_rows=vec_rows,
+            top_k=top_k,
+        )
+
+        if not fused_ids:
+            return []
+
+        # Hydrate SearchResult objects
+        return self._hydrate(
+            session=session,
+            ranked_ids=fused_ids,
+            query=query,
+        )
 
     # ──────────────────────────────────────────
     # Leg 1: Full-Text Search
