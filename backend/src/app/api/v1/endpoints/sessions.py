@@ -185,17 +185,95 @@ async def list_sessions(
     domain: Optional[str] = None,
     q: Optional[str] = None,
     limit: int = 20,
+    db: Session | None = Depends(get_db),
 ):
-    """Liệt kê research sessions."""
-    # TODO: implement database query
-    return {"data": [], "meta": {"total": 0}}
+    """Liệt kê research sessions từ database."""
+    if db is None:
+        return {"data": [], "meta": {"total": 0}}
+
+    query = db.query(ResearchSession)
+    if status:
+        query = query.filter(ResearchSession.status == status)
+    if q:
+        query = query.filter(ResearchSession.title.ilike(f"%{q.strip()}%"))
+
+    total_count = query.count()
+    records = query.order_by(ResearchSession.created_at.desc()).limit(limit).all()
+
+    items = []
+    for r in records:
+        items.append({
+            "id": str(r.id),
+            "title": r.title,
+            "description": r.description,
+            "domain": domain or "research",
+            "status": r.status.value if hasattr(r.status, "value") else str(r.status),
+            "workflow_state": r.workflow_state,
+            "created_at": r.created_at.isoformat() if r.created_at else None,
+            "updated_at": r.updated_at.isoformat() if r.updated_at else None,
+        })
+
+    return {
+        "data": items,
+        "meta": {"total": total_count},
+    }
 
 
 @router.get("/{session_id}")
-async def get_session(session_id: str):
-    """Lấy chi tiết một session."""
-    # TODO: implement database query
-    raise HTTPException(status_code=404, detail="Session not found")
+async def get_session(
+    session_id: uuid.UUID,
+    db: Session | None = Depends(get_db),
+):
+    """Lấy chi tiết một session kèm ProblemFrame mới nhất từ database."""
+    if db is None:
+        raise HTTPException(status_code=404, detail="Session not found")
+
+    record = db.query(ResearchSession).filter_by(id=session_id).first()
+    if not record:
+        raise HTTPException(status_code=404, detail=f"ResearchSession with id '{session_id}' not found.")
+
+    frame = (
+        db.query(ProblemFrame)
+        .filter_by(session_id=session_id)
+        .order_by(ProblemFrame.created_at.desc())
+        .first()
+    )
+
+    frame_payload = None
+    if frame:
+        frame_payload = {
+            "id": str(frame.id),
+            "session_id": str(frame.session_id),
+            "raw_statement": frame.raw_statement,
+            "normalized_statement": frame.normalized_statement,
+            "contradiction_type": (
+                frame.contradiction_type.value
+                if hasattr(frame.contradiction_type, "value")
+                else str(frame.contradiction_type)
+            ),
+            "improving_parameter": frame.improving_parameter,
+            "worsening_parameter": frame.worsening_parameter,
+            "domain": frame.domain or "research",
+            "created_at": frame.created_at.isoformat() if frame.created_at else None,
+        }
+
+    session_payload = {
+        "id": str(record.id),
+        "title": record.title,
+        "description": record.description,
+        "domain": "research",
+        "status": record.status.value if hasattr(record.status, "value") else str(record.status),
+        "workflow_state": record.workflow_state,
+        "created_at": record.created_at.isoformat() if record.created_at else None,
+        "updated_at": record.updated_at.isoformat() if record.updated_at else None,
+        "problem_frame": frame_payload,
+        "current_problem_frame": frame_payload,
+    }
+
+    return {
+        **session_payload,
+        "data": session_payload,
+    }
 
 
 @router.post("/{session_id}/problem-frame", status_code=status.HTTP_201_CREATED)
