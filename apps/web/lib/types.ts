@@ -1,33 +1,113 @@
 // Shared TypeScript types mirroring the backend domain models
+// Source of Truth: docs/DOMAIN_SCHEMA.md, docs/API_CONTRACTS.md, backend endpoints
 
 export type DomainType = 'technical' | 'business' | 'education' | 'personal' | 'research'
-export type SessionStatus = 'draft' | 'active' | 'archived'
-export type WorkflowStage = 'intake' | 'structuring' | 'retrieval' | 'ideation' | 'evaluation' | 'synthesis'
+export type SessionStatus = 'active' | 'paused' | 'completed' | 'archived' | 'draft'
+export type WorkflowStage =
+  | 'idle'
+  | 'intake'
+  | 'structuring'
+  | 'retrieval'
+  | 'ideation'
+  | 'evaluation'
+  | 'synthesis'
+  | 'completed'
+
+export type ContradictionType = 'technical' | 'physical' | 'none' | 'unknown'
 export type NoteType = 'insight' | 'hypothesis' | 'decision' | 'question' | 'action'
 export type SolutionStatus = 'candidate' | 'accepted' | 'rejected'
 export type TopicType = 'contradiction' | 'function' | 'evolution' | 'business' | 'case_study' | 'learning'
 
-export interface ResearchSession {
-  id: string
-  title: string
-  problem_statement: string
-  domain: DomainType
-  status: SessionStatus
-  current_stage: WorkflowStage
-  tags: string[]
-  created_at: string
-  updated_at: string
-}
-
 export interface ProblemFrame {
   id: string
   session_id: string
+  raw_statement: string
+  normalized_statement?: string | null
+  contradiction_type: ContradictionType
+  improving_parameter?: string | null
+  worsening_parameter?: string | null
+  domain?: string | null
+  created_at?: string | null
+}
+
+export interface ProblemFrameCreateInput {
+  raw_statement: string
+  domain?: string | null
+}
+
+export interface ResearchSession {
+  id: string
+  title: string
+  description?: string | null
+  domain: DomainType | string
+  status: SessionStatus
+  workflow_state?: WorkflowStage
+  tags: string[]
+  created_at: string
+  updated_at: string
+  problem_frame?: ProblemFrame | null
+  // UI compatibility aliases
+  current_stage?: WorkflowStage
+  problem_statement?: string
+}
+
+export interface SessionListResponse {
+  data: ResearchSession[]
+  meta: { total: number }
+}
+
+export interface SessionDetailResponse extends ResearchSession {}
+
+export interface CreateSessionInput {
+  title: string
+  description?: string | null
+  domain?: string
+  tags?: string[]
+}
+
+export interface RecommendedMethod {
+  id: number
+  principle_id: number
+  principle?: number
+  title: string
+  description: string
+}
+
+export interface NextStepResponse {
+  session_id: string
+  previous_state: string
+  current_state: string
+  workflow_state: string
+  next_step: string
+  recommended_methods: RecommendedMethod[]
+}
+
+export interface SearchRequest {
+  query: string
+  top_k?: number
+  filters?: Record<string, any>
+}
+
+export interface SearchResultItem {
+  chunk_id: string
+  source_ref: string
+  excerpt: string
+  score: number
+  metadata: Record<string, any>
+}
+
+export interface SearchResponse {
+  results: SearchResultItem[]
+  latency_ms: number
+}
+
+// UI Draft & Legacy types (kept for backward compatibility with existing components)
+export interface ProblemIntakeDraft {
   goal: string
   constraints: string[]
   affected_entities: string[]
   failure_signals: string[]
   success_criteria: string[]
-  contradictions: Contradiction[]
 }
 
 export interface Contradiction {
