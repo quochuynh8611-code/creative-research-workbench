@@ -11,7 +11,13 @@ from sqlalchemy.orm import Session
 
 from app.core.config import settings
 from app.domain.models import ProblemFrame, ResearchSession, SessionStatus
+from app.services.method_recommender import MethodRecommender
 from app.services.problem_structuring_service import ProblemStructuringService
+from app.services.workflow_engine import (
+    InvalidTransitionError,
+    WorkflowEngine,
+    WorkflowState,
+)
 
 router = APIRouter()
 
@@ -41,6 +47,24 @@ def get_problem_structuring_service() -> ProblemStructuringService:
         db_url = db_url.replace("postgresql+asyncpg://", "postgresql+psycopg2://")
     engine = create_engine(db_url)
     return ProblemStructuringService(bind=engine)
+
+
+def get_workflow_engine() -> WorkflowEngine:
+    """Dependency cung cấp WorkflowEngine theo cấu hình database mặc định."""
+    db_url = settings.DATABASE_URL
+    if "asyncpg" in db_url:
+        db_url = db_url.replace("postgresql+asyncpg://", "postgresql+psycopg2://")
+    engine = create_engine(db_url)
+    return WorkflowEngine(bind=engine)
+
+
+def get_method_recommender() -> MethodRecommender:
+    """Dependency cung cấp MethodRecommender theo cấu hình database mặc định."""
+    db_url = settings.DATABASE_URL
+    if "asyncpg" in db_url:
+        db_url = db_url.replace("postgresql+asyncpg://", "postgresql+psycopg2://")
+    engine = create_engine(db_url)
+    return MethodRecommender(bind=engine)
 
 
 # ──────────────────────────────────────────────
@@ -231,6 +255,61 @@ async def create_problem_frame_canonical(
         "worsening_parameter": frame.worsening_parameter,
         "domain": frame.domain,
         "created_at": frame.created_at.isoformat() if frame.created_at else None,
+    }
+
+
+@router.post("/{session_id}/next-step", status_code=status.HTTP_200_OK)
+async def next_step(
+    session_id: uuid.UUID,
+    db: Session | None = Depends(get_db),
+    engine: WorkflowEngine = Depends(get_workflow_engine),
+    recommender: MethodRecommender = Depends(get_method_recommender),
+):
+    """
+    Chuyển sang bước nghiên cứu tiếp theo và gợi ý phương pháp giải quyết (FSM next-step).
+    Ref: docs/ADR-001-architecture.md, docs/API_CONTRACTS.md, docs/IMPLEMENTATION_ROADMAP.md
+    """
+    if db is not None:
+        engine = WorkflowEngine(bind=db)
+        recommender = MethodRecommender(bind=db)
+
+    # 1. Kiểm tra session có tồn tại không
+    try:
+        previous_state = engine.get_current_state(session_id)
+    except ValueError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"ResearchSession with id '{session_id}' not found.",
+        )
+
+    # 2. Xác định next state và thực hiện transition
+    target_state = engine.get_next_state(session_id)
+    if target_state:
+        try:
+            current_state = engine.transition(session_id, target_state=target_state)
+        except InvalidTransitionError as e:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail=str(e),
+            )
+    else:
+        current_state = previous_state
+
+    # 3. Gợi ý phương pháp / nguyên tắc TRIZ
+    recommendations = recommender.recommend_methods(session_id)
+
+    payload = {
+        "session_id": str(session_id),
+        "previous_state": previous_state,
+        "current_state": current_state,
+        "workflow_state": current_state,
+        "next_step": current_state,
+        "recommended_methods": recommendations,
+        "principles": recommendations,
+    }
+    return {
+        **payload,
+        "data": payload,
     }
 
 
