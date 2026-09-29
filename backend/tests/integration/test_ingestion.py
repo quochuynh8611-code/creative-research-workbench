@@ -1,130 +1,118 @@
 """
-test_ingestion.py — Failing Integration Tests cho IngestionService
+test_ingestion.py — Integration Tests cho IngestionService
 
-TRAN᩠NG THÁI: RED — tất cả tests dưới đây MUST FAIL khi chưa có implementation.
-Mục tiêu: đưa về GREEN sau khi implement Phase 2.
-
-Coverage:
-  - Ingest 1 golden document thành công
-  - Document record được lưu với đúng metadata (frontmatter)
-  - Chunk + embedding được tạo
-  - Duplicate ingest bị chặn bằng content_hash
+Quy chuẩn:
+  - TDD / Gherkin BDD style
+  - Sử dụng testcontainers (PostgreSQL + pgvector) thông qua db_session fixture
+  - Coverage:
+      1. Ingest markdown có frontmatter tạo Document record với đúng metadata
+      2. Ingest tạo các Chunks có embeddings
+      3. Duplicate ingest bị chặn bằng content_hash (IngestResult.status == 'already_exists')
 """
 from __future__ import annotations
 
 import pathlib
-
 import pytest
-from sqlalchemy import Engine
+from sqlalchemy.orm import Session
 
-from .conftest import DOCS_DIR, GOLDEN_DOCS
+from app.domain.models import Chunk, Document
+from app.services.ingestion_service import IngestionService
 
 
-class TestIngestionService:
-    """
-    Test suite cho IngestionService.
+@pytest.fixture
+def sample_md_file(tmp_path: pathlib.Path) -> pathlib.Path:
+    """Fixture tạo 1 file markdown mẫu có đầy đủ YAML frontmatter hợp lệ."""
+    content = """---
+title: "Kiến trúc hệ thống"
+topic: "architecture"
+source_type: "decision-record"
+language: "vi"
+tags:
+  - architecture
+  - triz
+phase: "2"
+status: "canonical"
+golden: true
+---
 
-    RED: tất cả tests sẽ fail với ImportError hoặc AttributeError
-    cho đến khi `backend/src/app/services/ingestion_service.py` được viết.
-    """
+# Kiến trúc hệ thống
+Đây là tài liệu kiến trúc hệ thống phục vụ cho việc nghiên cứu và tìm kiếm theo TRIZ.
+Mục tiêu là hỗ trợ quy trình phân tích mâu thuẫn kỹ thuật và giải quyết vấn đề sáng tạo.
+"""
+    file_path = tmp_path / "sample_doc.md"
+    file_path.write_text(content, encoding="utf-8")
+    return file_path
 
-    def test_ingest_golden_doc_returns_success(
-        self, db_engine: Engine
-    ) -> None:
-        """
-        RED: ImportError — IngestionService chưa tồn tại.
 
-        Given: file ADR-001-architecture.md tồn tại với YAML frontmatter chuẩn
-        When: gọi IngestionService.ingest(filepath)
-        Then: trả về IngestResult với status="success"
-        """
-        from app.services.ingestion_service import IngestionService  # type: ignore[import]
+def test_ingest_golden_doc_creates_document_record(
+    db_session: Session, sample_md_file: pathlib.Path
+) -> None:
+    """GIVEN: 1 markdown file hợp lệ với frontmatter
+       WHEN: IngestionService.ingest(filepath) được gọi
+       THEN: Document record được tạo trong DB với đúng metadata"""
+    engine = db_session.get_bind()
+    service = IngestionService(engine=engine)
+    result = service.ingest(str(sample_md_file))
 
-        doc_path = str(DOCS_DIR / "ADR-001-architecture.md")
-        service = IngestionService(engine=db_engine)
-        result = service.ingest(doc_path)
+    assert result.status == "success"
+    assert result.document_id is not None
 
-        assert result.status == "success"
-        assert result.document_id is not None
+    doc = db_session.get(Document, result.document_id)
+    assert doc is not None
+    assert doc.title == "Kiến trúc hệ thống"
+    assert doc.topic == "architecture"
+    assert doc.source_type == "decision-record"
+    assert doc.language == "vi"
+    assert "architecture" in doc.tags
+    assert doc.golden is True
+    assert doc.status == "canonical"
+    assert doc.content_hash is not None
 
-    def test_ingest_creates_chunks_with_correct_count(
-        self, db_engine: Engine
-    ) -> None:
-        """
-        RED: ImportError — IngestionService chưa tồn tại.
 
-        Given: file ADR-001-architecture.md (~2.8KB)
-        When: ingest với default chunk_size=512 tokens
-        Then:
-          - chunks_created >= 1
-          - embeddings_created == chunks_created
-          - mỗi chunk có token_count <= 512
-        """
-        from app.services.ingestion_service import IngestionService  # type: ignore[import]
+def test_ingest_creates_chunks_with_embeddings(
+    db_session: Session, sample_md_file: pathlib.Path
+) -> None:
+    """GIVEN: 1 markdown file hợp lệ
+       WHEN: ingest() hoàn thành
+       THEN: >= 1 Chunk record có embedding vector != None"""
+    engine = db_session.get_bind()
+    service = IngestionService(engine=engine)
+    result = service.ingest(str(sample_md_file))
 
-        service = IngestionService(engine=db_engine)
-        result = service.ingest(str(DOCS_DIR / "ADR-001-architecture.md"))
+    assert result.status == "success"
+    assert result.chunks_created >= 1
+    assert result.embeddings_created >= 1
 
-        assert result.chunks_created >= 1
-        assert result.embeddings_created == result.chunks_created
+    chunks = db_session.query(Chunk).filter(Chunk.document_id == result.document_id).all()
+    assert len(chunks) >= 1
+    for chunk in chunks:
+        assert chunk.content is not None
+        assert chunk.token_count > 0
+        assert chunk.embedding is not None
 
-    def test_ingest_parses_frontmatter_into_document_metadata(
-        self, db_engine: Engine
-    ) -> None:
-        """
-        RED: ImportError — IngestionService + Document model chưa tồn tại.
 
-        Given: ADR-001-architecture.md có frontmatter:
-          topic: "architecture", source_type: "decision-record", golden: true
-        When: ingest xong
-        Then: Document record trong DB phải có đúng các field đó
-        """
-        from app.services.ingestion_service import IngestionService  # type: ignore[import]
-        from app.domain.models import Document  # type: ignore[import]
-        from sqlalchemy.orm import Session
+def test_duplicate_ingest_skipped_by_content_hash(
+    db_session: Session, sample_md_file: pathlib.Path
+) -> None:
+    """GIVEN: 1 file đã được ingest
+       WHEN: ingest() được gọi lại với cùng file
+       THEN: IngestResult.status == 'already_exists', không tạo thêm record"""
+    engine = db_session.get_bind()
+    service = IngestionService(engine=engine)
 
-        service = IngestionService(engine=db_engine)
-        result = service.ingest(str(DOCS_DIR / "ADR-001-architecture.md"))
+    # Ingest lần 1
+    result1 = service.ingest(str(sample_md_file))
+    assert result1.status == "success"
 
-        with Session(db_engine) as session:
-            doc = session.get(Document, result.document_id)
-            assert doc is not None
-            assert doc.topic == "architecture"
-            assert doc.source_type == "decision-record"
-            assert doc.golden is True
-            assert doc.status == "canonical"
+    # Ingest lần 2 (cùng file)
+    result2 = service.ingest(str(sample_md_file))
+    assert result2.status == "already_exists"
+    assert result2.document_id == result1.document_id
 
-    def test_duplicate_ingest_skipped_by_content_hash(
-        self, db_engine: Engine
-    ) -> None:
-        """
-        RED: ImportError — IngestionService chưa tồn tại.
+    # Đảm bảo không tạo thêm document record mới
+    doc_count = db_session.query(Document).filter(Document.filepath == str(sample_md_file)).count()
+    assert doc_count == 1
 
-        Given: DOMAIN_SCHEMA.md đã được ingest lần 1
-        When: gọi ingest lần 2 với cùng file
-        Then:
-          - status == "already_exists"
-          - không tạo thêm Document record mới
-          - không tạo thêm Chunk nào
-        """
-        from app.services.ingestion_service import IngestionService  # type: ignore[import]
-        from app.domain.models import Document  # type: ignore[import]
-        from sqlalchemy.orm import Session
-        from sqlalchemy import func, select
-
-        service = IngestionService(engine=db_engine)
-        doc_path = str(DOCS_DIR / "DOMAIN_SCHEMA.md")
-
-        service.ingest(doc_path)  # lần 1
-        result2 = service.ingest(doc_path)  # lần 2
-
-        assert result2.status == "already_exists"
-
-        # Verify: vẫn chỉ có 1 Document record
-        with Session(db_engine) as session:
-            count = session.scalar(
-                select(func.count()).select_from(Document).where(
-                    Document.filepath == doc_path
-                )
-            )
-            assert count == 1
+    # Đảm bảo số chunks không bị nhân đôi
+    chunk_count = db_session.query(Chunk).filter(Chunk.document_id == result1.document_id).count()
+    assert chunk_count == result1.chunks_created

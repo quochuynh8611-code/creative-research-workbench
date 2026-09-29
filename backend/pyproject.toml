@@ -32,12 +32,17 @@ dev = [
     "ruff>=0.4.0",
     "mypy>=1.10.0",
     "testcontainers[postgres]>=4.7.0",
+    "psycopg2-binary>=2.9.0",
 ]
 
 [tool.ruff]
 line-length = 100
 target-version = "py311"
 
+[tool.hatch.build.targets.wheel]
+packages = ["src/app"]
+
 [tool.pytest.ini_options]
+pythonpath = ["src"]
 asyncio_mode = "auto"
 testpaths = ["tests"]

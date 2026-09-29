@@ -12,7 +12,7 @@ from __future__ import annotations
 
 import os
 import pathlib
-from typing import Generator
+from typing import Any, Generator
 
 import pytest
 from sqlalchemy import Engine, create_engine, text
@@ -51,34 +51,9 @@ GOLDEN_QUERIES: list[str] = [
 
 
 @pytest.fixture(scope="session")
-def db_engine() -> Generator[Engine, None, None]:
+def db_engine(sync_engine: Engine, tables: Any) -> Engine:
     """
-    Spin up PostgreSQL 16 + pgvector trong Docker container thực.
-    Schema được tạo từ SQLAlchemy models (sẽ import khi Phase 2 implement xong).
-    
-    RED STATE: fixture này sẽ fail tại `from app.domain.models import Base`
-    cho đến khi models.py được implement.
+    Tái sử dụng sync_engine và tables từ root conftest.py.
+    Tránh spin up container thứ 2 và tránh duplicate DDL lifecycle.
     """
-    try:
-        from testcontainers.postgres import PostgresContainer
-    except ImportError as e:
-        pytest.skip(f"testcontainers không được cài: {e}")
-
-    # Import models — sẽ ImportError khi chưa implement (RED)
-    from app.domain.models import Base  # type: ignore[import]
-
-    with PostgresContainer("pgvector/pgvector:pg16") as pg:
-        engine = create_engine(pg.get_connection_url())
-
-        # Enable pgvector extension
-        with engine.connect() as conn:
-            conn.execute(text("CREATE EXTENSION IF NOT EXISTS vector"))
-            conn.commit()
-
-        # Tạo toàn bộ tables từ SQLAlchemy models
-        Base.metadata.create_all(engine)
-
-        yield engine
-
-        # Teardown: drop all (container sẽ bị xóa cùng)
-        Base.metadata.drop_all(engine)
+    return sync_engine
