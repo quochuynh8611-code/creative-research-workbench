@@ -2,27 +2,12 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from sqlalchemy import create_engine, text
-
 from app.api.v1.router import api_router
 from app.core.config import settings
-from app.domain.models import Base
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Tự động khởi tạo schema database nếu database đã sẵn sàng
-    try:
-        db_url = settings.DATABASE_URL
-        if "asyncpg" in db_url:
-            db_url = db_url.replace("postgresql+asyncpg://", "postgresql+psycopg2://")
-        engine = create_engine(db_url)
-        with engine.connect() as conn:
-            conn.execute(text("CREATE EXTENSION IF NOT EXISTS vector"))
-            conn.commit()
-        Base.metadata.create_all(bind=engine)
-    except Exception:
-        pass
     yield
 
 
