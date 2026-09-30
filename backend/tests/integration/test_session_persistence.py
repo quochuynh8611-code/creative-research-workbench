@@ -108,6 +108,35 @@ async def test_create_session_persists_research_session(
 
 
 @pytest.mark.asyncio
+async def test_create_session_appears_in_list_sessions(db_session: Session):
+    """
+    GIVEN: Tạo session mới qua POST /api/v1/sessions
+    WHEN: Gọi GET /api/v1/sessions
+    THEN: Session mới tạo phải xuất hiện trong danh sách trả về từ list_sessions.
+    """
+    payload = {
+        "title": "Session Persistence List Integration Verification",
+        "description": "Kiểm tra session mới tạo xuất hiện trong list_sessions",
+        "domain": "research",
+        "tags": ["verification", "commit"],
+    }
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        create_resp = await client.post("/api/v1/sessions", json=payload)
+        assert create_resp.status_code == 201
+        created_data = create_resp.json().get("data", create_resp.json())
+        session_id = created_data["id"]
+
+        list_resp = await client.get("/api/v1/sessions")
+        assert list_resp.status_code == 200
+        list_data = list_resp.json().get("data", [])
+
+        matching_session = next((s for s in list_data if s["id"] == session_id), None)
+        assert matching_session is not None, f"Created session {session_id} not found in list_sessions"
+        assert matching_session["title"] == "Session Persistence List Integration Verification"
+
+
+@pytest.mark.asyncio
 async def test_create_session_initializes_workflow_state(
     db_session: Session,
 ):

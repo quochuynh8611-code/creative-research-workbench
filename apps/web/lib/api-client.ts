@@ -95,3 +95,24 @@ export async function searchKnowledge(input: SearchRequest): Promise<SearchRespo
   )
   return response.data.data ?? response.data
 }
+
+/**
+ * 7. Lưu trữ an toàn (soft-delete / archive) một research session.
+ */
+export async function archiveSession(sessionId: string): Promise<ResearchSession> {
+  const response = await apiClient.post<{ data?: ResearchSession } & ResearchSession>(
+    `/api/v1/sessions/${sessionId}/archive`
+  )
+  return response.data.data ?? response.data
+}
+
+/**
+ * 8. Khôi phục một research session đã lưu trữ về trạng thái active.
+ */
+export async function restoreSession(sessionId: string): Promise<ResearchSession> {
+  const response = await apiClient.post<{ data?: ResearchSession } & ResearchSession>(
+    `/api/v1/sessions/${sessionId}/restore`
+  )
+  return response.data.data ?? response.data
+}
+

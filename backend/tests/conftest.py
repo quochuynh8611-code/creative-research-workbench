@@ -25,7 +25,6 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 from sqlalchemy import create_engine, event, text
 from sqlalchemy.orm import Session, sessionmaker
-from testcontainers.postgres import PostgresContainer
 
 from app.domain.models import (
     Base,
@@ -40,34 +39,30 @@ from app.domain.models import (
 )
 
 
-# ──────────────────────────────────────────────
-# PostgreSQL Container — session scope
-# ──────────────────────────────────────────────
-
 @pytest.fixture(scope="session")
-def postgres_container():
-    """
-    Spin up PostgreSQL + pgvector extension.
-    Image: ankane/pgvector — bao gồm sẵn pgvector.
-    """
-    with PostgresContainer(image="ankane/pgvector:latest") as pg:
-        yield pg
-
-
-@pytest.fixture(scope="session")
-def sync_engine(postgres_container: PostgresContainer):
+def sync_engine():
     """SQLAlchemy sync engine — dùng cho DDL và tests đồng bộ."""
-    url = postgres_container.get_connection_url()
-    # testcontainers trả về postgresql+psycopg2://, giữ nguyên
-    engine = create_engine(url, echo=False, pool_pre_ping=True)
+    import os
+    test_db_url = os.environ.get("TEST_DATABASE_URL")
+    if not test_db_url:
+        from testcontainers.postgres import PostgresContainer
+        with PostgresContainer(image="ankane/pgvector:latest") as pg:
+            url = pg.get_connection_url()
+            engine = create_engine(url, echo=False, pool_pre_ping=True)
+            with engine.connect() as conn:
+                conn.execute(text("CREATE EXTENSION IF NOT EXISTS vector"))
+                conn.commit()
+            yield engine
+            engine.dispose()
+            return
 
-    # Bật pgvector extension trước khi create_all
+    engine = create_engine(test_db_url, echo=False, pool_pre_ping=True)
     with engine.connect() as conn:
         conn.execute(text("CREATE EXTENSION IF NOT EXISTS vector"))
         conn.commit()
-
     yield engine
     engine.dispose()
+
 
 
 @pytest.fixture(scope="session")

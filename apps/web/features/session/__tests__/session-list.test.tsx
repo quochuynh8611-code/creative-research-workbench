@@ -4,17 +4,22 @@ import { render, screen, waitFor, fireEvent } from '@testing-library/react'
 import '@testing-library/jest-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { SessionList } from '../session-list'
-import { listSessions, createSession } from '@/lib/api-client'
+import { listSessions, createSession, archiveSession, restoreSession } from '@/lib/api-client'
 import type { ResearchSession, SessionListResponse } from '@/lib/types'
 
 // Mock api-client to avoid actual network calls
 jest.mock('@/lib/api-client', () => ({
   listSessions: jest.fn(),
   createSession: jest.fn(),
+  archiveSession: jest.fn(),
+  restoreSession: jest.fn(),
 }))
 
 const mockedListSessions = listSessions as jest.MockedFunction<typeof listSessions>
 const mockedCreateSession = createSession as jest.MockedFunction<typeof createSession>
+const mockedArchiveSession = archiveSession as jest.MockedFunction<typeof archiveSession>
+const mockedRestoreSession = restoreSession as jest.MockedFunction<typeof restoreSession>
+
 
 function createTestQueryClient() {
   return new QueryClient({
@@ -364,3 +369,133 @@ describe('SessionList Search & Filter Enhancement (Phase 5.3c RED)', () => {
     expect(screen.getByText(/2 sessions/i)).toBeInTheDocument()
   })
 })
+
+describe('SessionList Lifecycle & Safe Deletion (Phase 5.9)', () => {
+  const MOCK_ACTIVE_SESSIONS: ResearchSession[] = [
+    {
+      id: 'session-active-1',
+      title: 'Session Hoạt Động',
+      description: 'Đang nghiên cứu TRIZ',
+      domain: 'technical',
+      status: 'active',
+      workflow_state: 'structuring',
+      tags: ['triz'],
+      created_at: '2026-03-01T10:00:00Z',
+      updated_at: '2026-03-01T12:00:00Z',
+      problem_frame: null,
+    },
+  ]
+
+  const MOCK_ARCHIVED_SESSIONS: ResearchSession[] = [
+    {
+      id: 'session-archived-1',
+      title: 'Session Đã Lưu Trữ',
+      description: 'Nghiên cứu cũ đã xong',
+      domain: 'business',
+      status: 'archived',
+      workflow_state: 'idle',
+      tags: ['archived'],
+      created_at: '2026-02-01T10:00:00Z',
+      updated_at: '2026-02-15T12:00:00Z',
+      problem_frame: null,
+    },
+  ]
+
+  beforeEach(() => {
+    jest.clearAllMocks()
+    mockedListSessions.mockImplementation((params) => {
+      if (params?.status === 'archived') {
+        return Promise.resolve({
+          data: MOCK_ARCHIVED_SESSIONS,
+          meta: { total: 1 },
+        })
+      }
+      return Promise.resolve({
+        data: MOCK_ACTIVE_SESSIONS,
+        meta: { total: 1 },
+      })
+    })
+  })
+
+  it('13. Chuyển đổi qua lại giữa tab Đang hoạt động và Đã lưu trữ', async () => {
+    renderWithClient(<SessionList />)
+
+    await waitFor(() => {
+      expect(screen.getByText('Session Hoạt Động')).toBeInTheDocument()
+    })
+
+    // Click tab "Đã lưu trữ"
+    const archivedTab = screen.getByRole('button', { name: /đã lưu trữ/i })
+    fireEvent.click(archivedTab)
+
+    await waitFor(() => {
+      expect(mockedListSessions).toHaveBeenCalledWith({ status: 'archived' })
+      expect(screen.getByText('Session Đã Lưu Trữ')).toBeInTheDocument()
+    })
+    expect(screen.queryByText('Session Hoạt Động')).not.toBeInTheDocument()
+
+    // Click lại tab "Đang hoạt động"
+    const activeTab = screen.getByRole('button', { name: /đang hoạt động/i })
+    fireEvent.click(activeTab)
+
+    await waitFor(() => {
+      expect(screen.getByText('Session Hoạt Động')).toBeInTheDocument()
+    })
+    expect(screen.queryByText('Session Đã Lưu Trữ')).not.toBeInTheDocument()
+  })
+
+  it('14. Mở modal xác nhận và gọi archiveSession khi người dùng xác nhận lưu trữ', async () => {
+    mockedArchiveSession.mockResolvedValue({
+      ...MOCK_ACTIVE_SESSIONS[0],
+      status: 'archived',
+    })
+
+    renderWithClient(<SessionList />)
+
+    await waitFor(() => {
+      expect(screen.getByText('Session Hoạt Động')).toBeInTheDocument()
+    })
+
+    // Click nút "Lưu trữ" trên card
+    const archiveBtn = screen.getByRole('button', { name: /lưu trữ/i })
+    fireEvent.click(archiveBtn)
+
+    // Modal xác nhận xuất hiện
+    expect(screen.getByText(/bạn có chắc chắn muốn chuyển session/i)).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /xác nhận lưu trữ/i })).toBeInTheDocument()
+
+    // Click "Xác nhận lưu trữ"
+    const confirmBtn = screen.getByRole('button', { name: /xác nhận lưu trữ/i })
+    fireEvent.click(confirmBtn)
+
+    await waitFor(() => {
+      expect(mockedArchiveSession).toHaveBeenCalledWith('session-active-1')
+    })
+  })
+
+  it('15. Gọi restoreSession khi người dùng bấm Khôi phục ở tab Đã lưu trữ', async () => {
+    mockedRestoreSession.mockResolvedValue({
+      ...MOCK_ARCHIVED_SESSIONS[0],
+      status: 'active',
+    })
+
+    renderWithClient(<SessionList />)
+
+    // Sang tab Đã lưu trữ
+    const archivedTab = screen.getByRole('button', { name: /đã lưu trữ/i })
+    fireEvent.click(archivedTab)
+
+    await waitFor(() => {
+      expect(screen.getByText('Session Đã Lưu Trữ')).toBeInTheDocument()
+    })
+
+    // Click "Khôi phục"
+    const restoreBtn = screen.getByRole('button', { name: /khôi phục/i })
+    fireEvent.click(restoreBtn)
+
+    await waitFor(() => {
+      expect(mockedRestoreSession).toHaveBeenCalledWith('session-archived-1')
+    })
+  })
+})
+

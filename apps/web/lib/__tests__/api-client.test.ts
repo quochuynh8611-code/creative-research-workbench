@@ -19,8 +19,11 @@ import {
   createProblemFrame,
   nextStep,
   searchKnowledge,
+  archiveSession,
+  restoreSession,
   apiClient,
 } from '../api-client'
+
 import type {
   CreateSessionInput,
   ProblemFrameCreateInput,
@@ -242,4 +245,51 @@ describe('Frontend API Client Contract Tests (Phase 5.2)', () => {
     expect(result.results[0].source_ref).toBe('docs/ADR-001-architecture.md')
     expect(result.latency_ms).toBe(12.5)
   })
+
+  // 7. Archive Session
+  it('7. archiveSession gọi POST /api/v1/sessions/{id}/archive', async () => {
+    const sessionId = 'd9b2d20b-0001-0000-0000-000000000001'
+    const mockApiResponse = {
+      data: {
+        id: sessionId,
+        title: 'Tối ưu hóa giảm rung bánh răng',
+        status: 'archived',
+        workflow_state: 'idle',
+        created_at: '2026-09-29T10:00:00Z',
+        updated_at: '2026-09-30T10:00:00Z',
+      },
+    }
+
+    const spy = jest.spyOn(apiClient, 'post').mockResolvedValueOnce(mockApiResponse)
+
+    const result = await archiveSession(sessionId)
+
+    expect(spy).toHaveBeenCalledWith(`/api/v1/sessions/${sessionId}/archive`)
+    expect(result.id).toBe(sessionId)
+    expect(result.status).toBe('archived')
+  })
+
+  // 8. Restore Session
+  it('8. restoreSession gọi POST /api/v1/sessions/{id}/restore và trả về status active', async () => {
+    const sessionId = 'd9b2d20b-0001-0000-0000-000000000001'
+    const mockApiResponse = {
+      data: {
+        id: sessionId,
+        title: 'Tối ưu hóa giảm rung bánh răng',
+        status: 'active',
+        workflow_state: 'idle',
+        created_at: '2026-09-29T10:00:00Z',
+        updated_at: '2026-09-30T10:05:00Z',
+      },
+    }
+
+    const spy = jest.spyOn(apiClient, 'post').mockResolvedValueOnce(mockApiResponse)
+
+    const result = await restoreSession(sessionId)
+
+    expect(spy).toHaveBeenCalledWith(`/api/v1/sessions/${sessionId}/restore`)
+    expect(result.id).toBe(sessionId)
+    expect(result.status).toBe('active')
+  })
 })
+

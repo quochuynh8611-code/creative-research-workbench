@@ -13,9 +13,12 @@ import {
   GitBranch,
   X,
   CheckCircle2,
+  Archive,
+  RotateCcw,
+  ArchiveRestore,
 } from 'lucide-react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { listSessions, createSession } from '@/lib/api-client'
+import { listSessions, createSession, archiveSession, restoreSession } from '@/lib/api-client'
 import { DOMAIN_LABELS, STATUS_LABELS, STAGE_LABELS, formatDate } from '@/lib/utils'
 import { cn } from '@/lib/utils'
 import type { DomainType } from '@/lib/types'
@@ -37,6 +40,7 @@ const DOMAIN_OPTIONS: { value: DomainType; label: string }[] = [
 ]
 
 export function SessionList() {
+  const [activeTab, setActiveTab] = useState<'active' | 'archived'>('active')
   const [search, setSearch] = useState('')
   const [isCreating, setIsCreating] = useState(false)
   const [formTitle, setFormTitle] = useState('')
@@ -44,10 +48,11 @@ export function SessionList() {
   const [formDomain, setFormDomain] = useState<DomainType>('technical')
   const [formTags, setFormTags] = useState('')
   const [validationError, setValidationError] = useState<string | null>(null)
+  const [confirmArchiveId, setConfirmArchiveId] = useState<string | null>(null)
 
   const queryClient = useQueryClient()
 
-  // 1. Read Path Query
+  // 1. Read Path Query (Filtered by Active vs Archived)
   const {
     data,
     isLoading,
@@ -55,8 +60,8 @@ export function SessionList() {
     error,
     refetch,
   } = useQuery({
-    queryKey: ['sessions'],
-    queryFn: () => listSessions(),
+    queryKey: ['sessions', activeTab],
+    queryFn: () => listSessions(activeTab === 'archived' ? { status: 'archived' } : undefined),
   })
 
   // 2. Create Path Mutation
@@ -65,6 +70,23 @@ export function SessionList() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['sessions'] })
       handleCloseForm()
+    },
+  })
+
+  // 3. Archive Path Mutation
+  const archiveMutation = useMutation({
+    mutationFn: (sessionId: string) => archiveSession(sessionId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['sessions'] })
+      setConfirmArchiveId(null)
+    },
+  })
+
+  // 4. Restore Path Mutation
+  const restoreMutation = useMutation({
+    mutationFn: (sessionId: string) => restoreSession(sessionId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['sessions'] })
     },
   })
 
@@ -87,6 +109,8 @@ export function SessionList() {
       }) ?? false
     return matchTitle || matchDesc || matchDomain || matchTags
   })
+
+  const sessionToArchive = sessions.find((s) => s.id === confirmArchiveId)
 
   const formatWorkflowState = (state?: string) => {
     if (!state) return null
@@ -158,6 +182,41 @@ export function SessionList() {
             Tạo session mới
           </button>
         )}
+      </div>
+
+      {/* Status Filter Tabs (Active vs Archived) */}
+      <div className="flex items-center gap-2 border-b border-border pb-1">
+        <button
+          type="button"
+          onClick={() => {
+            setActiveTab('active')
+            setSearch('')
+          }}
+          className={cn(
+            'px-4 py-2 text-sm font-medium rounded-t-md transition-colors relative flex items-center gap-2',
+            activeTab === 'active'
+              ? 'text-primary border-b-2 border-primary font-semibold'
+              : 'text-muted-foreground hover:text-foreground'
+          )}
+        >
+          <span>Đang hoạt động</span>
+        </button>
+        <button
+          type="button"
+          onClick={() => {
+            setActiveTab('archived')
+            setSearch('')
+          }}
+          className={cn(
+            'px-4 py-2 text-sm font-medium rounded-t-md transition-colors relative flex items-center gap-2',
+            activeTab === 'archived'
+              ? 'text-primary border-b-2 border-primary font-semibold'
+              : 'text-muted-foreground hover:text-foreground'
+          )}
+        >
+          <Archive className="w-4 h-4" />
+          <span>Đã lưu trữ</span>
+        </button>
       </div>
 
       {/* Inline Creation Panel (Phase 5.3b) */}
@@ -307,6 +366,65 @@ export function SessionList() {
         </div>
       )}
 
+      {/* Confirmation Modal for Safe Archive */}
+      {confirmArchiveId && sessionToArchive && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4">
+          <div className="bg-card border border-border rounded-xl max-w-md w-full p-6 shadow-xl space-y-4 animate-in fade-in zoom-in-95 duration-150">
+            <div className="flex items-start gap-3">
+              <div className="p-2.5 rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400 shrink-0">
+                <Archive className="w-6 h-6" />
+              </div>
+              <div className="space-y-1">
+                <h3 className="text-lg font-semibold">Lưu trữ Research Session</h3>
+                <p className="text-sm text-muted-foreground">
+                  Bạn có chắc chắn muốn chuyển session <span className="font-medium text-foreground">"{sessionToArchive.title}"</span> vào mục Lưu trữ không?
+                </p>
+              </div>
+            </div>
+
+            <p className="text-xs text-muted-foreground bg-muted p-3 rounded-md">
+              💡 Lưu ý: Dữ liệu nghiên cứu, ProblemFrame và Contradiction vẫn được bảo toàn nguyên vẹn và bạn có thể khôi phục lại bất kỳ lúc nào.
+            </p>
+
+            {archiveMutation.isError && (
+              <div className="bg-destructive/10 border border-destructive/20 text-destructive text-sm px-3.5 py-2 rounded-md flex items-center gap-2">
+                <AlertCircle className="w-4 h-4 shrink-0" />
+                <span>{(archiveMutation.error as Error)?.message || 'Không thể lưu trữ session'}</span>
+              </div>
+            )}
+
+            <div className="flex items-center justify-end gap-3 pt-2">
+              <button
+                type="button"
+                onClick={() => setConfirmArchiveId(null)}
+                disabled={archiveMutation.isPending}
+                className="px-4 py-2 border border-input rounded-md text-sm font-medium hover:bg-muted transition-colors disabled:opacity-50"
+              >
+                Hủy bỏ
+              </button>
+              <button
+                type="button"
+                onClick={() => archiveMutation.mutate(confirmArchiveId)}
+                disabled={archiveMutation.isPending}
+                className="inline-flex items-center gap-2 bg-destructive text-destructive-foreground px-4 py-2 rounded-md text-sm font-medium hover:opacity-90 transition-opacity disabled:opacity-50"
+              >
+                {archiveMutation.isPending ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Đang lưu trữ...
+                  </>
+                ) : (
+                  <>
+                    <Archive className="w-4 h-4" />
+                    Xác nhận lưu trữ
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Search Input */}
       <div className="relative">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
@@ -352,10 +470,16 @@ export function SessionList() {
         <div className="text-center py-16 text-muted-foreground space-y-3">
           <Brain className="w-10 h-10 mx-auto mb-3 opacity-40" />
           <p className="font-medium">
-            {sessions.length === 0 ? 'Chưa có session nào' : 'Không tìm thấy session nào'}
+            {activeTab === 'archived'
+              ? 'Không có session nào được lưu trữ'
+              : sessions.length === 0
+              ? 'Chưa có session nào'
+              : 'Không tìm thấy session nào'}
           </p>
           <p className="text-sm mt-1">
-            {sessions.length === 0
+            {activeTab === 'archived'
+              ? 'Các session được lưu trữ an toàn sẽ xuất hiện tại đây'
+              : sessions.length === 0
               ? 'Tạo session đầu tiên để bắt đầu nghiên cứu'
               : 'Thử tìm kiếm với từ khóa khác'}
           </p>
@@ -377,14 +501,18 @@ export function SessionList() {
       {!isLoading && !isError && filtered.length > 0 && (
         <div className="space-y-3">
           {filtered.map((session) => (
-            <Link
+            <div
               key={session.id}
-              href={`/sessions/${session.id}`}
-              className="block bg-card border border-border rounded-lg p-5 hover:border-primary/50 hover:shadow-sm transition-all"
+              className="group relative bg-card border border-border rounded-lg p-5 hover:border-primary/50 hover:shadow-sm transition-all"
             >
               <div className="flex items-start justify-between gap-4">
-                <div className="flex-1 min-w-0">
-                  <h3 className="font-semibold truncate">{session.title}</h3>
+                <Link
+                  href={`/sessions/${session.id}`}
+                  className="flex-1 min-w-0"
+                >
+                  <h3 className="font-semibold truncate group-hover:text-primary transition-colors">
+                    {session.title}
+                  </h3>
                   {session.description && (
                     <p className="text-sm text-muted-foreground mt-1 line-clamp-2">
                       {session.description}
@@ -423,16 +551,56 @@ export function SessionList() {
                         </span>
                       ))}
                   </div>
-                </div>
-                <div className="flex items-center gap-1 text-xs text-muted-foreground shrink-0">
-                  <Clock className="w-3 h-3" />
-                  {formatDate(session.updated_at)}
+                </Link>
+
+                <div className="flex flex-col items-end gap-3 shrink-0">
+                  <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                    <Clock className="w-3 h-3" />
+                    {formatDate(session.updated_at)}
+                  </div>
+
+                  {/* Actions: Archive (for active/draft/completed) or Restore (for archived) */}
+                  {activeTab === 'archived' ? (
+                    <button
+                      type="button"
+                      aria-label="Khôi phục session"
+                      onClick={(e) => {
+                        e.preventDefault()
+                        e.stopPropagation()
+                        restoreMutation.mutate(session.id)
+                      }}
+                      disabled={restoreMutation.isPending}
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium bg-primary/10 text-primary hover:bg-primary hover:text-primary-foreground transition-colors disabled:opacity-50"
+                    >
+                      {restoreMutation.isPending ? (
+                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      ) : (
+                        <RotateCcw className="w-3.5 h-3.5" />
+                      )}
+                      Khôi phục
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      aria-label="Lưu trữ session"
+                      onClick={(e) => {
+                        e.preventDefault()
+                        e.stopPropagation()
+                        setConfirmArchiveId(session.id)
+                      }}
+                      className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors opacity-80 group-hover:opacity-100"
+                    >
+                      <Archive className="w-3.5 h-3.5" />
+                      Lưu trữ
+                    </button>
+                  )}
                 </div>
               </div>
-            </Link>
+            </div>
           ))}
         </div>
       )}
     </div>
   )
 }
+

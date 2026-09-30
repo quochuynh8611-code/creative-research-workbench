@@ -26,45 +26,43 @@ router = APIRouter()
 # Dependency Injection
 # ──────────────────────────────────────────────
 
-def get_db() -> Generator[Session | None, None, None]:
+_engine = None
+
+
+def get_engine():
+    global _engine
+    if _engine is None:
+        db_url = settings.DATABASE_URL
+        if "asyncpg" in db_url:
+            db_url = db_url.replace("postgresql+asyncpg://", "postgresql+psycopg2://")
+        _engine = create_engine(db_url, pool_pre_ping=True)
+    return _engine
+
+
+def get_db() -> Generator[Session, None, None]:
     """Dependency cung cấp SQLAlchemy Session cho database."""
-    db_url = settings.DATABASE_URL
-    if "asyncpg" in db_url:
-        db_url = db_url.replace("postgresql+asyncpg://", "postgresql+psycopg2://")
+    engine = get_engine()
+    session = Session(bind=engine)
     try:
-        engine = create_engine(db_url)
-        with engine.connect() as conn:
-            with Session(bind=conn) as session:
-                yield session
-    except Exception:
-        yield None
+        yield session
+    finally:
+        session.close()
 
 
 def get_problem_structuring_service() -> ProblemStructuringService:
     """Dependency cung cấp ProblemStructuringService theo cấu hình database mặc định."""
-    db_url = settings.DATABASE_URL
-    if "asyncpg" in db_url:
-        db_url = db_url.replace("postgresql+asyncpg://", "postgresql+psycopg2://")
-    engine = create_engine(db_url)
-    return ProblemStructuringService(bind=engine)
+    return ProblemStructuringService(bind=get_engine())
 
 
 def get_workflow_engine() -> WorkflowEngine:
     """Dependency cung cấp WorkflowEngine theo cấu hình database mặc định."""
-    db_url = settings.DATABASE_URL
-    if "asyncpg" in db_url:
-        db_url = db_url.replace("postgresql+asyncpg://", "postgresql+psycopg2://")
-    engine = create_engine(db_url)
-    return WorkflowEngine(bind=engine)
+    return WorkflowEngine(bind=get_engine())
 
 
 def get_method_recommender() -> MethodRecommender:
     """Dependency cung cấp MethodRecommender theo cấu hình database mặc định."""
-    db_url = settings.DATABASE_URL
-    if "asyncpg" in db_url:
-        db_url = db_url.replace("postgresql+asyncpg://", "postgresql+psycopg2://")
-    engine = create_engine(db_url)
-    return MethodRecommender(bind=engine)
+    return MethodRecommender(bind=get_engine())
+
 
 
 # ──────────────────────────────────────────────
@@ -132,6 +130,7 @@ async def create_session(
         )
         db.add(session_record)
         db.flush()
+        db.commit()
         db.refresh(session_record)
 
         created_iso = (
@@ -194,6 +193,10 @@ async def list_sessions(
     query = db.query(ResearchSession)
     if status:
         query = query.filter(ResearchSession.status == status)
+    else:
+        # Phase 5.9 spec: Mặc định GET /api/v1/sessions phải ẩn archived
+        query = query.filter(ResearchSession.status != SessionStatus.archived)
+
     if q:
         query = query.filter(ResearchSession.title.ilike(f"%{q.strip()}%"))
 
@@ -217,6 +220,108 @@ async def list_sessions(
         "data": items,
         "meta": {"total": total_count},
     }
+
+
+@router.post("/{session_id}/archive", status_code=status.HTTP_200_OK)
+async def archive_session(
+    session_id: uuid.UUID,
+    db: Session | None = Depends(get_db),
+):
+    """
+    Lưu trữ an toàn (soft-delete) một ResearchSession.
+    Ref: docs/PHASE_5.9_SESSION_LIFECYCLE_SPEC.md
+    """
+    if db is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Database session not available")
+
+    record = db.query(ResearchSession).filter_by(id=session_id).first()
+    if not record:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"ResearchSession with id '{session_id}' not found.",
+        )
+
+    current_status = (
+        record.status.value
+        if hasattr(record.status, "value")
+        else str(record.status)
+    )
+    if current_status == SessionStatus.archived.value:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Session is already archived.",
+        )
+
+    record.status = SessionStatus.archived
+    db.flush()
+    db.commit()
+    db.refresh(record)
+
+    payload = {
+        "id": str(record.id),
+        "title": record.title,
+        "description": record.description,
+        "status": record.status.value if hasattr(record.status, "value") else str(record.status),
+        "workflow_state": record.workflow_state,
+        "created_at": record.created_at.isoformat() if record.created_at else None,
+        "updated_at": record.updated_at.isoformat() if record.updated_at else None,
+    }
+    return {
+        **payload,
+        "data": payload,
+    }
+
+
+@router.post("/{session_id}/restore", status_code=status.HTTP_200_OK)
+async def restore_session(
+    session_id: uuid.UUID,
+    db: Session | None = Depends(get_db),
+):
+    """
+    Khôi phục ResearchSession đã lưu trữ về trạng thái 'active'.
+    Ref: docs/PHASE_5.9_SESSION_LIFECYCLE_SPEC.md
+    """
+    if db is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Database session not available")
+
+    record = db.query(ResearchSession).filter_by(id=session_id).first()
+    if not record:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"ResearchSession with id '{session_id}' not found.",
+        )
+
+    current_status = (
+        record.status.value
+        if hasattr(record.status, "value")
+        else str(record.status)
+    )
+    if current_status != SessionStatus.archived.value:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Session is not archived (current status: '{current_status}').",
+        )
+
+    # Khóa source of truth Phase 5.9: Always restore to active
+    record.status = SessionStatus.active
+    db.flush()
+    db.commit()
+    db.refresh(record)
+
+    payload = {
+        "id": str(record.id),
+        "title": record.title,
+        "description": record.description,
+        "status": record.status.value if hasattr(record.status, "value") else str(record.status),
+        "workflow_state": record.workflow_state,
+        "created_at": record.created_at.isoformat() if record.created_at else None,
+        "updated_at": record.updated_at.isoformat() if record.updated_at else None,
+    }
+    return {
+        **payload,
+        "data": payload,
+    }
+
 
 
 @router.get("/{session_id}")
