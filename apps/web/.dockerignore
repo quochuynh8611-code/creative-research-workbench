@@ -1,0 +1,4 @@
+node_modules
+.next
+.swc
+tsconfig.tsbuildinfo

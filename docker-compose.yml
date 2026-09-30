@@ -8,8 +8,8 @@ services:
       POSTGRES_USER: crw_user
       POSTGRES_PASSWORD: crw_password
       POSTGRES_DB: crw_dev
-    ports:
-      - "5432:5432"
+    expose:
+      - "5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
@@ -20,32 +20,36 @@ services:
 
   api:
     build:
-      context: ./apps/api
+      context: ./backend
       dockerfile: Dockerfile
     container_name: crw_api
     ports:
       - "8000:8000"
     environment:
-      DATABASE_URL: postgresql://crw_user:crw_password@db:5432/crw_dev
+      DATABASE_URL: postgresql+asyncpg://crw_user:crw_password@db:5432/crw_dev
       ENVIRONMENT: development
+      PYTHONPATH: src
+      ALLOWED_ORIGINS: '["http://localhost:3011", "http://127.0.0.1:3011", "http://localhost:8000", "http://localhost:3000"]'
     depends_on:
       db:
         condition: service_healthy
     volumes:
-      - ./apps/api:/app
-    command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+      - ./backend:/app
+    command: uvicorn src.app.main:app --host 0.0.0.0 --port 8000 --reload
 
   frontend:
-    image: node:20-alpine
+    build:
+      context: ./apps/web
+      dockerfile: Dockerfile
     container_name: crw_frontend
-    working_dir: /app
     ports:
-      - "3000:3000"
-    volumes:
-      - ./apps/web:/app
-    command: sh -c "npm install && npm run dev"
+      - "3011:3000"
+    environment:
+      API_BASE_URL: http://api:8000
+      NEXT_PUBLIC_API_URL: http://localhost:8000
     depends_on:
       - api
 
 volumes:
   postgres_data:
+

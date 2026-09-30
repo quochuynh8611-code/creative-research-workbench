@@ -13,52 +13,73 @@ Một workspace nghiên cứu sáng tạo kết hợp tri thức TRIZ với AI w
 | Infra | Docker Compose |
 | Testing | pytest + pytest-asyncio |
 
-## Architecture
+## Canonical Architecture (Sources of Truth)
+
+Dự án tuân thủ nghiêm ngặt nguyên tắc **Single Source of Truth**:
 
 ```
 creative-research-workbench/
-├── apps/
-│   ├── api/              # FastAPI backend
-│   │   ├── domain/       # Core entities & business rules
-│   │   ├── services/     # Orchestration logic
-│   │   ├── api/          # Routes & controllers
-│   │   ├── infrastructure/ # DB, retrieval, embeddings
-│   │   └── tests/
-│   └── web/              # Next.js frontend
-│       ├── features/     # Session, intake, structuring, retrieval
-│       └── components/
-├── docs/                 # All specs, ADRs, contracts
-└── docker-compose.yml
+├── backend/              # [CANONICAL BACKEND] Python 3.11 + FastAPI + SQLAlchemy + pgvector
+│   ├── src/app/
+│   │   ├── api/v1/       # REST API endpoints (sessions, search, problem-frames)
+│   │   ├── domain/       # Core Domain Entities (ResearchSession, ProblemFrame, Contradiction, Chunk)
+│   │   ├── services/     # Core Services (Ingestion, Hybrid Retrieval, Structuring, Recommender, FSM)
+│   │   └── core/         # Config & Database Session Management
+│   └── tests/            # Pytest test suites (Unit, Integration, Performance)
+│
+├── apps/web/             # [CANONICAL FRONTEND] Next.js 14 + TypeScript + Tailwind CSS + TanStack Query
+│   ├── app/              # Next.js App Router (pages & layouts)
+│   ├── features/         # Modular Feature Components
+│   │   ├── session/      # Session list, detail & TRIZ Workflow Stepper
+│   │   ├── intake/       # Problem Intake Form
+│   │   ├── structuring/  # Normalized View & Contradiction Badge
+│   │   ├── retrieval/    # Evidence Panel (10 Golden Documents citations)
+│   │   ├── ideation/     # Principle Suggestions (40 TRIZ Inventive Principles)
+│   │   └── search/       # Global Search Overlay (Cmd+K / Ctrl+K)
+│   └── lib/              # API Client (Axios) & TypeScript Domain Types
+│
+├── docs/                 # Specifications, ADRs, Contracts, Implementation Checklists
+├── docker-compose.yml    # Local multi-container orchestration (DB + Backend + Frontend)
+│
+├── apps/api/             # ⚠️ [DEPRECATED / LEGACY] Không phát triển thêm tại đây
+└── frontend/             # ⚠️ [DEPRECATED / LEGACY] Không phát triển thêm tại đây
 ```
 
 ## Quick Start
 
-### 1. Clone & setup environment
-```bash
-git clone https://github.com/quochuynh8611-code/creative-research-workbench.git
-cd creative-research-workbench
-cp .env.example .env
-# Edit .env with your values
-```
-
-### 2. Start services
+### 1. Khởi động Database (PostgreSQL + pgvector)
 ```bash
 docker compose up -d db
 ```
 
-### 3. Run API locally
+### 2. Chạy Backend (FastAPI)
 ```bash
-cd apps/api
-pip install uv
-uv pip install -e .
-uvicorn main:app --reload
+cd backend
+PYTHONPATH=src uv run uvicorn app.main:app --host 127.0.0.1 --port 8000 --reload
+# Kiểm tra Health: curl http://127.0.0.1:8000/health
 ```
 
-### 4. Run tests
+### 3. Chạy Frontend (Next.js)
 ```bash
-cd apps/api
-pytest tests/ -v
+cd apps/web
+npm install
+npm run dev -- --port 3011
+# Truy cập UI tại: http://localhost:3011/sessions
 ```
+
+### 4. Chạy Kiểm thử (Testing)
+- **Frontend Tests (Jest + TypeScript + ESLint):**
+  ```bash
+  cd apps/web
+  npm test
+  npm run type-check
+  npm run lint
+  ```
+- **Backend Tests (Pytest):**
+  ```bash
+  cd backend
+  PYTHONPATH=src uv run pytest tests/ -v
+  ```
 
 ## Documentation
 
