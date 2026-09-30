@@ -2,109 +2,263 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import { ArrowLeft, Brain } from 'lucide-react'
-import { STAGE_LABELS, WORKFLOW_STAGES } from '@/lib/utils'
+import { ArrowLeft, Brain, Loader2, AlertCircle, Sparkles, FolderSearch, Lightbulb, BookOpen } from 'lucide-react'
+import { useQuery } from '@tanstack/react-query'
+import { DOMAIN_LABELS, STATUS_LABELS, STAGE_LABELS, WORKFLOW_STAGES, formatDate, cn } from '@/lib/utils'
+import { getSession } from '@/lib/api-client'
 import { IntakeForm } from '@/features/intake/intake-form'
+import { NormalizedView } from '@/features/structuring/normalized-view'
+import { WorkflowStepper } from '@/features/session/workflow-stepper'
+import { PrincipleSuggestions } from '@/features/ideation/principle-suggestions'
+import { EvidencePanel } from '@/features/retrieval/evidence-panel'
+import type { ProblemFrame, WorkflowStage, RecommendedMethod } from '@/lib/types'
 
 const TABS = [
-  { id: 'intake', label: 'Nhập vấn đề' },
-  { id: 'structuring', label: 'Phân tích' },
-  { id: 'retrieval', label: 'Tài liệu' },
-  { id: 'ideation', label: 'Ý tưởng' },
-  { id: 'notebook', label: 'Notebook' },
+  { id: 'intake', label: 'Nhập vấn đề', icon: Sparkles },
+  { id: 'structuring', label: 'Phân tích cấu trúc', icon: Brain },
+  { id: 'retrieval', label: 'Tài liệu & Bằng chứng', icon: FolderSearch },
+  { id: 'ideation', label: 'Ý tưởng & Nguyên tắc', icon: Lightbulb },
+  { id: 'notebook', label: 'Ghi chép (Notebook)', icon: BookOpen },
 ]
 
-interface Props {
+interface SessionDetailProps {
   sessionId: string
 }
 
-export function SessionDetail({ sessionId }: Props) {
-  const [activeTab, setActiveTab] = useState('intake')
-  const currentStage = 'intake'
+export function SessionDetail({ sessionId }: SessionDetailProps) {
+  const [activeTab, setActiveTab] = useState<string>('intake')
+  const [localProblemFrame, setLocalProblemFrame] = useState<ProblemFrame | null>(null)
+  const [recommendedMethods, setRecommendedMethods] = useState<RecommendedMethod[]>([])
 
-  const stageIndex = WORKFLOW_STAGES.indexOf(currentStage as any)
+  const {
+    data: session,
+    isLoading,
+    isError,
+    error,
+    refetch,
+  } = useQuery({
+    queryKey: ['session', sessionId],
+    queryFn: () => getSession(sessionId),
+  })
+
+  const effectiveProblemFrame = localProblemFrame || session?.problem_frame || null
+
+  const handleProblemFrameCreated = (frame: ProblemFrame) => {
+    setLocalProblemFrame(frame)
+    setActiveTab('structuring')
+  }
+
+  if (isLoading) {
+    return (
+      <div className="max-w-5xl mx-auto px-6 py-16 flex flex-col items-center justify-center text-center space-y-4">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+        <p className="text-sm font-medium text-muted-foreground">
+          Đang tải thông tin phiên nghiên cứu #{sessionId}...
+        </p>
+      </div>
+    )
+  }
+
+  if (isError || !session) {
+    return (
+      <div className="max-w-5xl mx-auto px-6 py-12">
+        <Link
+          href="/sessions"
+          className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground mb-6"
+        >
+          <ArrowLeft className="w-4 h-4" />
+          Quay lại danh sách
+        </Link>
+        <div className="p-6 rounded-xl border border-destructive/20 bg-destructive/5 text-center space-y-3">
+          <AlertCircle className="w-8 h-8 text-destructive mx-auto" />
+          <h2 className="text-lg font-semibold text-foreground">
+            Không thể tải dữ liệu phiên nghiên cứu
+          </h2>
+          <p className="text-sm text-muted-foreground max-w-md mx-auto">
+            {(error as any)?.message || 'Phiên nghiên cứu không tồn tại hoặc hệ thống gặp sự cố kết nối.'}
+          </p>
+          <div className="pt-2">
+            <button
+              onClick={() => refetch()}
+              className="px-4 py-2 rounded-lg bg-primary text-primary-foreground text-xs font-medium hover:opacity-90 transition-opacity"
+            >
+              Thử lại
+            </button>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  const currentStage: WorkflowStage = (session.workflow_state || session.current_stage || 'intake') as WorkflowStage
+  const stageIndex = WORKFLOW_STAGES.indexOf(currentStage as any) >= 0 ? WORKFLOW_STAGES.indexOf(currentStage as any) : 0
 
   return (
-    <div className="max-w-5xl mx-auto px-6 py-8">
-      {/* Back */}
+    <div className="max-w-5xl mx-auto px-6 py-8 space-y-8">
+      {/* Back button */}
       <Link
         href="/sessions"
-        className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground mb-6"
+        className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
       >
         <ArrowLeft className="w-4 h-4" />
-        Quay lại danh sách
+        <span>Quay lại danh sách phiên</span>
       </Link>
 
-      {/* Session header */}
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold">Tối ưu thời gian giao hàng thiết bị y tế</h1>
-        <p className="text-sm text-muted-foreground mt-1">Session #{sessionId} · Kinh doanh</p>
-      </div>
-
-      {/* Workflow progress */}
-      <div className="flex items-center gap-2 mb-8 overflow-x-auto pb-1">
-        {WORKFLOW_STAGES.map((stage, idx) => (
-          <div key={stage} className="flex items-center gap-2 shrink-0">
-            <div
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
-                idx < stageIndex
-                  ? 'bg-primary text-primary-foreground'
-                  : idx === stageIndex
-                  ? 'bg-accent text-accent-foreground border border-primary'
+      {/* Session Header */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-border">
+        <div className="space-y-1.5">
+          <div className="flex flex-wrap items-center gap-2.5">
+            <h1 className="text-2xl font-bold tracking-tight text-foreground">
+              {session.title}
+            </h1>
+            <span
+              className={cn(
+                'px-2.5 py-0.5 rounded-full text-xs font-semibold',
+                session.status === 'active'
+                  ? 'bg-emerald-500/15 text-emerald-500 border border-emerald-500/30'
+                  : session.status === 'paused'
+                  ? 'bg-amber-500/15 text-amber-500 border border-amber-500/30'
                   : 'bg-muted text-muted-foreground'
-              }`}
+              )}
             >
-              <span>{idx + 1}</span>
-              <span>{STAGE_LABELS[stage]}</span>
-            </div>
-            {idx < WORKFLOW_STAGES.length - 1 && (
-              <div className={`h-px w-4 shrink-0 ${idx < stageIndex ? 'bg-primary' : 'bg-border'}`} />
+              {STATUS_LABELS[session.status] || session.status}
+            </span>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
+            <span>
+              Lĩnh vực: <strong className="text-foreground font-medium">{DOMAIN_LABELS[session.domain] || session.domain}</strong>
+            </span>
+            <span>•</span>
+            <span>Tạo lúc: {formatDate(session.created_at)}</span>
+            {session.tags && session.tags.length > 0 && (
+              <>
+                <span>•</span>
+                <div className="flex items-center gap-1.5">
+                  {session.tags.map((tag) => (
+                    <span key={tag} className="px-2 py-0.5 bg-accent text-accent-foreground rounded text-[11px]">
+                      #{tag}
+                    </span>
+                  ))}
+                </div>
+              </>
             )}
           </div>
-        ))}
-      </div>
-
-      {/* Tabs */}
-      <div className="border-b border-border mb-6">
-        <div className="flex gap-0">
-          {TABS.map((tab) => (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
-              className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${
-                activeTab === tab.id
-                  ? 'border-primary text-primary'
-                  : 'border-transparent text-muted-foreground hover:text-foreground'
-              }`}
-            >
-              {tab.label}
-            </button>
-          ))}
         </div>
       </div>
 
-      {/* Tab content */}
+      {/* Workflow Stepper */}
+      <WorkflowStepper
+        sessionId={sessionId}
+        currentStage={currentStage}
+        onSelectStage={(stage) => {
+          if (stage === 'intake' || stage === 'structuring' || stage === 'retrieval' || stage === 'ideation') {
+            setActiveTab(stage)
+          }
+        }}
+        onNextStepSuccess={(res) => {
+          if (res.recommended_methods && res.recommended_methods.length > 0) {
+            setRecommendedMethods(res.recommended_methods)
+          }
+          const nextStage = res.current_state || res.workflow_state
+          if (nextStage === 'intake' || nextStage === 'structuring' || nextStage === 'retrieval' || nextStage === 'ideation') {
+            setActiveTab(nextStage)
+          }
+        }}
+      />
+
+      {/* Tab Navigation */}
+      <div className="border-b border-border">
+        <div className="flex gap-1 overflow-x-auto">
+          {TABS.map((tab) => {
+            const Icon = tab.icon
+            const isActive = activeTab === tab.id
+            return (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={cn(
+                  'flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition-all whitespace-nowrap',
+                  isActive
+                    ? 'border-primary text-primary font-semibold'
+                    : 'border-transparent text-muted-foreground hover:text-foreground hover:border-muted'
+                )}
+              >
+                <Icon className="w-4 h-4" />
+                <span>{tab.label}</span>
+              </button>
+            )
+          })}
+        </div>
+      </div>
+
+      {/* Tab Contents */}
       <div>
-        {activeTab === 'intake' && <IntakeForm sessionId={sessionId} />}
+        {activeTab === 'intake' && (
+          <IntakeForm
+            sessionId={sessionId}
+            domain={typeof session.domain === 'string' ? session.domain : undefined}
+            initialProblemFrame={effectiveProblemFrame}
+            onProblemFrameCreated={handleProblemFrameCreated}
+          />
+        )}
+
         {activeTab === 'structuring' && (
-          <div className="text-center py-16 text-muted-foreground">
-            <Brain className="w-10 h-10 mx-auto mb-3 opacity-40" />
-            <p>Hoàn thành Problem Intake trước để phân tích cấu trúc</p>
-          </div>
+          effectiveProblemFrame ? (
+            <NormalizedView
+              problemFrame={effectiveProblemFrame}
+              onEditIntake={() => setActiveTab('intake')}
+              onProceedToRetrieval={() => setActiveTab('retrieval')}
+            />
+          ) : (
+            <div className="text-center py-16 px-4 rounded-xl border border-dashed border-border text-muted-foreground space-y-4">
+              <Brain className="w-12 h-12 mx-auto opacity-40 text-primary" />
+              <div className="space-y-1">
+                <h3 className="text-base font-semibold text-foreground">
+                  Chưa có phân tích cấu trúc bài toán
+                </h3>
+                <p className="text-sm max-w-md mx-auto">
+                  Hãy hoàn thành bước <strong>Nhập vấn đề (Problem Intake)</strong> để hệ thống tự động chuẩn hóa và nhận diện mâu thuẫn TRIZ.
+                </p>
+              </div>
+              <div>
+                <button
+                  onClick={() => setActiveTab('intake')}
+                  className="px-4 py-2 rounded-lg bg-primary text-primary-foreground text-xs font-medium hover:opacity-90 transition-opacity"
+                >
+                  Nhập vấn đề ngay
+                </button>
+              </div>
+            </div>
+          )
         )}
+
         {activeTab === 'retrieval' && (
-          <div className="text-center py-16 text-muted-foreground">
-            <p>Knowledge Retrieval — coming in Phase 2</p>
-          </div>
+          <EvidencePanel
+            sessionId={sessionId}
+            initialQuery={
+              effectiveProblemFrame?.normalized_statement ||
+              effectiveProblemFrame?.raw_statement ||
+              session.title
+            }
+            domain={typeof session.domain === 'string' ? session.domain : undefined}
+          />
         )}
+
         {activeTab === 'ideation' && (
-          <div className="text-center py-16 text-muted-foreground">
-            <p>Idea Studio — coming in Phase 4</p>
-          </div>
+          <PrincipleSuggestions
+            methods={recommendedMethods}
+            onSelectPrinciple={() => setActiveTab('notebook')}
+          />
         )}
+
         {activeTab === 'notebook' && (
-          <div className="text-center py-16 text-muted-foreground">
-            <p>Research Notebook — coming in Phase 5</p>
+          <div className="text-center py-16 px-4 rounded-xl border border-dashed border-border text-muted-foreground space-y-2">
+            <BookOpen className="w-10 h-10 mx-auto opacity-40 text-primary" />
+            <h3 className="text-base font-semibold text-foreground">Research Notebook</h3>
+            <p className="text-sm max-w-md mx-auto">
+              Lưu trữ ghi chú, giả thuyết và tổng hợp giải pháp nghiên cứu.
+            </p>
           </div>
         )}
       </div>
