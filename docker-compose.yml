@@ -1,9 +1,8 @@
-version: "3.9"
-
 services:
   db:
     image: pgvector/pgvector:pg16
     container_name: crw_postgres
+    restart: unless-stopped
     environment:
       POSTGRES_USER: crw_user
       POSTGRES_PASSWORD: crw_password
@@ -23,33 +22,40 @@ services:
       context: ./backend
       dockerfile: Dockerfile
     container_name: crw_api
+    restart: unless-stopped
     ports:
       - "8000:8000"
     environment:
       DATABASE_URL: postgresql+asyncpg://crw_user:crw_password@db:5432/crw_dev
-      ENVIRONMENT: development
+      ENVIRONMENT: production
       PYTHONPATH: src
       ALLOWED_ORIGINS: '["http://localhost:3011", "http://127.0.0.1:3011", "http://localhost:8000", "http://localhost:3000"]'
     depends_on:
       db:
         condition: service_healthy
-    volumes:
-      - ./backend:/app
-    command: uvicorn src.app.main:app --host 0.0.0.0 --port 8000 --reload
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://127.0.0.1:8000/health"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
 
   frontend:
     build:
       context: ./apps/web
       dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_API_URL: http://localhost:8000
     container_name: crw_frontend
+    restart: unless-stopped
     ports:
       - "3011:3000"
     environment:
       API_BASE_URL: http://api:8000
       NEXT_PUBLIC_API_URL: http://localhost:8000
     depends_on:
-      - api
+      api:
+        condition: service_healthy
 
 volumes:
   postgres_data:
-

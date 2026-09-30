@@ -47,12 +47,36 @@ creative-research-workbench/
 
 ## Quick Start
 
-### 1. Khởi động Database (PostgreSQL + pgvector)
+### Cách 1: Khởi động toàn bộ hệ thống bằng Docker Compose (Khuyến nghị Deploy / Self-Host)
+
+Chỉ 1 lệnh duy nhất để build và khởi động toàn bộ production-ready stack (PostgreSQL + pgvector, Backend API và Frontend Next.js Standalone):
+
+```bash
+docker compose up -d --build
+```
+
+#### Các lệnh kiểm tra & vận hành nhanh:
+- **Kiểm tra trạng thái containers:** `docker compose ps`
+- **Kiểm tra Backend Health:** `curl -i http://localhost:8000/health` (HTTP 200 OK)
+- **Kiểm tra Sessions API:** `curl -i http://localhost:8000/api/v1/sessions` (HTTP 200 OK)
+- **Kiểm tra Frontend Routing:** `curl -I http://localhost:3011/sessions` (HTTP 200 OK)
+- **Truy cập Web App UI:** [http://localhost:3011/sessions](http://localhost:3011/sessions)
+- **Truy cập API Docs (Swagger):** [http://localhost:8000/docs](http://localhost:8000/docs)
+- **Xem logs hệ thống:** `docker compose logs -f`
+- **Dừng hệ thống:** `docker compose down`
+
+> ✅ **Xác thực Runtime:** Toàn bộ stack Docker đã được kiểm thử End-to-End thực tế: Database healthy, Backend API `/health` = 200 OK, Next.js Standalone Runner phục vụ `/sessions` = 200 OK.
+
+---
+
+### Cách 2: Chạy Local Development từng phần
+
+#### 1. Khởi động Database (PostgreSQL + pgvector)
 ```bash
 docker compose up -d db
 ```
 
-### 2. Chạy Backend (FastAPI)
+#### 2. Chạy Backend (FastAPI)
 ```bash
 cd backend
 PYTHONPATH=src uv run uvicorn app.main:app --host 127.0.0.1 --port 8000 --reload
