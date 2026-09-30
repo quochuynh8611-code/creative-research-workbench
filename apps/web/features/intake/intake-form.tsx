@@ -1,8 +1,11 @@
 'use client'
 
 import { useState } from 'react'
-import { Plus, X, ChevronRight } from 'lucide-react'
+import { Plus, X, ChevronRight, Loader2, AlertCircle } from 'lucide-react'
+import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { cn } from '@/lib/utils'
+import { createProblemFrame } from '@/lib/api-client'
+import type { ProblemFrame } from '@/lib/types'
 
 interface ProblemFrameDraft {
   goal: string
@@ -46,6 +49,7 @@ function TagInput({
           className="flex-1 px-3 py-2 text-sm border border-input rounded-md bg-background focus:outline-none focus:ring-2 focus:ring-ring"
         />
         <button
+          type="button"
           onClick={handleAdd}
           className="px-3 py-2 bg-secondary text-secondary-foreground rounded-md hover:bg-accent transition-colors"
         >
@@ -60,7 +64,11 @@ function TagInput({
               className="inline-flex items-center gap-1 text-xs bg-accent text-accent-foreground px-2.5 py-1 rounded-full"
             >
               {item}
-              <button onClick={() => onRemove(idx)} className="hover:text-destructive">
+              <button
+                type="button"
+                onClick={() => onRemove(idx)}
+                className="hover:text-destructive"
+              >
                 <X className="w-3 h-3" />
               </button>
             </span>
@@ -71,19 +79,30 @@ function TagInput({
   )
 }
 
-interface Props {
+interface IntakeFormProps {
   sessionId: string
+  domain?: string | null
+  initialProblemFrame?: ProblemFrame | null
+  onProblemFrameCreated?: (frame: ProblemFrame) => void
 }
 
-export function IntakeForm({ sessionId }: Props) {
+export function IntakeForm({
+  sessionId,
+  domain,
+  initialProblemFrame,
+  onProblemFrameCreated,
+}: IntakeFormProps) {
+  const queryClient = useQueryClient()
+
   const [form, setForm] = useState<ProblemFrameDraft>({
-    goal: '',
+    goal: initialProblemFrame?.raw_statement || '',
     constraints: [],
     affected_entities: [],
     failure_signals: [],
     success_criteria: [],
   })
-  const [saved, setSaved] = useState(false)
+
+  const [submitError, setSubmitError] = useState<string | null>(null)
 
   const addItem = (field: keyof Omit<ProblemFrameDraft, 'goal'>) => (val: string) =>
     setForm((f) => ({ ...f, [field]: [...f[field], val] }))
@@ -91,84 +110,138 @@ export function IntakeForm({ sessionId }: Props) {
   const removeItem = (field: keyof Omit<ProblemFrameDraft, 'goal'>) => (idx: number) =>
     setForm((f) => ({ ...f, [field]: f[field].filter((_, i) => i !== idx) }))
 
-  const handleSubmit = () => {
-    // TODO: call API POST /sessions/{id}/problem-frame
-    console.log('ProblemFrame draft:', { session_id: sessionId, ...form })
-    setSaved(true)
-    setTimeout(() => setSaved(false), 2000)
+  const mutation = useMutation({
+    mutationFn: (rawStatement: string) =>
+      createProblemFrame(sessionId, {
+        raw_statement: rawStatement,
+        ...(domain ? { domain } : {}),
+      }),
+    onSuccess: (data) => {
+      setSubmitError(null)
+      queryClient.invalidateQueries({ queryKey: ['session', sessionId] })
+      onProblemFrameCreated?.(data)
+    },
+    onError: (err: any) => {
+      const errorMsg =
+        err?.response?.data?.detail ||
+        err?.message ||
+        'Không thể lưu bài toán. Vui lòng kiểm tra lại kết nối.'
+      setSubmitError(errorMsg)
+    },
+  })
+
+  const composeStatement = (): string => {
+    const parts: string[] = [form.goal.trim()]
+    if (form.constraints.length > 0) {
+      parts.push(`Ràng buộc: ${form.constraints.join(', ')}`)
+    }
+    if (form.affected_entities.length > 0) {
+      parts.push(`Đối tượng: ${form.affected_entities.join(', ')}`)
+    }
+    if (form.failure_signals.length > 0) {
+      parts.push(`Tín hiệu thất bại: ${form.failure_signals.join(', ')}`)
+    }
+    if (form.success_criteria.length > 0) {
+      parts.push(`Tiêu chí: ${form.success_criteria.join(', ')}`)
+    }
+    return parts.join('. ')
+  }
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    setSubmitError(null)
+    const statement = form.goal.trim()
+    if (!statement) return
+    mutation.mutate(statement)
   }
 
   const isValid = form.goal.trim().length > 10
 
   return (
-    <div className="space-y-6 max-w-2xl">
+    <form onSubmit={handleSubmit} className="space-y-6 max-w-2xl">
       <div>
         <h2 className="text-lg font-semibold mb-1">Problem Intake</h2>
         <p className="text-sm text-muted-foreground">
-          Mô tả vấn đề theo cấu trúc để hệ thống có thể phân tích chính xác hơn.
+          Mô tả vấn đề hoặc mâu thuẫn để hệ thống chuẩn hóa và nhận diện bài toán TRIZ.
         </p>
       </div>
 
-      {/* Goal */}
+      {submitError && (
+        <div className="flex items-center gap-2 p-3 text-sm text-destructive bg-destructive/10 border border-destructive/20 rounded-md">
+          <AlertCircle className="w-4 h-4 shrink-0" />
+          <span>{submitError}</span>
+        </div>
+      )}
+
+      {/* Goal / Raw Statement */}
       <div>
         <label className="block text-sm font-medium mb-1.5">
-          Mục tiêu <span className="text-destructive">*</span>
+          Mục tiêu / Mô tả bài toán <span className="text-destructive">*</span>
         </label>
         <textarea
           value={form.goal}
           onChange={(e) => setForm((f) => ({ ...f, goal: e.target.value }))}
-          placeholder="Bạn muốn đạt được điều gì? Ví dụ: Giảm thời gian giao hàng xuống 30% trong Q3..."
-          rows={3}
+          placeholder="Bạn muốn đạt được điều gì? Ví dụ: Cần tăng độ bền và độ cứng của cánh tay robot nhưng không được làm tăng trọng lượng tổng thể..."
+          rows={4}
           className="w-full px-3 py-2 text-sm border border-input rounded-md bg-background focus:outline-none focus:ring-2 focus:ring-ring resize-none"
         />
-        <p className="text-xs text-muted-foreground mt-1">{form.goal.length} ký tự</p>
+        <p className="text-xs text-muted-foreground mt-1">{form.goal.length} ký tự (tối thiểu 10 ký tự)</p>
       </div>
 
       <TagInput
-        label="Ràng buộc"
+        label="Ràng buộc (Constraints)"
         items={form.constraints}
         onAdd={addItem('constraints')}
         onRemove={removeItem('constraints')}
-        placeholder="Ví dụ: Ngân sách tối đa 50 triệu"
+        placeholder="Ví dụ: Ngân sách vật liệu < 100 triệu, kích thước cố định"
       />
 
       <TagInput
-        label="Đối tượng bị tác động"
+        label="Đối tượng bị tác động (Affected Entities)"
         items={form.affected_entities}
         onAdd={addItem('affected_entities')}
         onRemove={removeItem('affected_entities')}
-        placeholder="Ví dụ: Đội kho hàng, khách hàng bệnh viện"
+        placeholder="Ví dụ: Động cơ servo, tải trọng đầu cuối"
       />
 
       <TagInput
-        label="Tín hiệu thất bại"
+        label="Tín hiệu thất bại / Mâu thuẫn phát sinh"
         items={form.failure_signals}
         onAdd={addItem('failure_signals')}
         onRemove={removeItem('failure_signals')}
-        placeholder="Ví dụ: Khiếu nại giao hàng trễ tăng 20%"
+        placeholder="Ví dụ: Rung lắc khi quay tốc độ cao"
       />
 
       <TagInput
-        label="Tiêu chí thành công"
+        label="Tiêu chí thành công (Success Criteria)"
         items={form.success_criteria}
         onAdd={addItem('success_criteria')}
         onRemove={removeItem('success_criteria')}
-        placeholder="Ví dụ: Lead time < 48 giờ"
+        placeholder="Ví dụ: Tăng gia tốc 25%, sai số < 0.1mm"
       />
 
       <button
-        onClick={handleSubmit}
-        disabled={!isValid}
+        type="submit"
+        disabled={!isValid || mutation.isPending}
         className={cn(
-          'inline-flex items-center gap-2 px-5 py-2.5 rounded-md text-sm font-medium transition-all',
-          isValid
-            ? 'bg-primary text-primary-foreground hover:opacity-90'
+          'inline-flex items-center gap-2 px-5 py-2.5 rounded-md text-sm font-medium transition-all shadow-sm',
+          isValid && !mutation.isPending
+            ? 'bg-primary text-primary-foreground hover:opacity-90 cursor-pointer'
             : 'bg-muted text-muted-foreground cursor-not-allowed'
         )}
       >
-        {saved ? '✓ Đã lưu!' : 'Lưu và chuyển sang Phân tích cấu trúc'}
-        {!saved && <ChevronRight className="w-4 h-4" />}
+        {mutation.isPending ? (
+          <>
+            <Loader2 className="w-4 h-4 animate-spin" />
+            <span>Đang chuẩn hóa bài toán...</span>
+          </>
+        ) : (
+          <>
+            <span>Lưu và chuyển sang Phân tích cấu trúc</span>
+            <ChevronRight className="w-4 h-4" />
+          </>
+        )}
       </button>
-    </div>
+    </form>
   )
 }
