@@ -248,3 +248,158 @@ def test_method_recommender_returns_full_metadata(sync_engine, db_session: Sessi
         assert "explanation" in item
         assert "examples" in item
         assert isinstance(item["examples"], list)
+
+
+def test_problem_structuring_service_import_and_dataset_path(sync_engine):
+    """
+    8. Regression: Đảm bảo ProblemStructuringService và MethodRecommender nạp đúng canonical dataset
+    từ backend/src/app/data/triz_matrix_39x39.json, khởi tạo in-memory đầy đủ 1521 entries,
+    và các service public classes khởi tạo thành công.
+    """
+    from app.services.problem_structuring_service import (
+        _CONTRADICTION_MATRIX_39X39,
+        _PARAM_CODE_TO_ID,
+        _TRIZ_DATA,
+        ProblemStructuringService,
+    )
+    from app.services.method_recommender import _PRINCIPLES_METADATA, MethodRecommender
+
+    assert len(_CONTRADICTION_MATRIX_39X39) == 1521, "Ma trận in-memory phải đủ 1521 tọa độ"
+    assert len(_PARAM_CODE_TO_ID) >= 39, "Bảng map param code phải có tối thiểu 39 thông số"
+    assert len(_PRINCIPLES_METADATA) == 40, "Metadata principles in-memory phải đủ 40 nguyên tắc"
+    assert _TRIZ_DATA.get("is_canonical") is True, "Dataset nạp vào phải là canonical"
+
+    # Xác minh khởi tạo public service instances không ném ngoại lệ
+    service = ProblemStructuringService(bind=sync_engine)
+    recommender = MethodRecommender(bind=sync_engine)
+    assert service.engine is sync_engine
+
+
+
+def test_end_to_end_structuring_to_method_recommendation_flow(sync_engine, db_session: Session):
+    """
+    9. Regression: Kiểm tra toàn trình (End-to-End) từ ProblemStructuringService.structure_problem
+    qua Contradiction persistence đến MethodRecommender.recommend_methods.
+    """
+    session = ResearchSession(
+        title="E2E TRIZ Optimization",
+        status=SessionStatus.active,
+        workflow_state="structuring",
+    )
+    db_session.add(session)
+    db_session.flush()
+
+    # Cải thiện tốc độ (#9: speed) làm tăng độ phức tạp (#36: complexity)
+    # Tọa độ (9, 36) trong Altshuller matrix
+    structuring_service = ProblemStructuringService(bind=db_session)
+    frame = structuring_service.structure_problem(
+        session_id=session.id,
+        raw_statement="Tăng tốc độ xử lý làm tăng độ phức tạp của thiết bị",
+        domain="engineering",
+    )
+
+    assert frame.contradiction_type == ContradictionType.technical
+    assert len(frame.contradictions) == 1
+    contradiction = frame.contradictions[0]
+    assert contradiction.suggested_principles is not None
+
+    # Gọi MethodRecommender để lấy danh sách gợi ý kèm metadata
+    recommender = MethodRecommender(bind=db_session)
+    recs = recommender.recommend_methods(session.id)
+
+    assert len(recs) == len(contradiction.suggested_principles)
+    for rec in recs:
+        assert rec["id"] in contradiction.suggested_principles
+        assert "name_vi" in rec and len(rec["name_vi"]) > 0
+        assert "description" in rec and len(rec["description"]) > 0
+
+
+def test_method_recommender_handles_unknown_or_missing_principle_metadata_gracefully(sync_engine, db_session: Session):
+    """
+    10. Regression: Đảm bảo MethodRecommender không crash nếu gặp principle ID lạ (ví dụ: 999)
+    hoặc metadata thiếu, mà kích hoạt fallback an toàn.
+    """
+    session = ResearchSession(
+        title="Test Resilient Method Recommender",
+        status=SessionStatus.active,
+        workflow_state="ideation",
+    )
+    db_session.add(session)
+    db_session.flush()
+
+    frame = ProblemFrame(
+        session_id=session.id,
+        raw_statement="Unknown test",
+        normalized_statement="Unknown test",
+        contradiction_type=ContradictionType.technical,
+    )
+    db_session.add(frame)
+    db_session.flush()
+
+    from app.domain.models import Contradiction
+    c = Contradiction(
+        problem_frame_id=frame.id,
+        type=ContradictionType.technical,
+        statement="Mâu thuẫn chứa nguyên tắc lạ.",
+        suggested_principles=[999],  # ID không có trong metadata chuẩn
+    )
+    db_session.add(c)
+    db_session.flush()
+
+    recommender = MethodRecommender(bind=db_session)
+    recs = recommender.recommend_methods(session.id)
+
+    # Phải trả về 1 item fallback an toàn, không raise Exception
+    assert len(recs) == 1
+    assert recs[0]["id"] == 999
+    assert recs[0]["title"] == "Principle 999"
+    assert "Principle 999" in recs[0]["description"]
+    assert recs[0]["examples"] == []
+
+
+def test_validate_triz_matrix_data_rejects_missing_parameter_or_non_list_cell():
+    """
+    11. Regression: Kiểm tra các edge cases bổ sung trong validate_triz_matrix_data:
+    - parameters không phải dict hoặc thiếu thông số
+    - principles không phải dict hoặc thiếu nguyên tắc
+    - matrix cell không phải list hoặc chứa kiểu dữ liệu không phải int
+    """
+    from app.services.problem_structuring_service import validate_triz_matrix_data
+
+    # Test 1: Parameters không đủ 39 (chỉ 38)
+    data_38_params = {
+        "parameters": {str(i): {"name_vi": f"P{i}", "name_en": f"P{i}", "code": f"p{i}"} for i in range(1, 39)},
+        "principles": {str(i): {"name_vi": f"Pr{i}", "name_en": f"Pr{i}", "description": "desc", "examples": []} for i in range(1, 41)},
+        "matrix": {f"{i}_{j}": [] for i in range(1, 40) for j in range(1, 40)},
+    }
+    with pytest.raises(RuntimeError, match="không đủ 39 thông số"):
+        validate_triz_matrix_data(data_38_params)
+
+    # Test 2: Principles không đủ 40 (chỉ 39)
+    data_39_principles = {
+        "parameters": {str(i): {"name_vi": f"P{i}", "name_en": f"P{i}", "code": f"p{i}"} for i in range(1, 40)},
+        "principles": {str(i): {"name_vi": f"Pr{i}", "name_en": f"Pr{i}", "description": "desc", "examples": []} for i in range(1, 40)},
+        "matrix": {f"{i}_{j}": [] for i in range(1, 40) for j in range(1, 40)},
+    }
+    with pytest.raises(RuntimeError, match="không đủ 40 nguyên tắc"):
+        validate_triz_matrix_data(data_39_principles)
+
+    # Test 3: Matrix cell không phải list (ví dụ là string)
+    data_str_cell = {
+        "parameters": {str(i): {"name_vi": f"P{i}", "name_en": f"P{i}", "code": f"p{i}"} for i in range(1, 40)},
+        "principles": {str(i): {"name_vi": f"Pr{i}", "name_en": f"Pr{i}", "description": "desc", "examples": []} for i in range(1, 41)},
+        "matrix": {f"{i}_{j}": [] for i in range(1, 40) for j in range(1, 40)},
+    }
+    data_str_cell["matrix"]["1_1"] = "invalid_string"  # type: ignore
+    with pytest.raises(RuntimeError, match="không phải list"):
+        validate_triz_matrix_data(data_str_cell)
+
+    # Test 4: Matrix cell chứa non-int (ví dụ float hoặc string)
+    data_float_cell = {
+        "parameters": {str(i): {"name_vi": f"P{i}", "name_en": f"P{i}", "code": f"p{i}"} for i in range(1, 40)},
+        "principles": {str(i): {"name_vi": f"Pr{i}", "name_en": f"Pr{i}", "description": "desc", "examples": []} for i in range(1, 41)},
+        "matrix": {f"{i}_{j}": [] for i in range(1, 40) for j in range(1, 40)},
+    }
+    data_float_cell["matrix"]["1_2"] = [1.5]  # type: ignore
+    with pytest.raises(RuntimeError, match="out of bounds"):
+        validate_triz_matrix_data(data_float_cell)

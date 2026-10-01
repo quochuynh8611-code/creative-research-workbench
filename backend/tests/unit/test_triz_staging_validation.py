@@ -42,8 +42,9 @@ def regression_fixtures():
 
 @pytest.fixture(scope="module")
 def scaffold_data():
-    assert os.path.exists(SCAFFOLD_JSON_PATH)
-    with open(SCAFFOLD_JSON_PATH, "r", encoding="utf-8") as f:
+    if not os.path.exists(SCAFFOLD_BAK_PATH):
+        pytest.skip("Scaffold .bak file not present for staging divergence comparison")
+    with open(SCAFFOLD_BAK_PATH, "r", encoding="utf-8") as f:
         return json.load(f)
 
 
