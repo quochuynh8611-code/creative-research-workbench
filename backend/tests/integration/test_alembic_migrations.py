@@ -56,6 +56,8 @@ def cleanup_after_migration_test(sync_engine: Engine):
     """Đảm bảo dọn dẹp bảng migration sau mỗi test để không ảnh hưởng test suite khác."""
     yield
     _clean_database(sync_engine)
+    from app.domain.models import Base
+    Base.metadata.create_all(sync_engine)
 
 
 def test_disposable_test_database_guard(sync_engine: Engine):

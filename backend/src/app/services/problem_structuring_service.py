@@ -263,13 +263,16 @@ class ProblemStructuringService:
     Hỗ trợ nhận Engine hoặc Session thông qua tham số đa hình `bind`.
     """
 
-    def __init__(self, bind: Engine | Session) -> None:
+    def __init__(self, bind: Engine | Session | None = None) -> None:
         if isinstance(bind, Session):
             self._session: Session | None = bind
             self._engine: Engine | None = None
-        else:
+        elif isinstance(bind, Engine):
             self._session = None
             self._engine = bind
+        else:
+            self._session = None
+            self._engine = None
 
     @property
     def engine(self) -> Engine | None:

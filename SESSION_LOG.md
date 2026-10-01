@@ -26,8 +26,24 @@
 | **Phase 6.3 (QW-1)** | Full TRIZ Canonical 39×39 Matrix & Bilingual Parameters | ✅ DONE | `f0a0885` |
 | **Phase 7.1 (QW-2)** | Wire Problem Canvas & Smart Tab Routing | ✅ DONE | `0ca4d8f` |
 | **Phase 9.1 (QW-5)** | Export Markdown GFM & Native Browser Print PDF | ✅ DONE | `bc9b1f3` |
-| **Phase 6.1 (QW-3)** | Real Embedding Engine (OpenAI & Gemini) & Polymorphic Factory | ✅ DONE | Pending commit |
+| **Phase 6.1 (QW-3)** | Real Embedding Engine (OpenAI & Gemini) & Polymorphic Factory | ✅ DONE | `13c4376` |
+| **Phase 6.2 (QW-4)** | LLM Problem Structuring Service & AI Trust Contract | ✅ DONE | Pending commit |
 | **Phase 6–12** | Professional Upgrade (AI Core, Canvas, Export…) | 🔵 IN PROGRESS | — |
+
+---
+
+## 📅 Phiên làm việc: 2026-10-01 (Phase 6.2 — LLM Problem Structuring Service)
+
+### ✅ Đã hoàn thành trong phiên này
+
+| # | Task | Chi tiết |
+|---|---|---|
+| 1 | **Phase 6.2 — LLM Client Engine** | Xây dựng `OpenAILLMClient` (`gpt-4o-mini`, JSON output) và `GeminiLLMClient` (`gemini-1.5-flash`, REST via `httpx`) |
+| 2 | **Polymorphic LLM Factory** | `get_llm_client(provider)` hỗ trợ `openai`, `gemini`, `mock` qua biến môi trường `LLM_PROVIDER` |
+| 3 | **AI Problem Analysis Service** | `AIAnalysisService` bóc tách JSON, validate nghiêm ngặt không đoán thông số ngoài 39 TRIZ parameters, prompt versioning `2026-10-01.v1` |
+| 4 | **AI Trust Contract Endpoint** | `POST /api/v1/sessions/{id}/ai/analyze-problem` trả về gợi ý tạm thời (zero auto-overwrite vào DB, không đổi FSM state) |
+| 5 | **Graceful Fallback & Degradation** | Tự động fallback sang Rule-Based analysis khi LLM timeout, 429, hoặc ném ngoại lệ kèm `provenance: "rule_based_fallback"` |
+| 6 | **Comprehensive Test Matrix** | 12 Unit tests (`test_llm_clients.py`) + 5 Integration tests (`test_ai_analysis_api.py`) đạt 100% pass |
 
 ---
 

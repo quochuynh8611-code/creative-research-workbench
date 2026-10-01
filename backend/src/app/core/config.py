@@ -24,8 +24,11 @@ class Settings(BaseSettings):
     GEMINI_API_KEY: str = ""
     EMBEDDING_MODEL_NAME: Optional[str] = None
 
-    # OpenAI / LLM
-    LLM_PROVIDER: str = "openai"  # "openai" | "ollama"
+    # OpenAI / Gemini / LLM (Phase 6.2)
+    LLM_PROVIDER: str = "mock"  # "mock" | "openai" | "gemini"
+    LLM_MODEL_NAME: Optional[str] = None
+    LLM_TIMEOUT_SECONDS: float = 10.0
+    LLM_MAX_RETRIES: int = 2
     OLLAMA_BASE_URL: str = "http://localhost:11434"
 
     # CORS

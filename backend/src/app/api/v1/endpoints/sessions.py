@@ -16,6 +16,7 @@ from app.domain.models import (
     ResearchSession,
     SessionStatus,
 )
+from app.services.ai_analysis_service import AIAnalysisService
 from app.services.method_recommender import MethodRecommender
 from app.services.problem_structuring_service import ProblemStructuringService
 from app.services.session_export_service import export_session_as_markdown
@@ -70,6 +71,11 @@ def get_method_recommender() -> MethodRecommender:
     return MethodRecommender(bind=get_engine())
 
 
+def get_ai_analysis_service() -> AIAnalysisService:
+    """Dependency cung cấp AIAnalysisService theo cấu hình LLM mặc định."""
+    return AIAnalysisService(rule_service=ProblemStructuringService())
+
+
 
 # ──────────────────────────────────────────────
 # Schemas
@@ -104,6 +110,18 @@ class ProblemFrameCreate(BaseModel):
 
 
 class ProblemFrameCreateRequest(BaseModel):
+    raw_statement: str = Field(..., min_length=1)
+    domain: str | None = None
+
+    @field_validator("raw_statement")
+    @classmethod
+    def validate_statement_not_whitespace(cls, v: str) -> str:
+        if not v or not v.strip():
+            raise ValueError("raw_statement must not be empty or whitespace only")
+        return v.strip()
+
+
+class AIProblemAnalysisRequest(BaseModel):
     raw_statement: str = Field(..., min_length=1)
     domain: str | None = None
 
@@ -470,6 +488,58 @@ async def create_problem_frame_canonical(
         "worsening_parameter": frame.worsening_parameter,
         "domain": frame.domain,
         "created_at": frame.created_at.isoformat() if frame.created_at else None,
+    }
+
+
+@router.post("/{session_id}/ai/analyze-problem", status_code=status.HTTP_200_OK)
+async def analyze_problem_with_ai(
+    session_id: uuid.UUID,
+    body: AIProblemAnalysisRequest,
+    db: Session | None = Depends(get_db),
+    ai_service: AIAnalysisService = Depends(get_ai_analysis_service),
+):
+    """
+    Phân tích bài toán bằng AI/LLM (Phase 6.2 — Ephemeral Suggestion Layer).
+
+    AI Trust Contract Guarantee:
+      - Pure suggestion: KHÔNG tự ý ghi đè ProblemFrame hoặc Contradiction trong database.
+      - KHÔNG tự động chuyển FSM state.
+      - Trả về provenance ("ai_hypothesis" hoặc "rule_based_fallback") kèm metadata.
+    Ref: docs/PROFESSIONAL_UPGRADE_ROADMAP.md, docs/PHASE_6_7_EXECUTION_SPEC.md
+    """
+    # 1. Xác thực session có tồn tại trong database
+    if db is not None:
+        session_record = db.query(ResearchSession).filter_by(id=session_id).first()
+        if not session_record:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"ResearchSession with id '{session_id}' not found.",
+            )
+
+    # 2. Gọi AI Service thực hiện phân tích
+    result = ai_service.analyze_problem(
+        raw_statement=body.raw_statement,
+        domain=body.domain,
+    )
+
+    return {
+        "data": {
+            "normalized_statement": result.normalized_statement,
+            "domain": result.domain,
+            "contradiction_type": result.contradiction_type,
+            "improving_parameter": result.improving_parameter,
+            "worsening_parameter": result.worsening_parameter,
+            "suggested_keywords": result.suggested_keywords,
+            "reasoning": result.reasoning,
+        },
+        "_meta": {
+            "provenance": result.provenance,
+            "provider": result.provider,
+            "model": result.model,
+            "prompt_version": result.prompt_version,
+            "latency_ms": result.latency_ms,
+            "fallback_reason": result.fallback_reason,
+        },
     }
 
 
