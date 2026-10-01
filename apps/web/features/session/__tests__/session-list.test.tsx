@@ -456,8 +456,8 @@ describe('SessionList Lifecycle & Safe Deletion (Phase 5.9)', () => {
       expect(screen.getByText('Session Hoạt Động')).toBeInTheDocument()
     })
 
-    // Click nút "Lưu trữ" trên card
-    const archiveBtn = screen.getByRole('button', { name: /lưu trữ/i })
+    // Click nút "Lưu trữ" trên card bằng accessible name chính xác
+    const archiveBtn = screen.getByRole('button', { name: /lưu trữ session/i })
     fireEvent.click(archiveBtn)
 
     // Modal xác nhận xuất hiện
@@ -495,6 +495,58 @@ describe('SessionList Lifecycle & Safe Deletion (Phase 5.9)', () => {
 
     await waitFor(() => {
       expect(mockedRestoreSession).toHaveBeenCalledWith('session-archived-1')
+    })
+  })
+
+  it('16. Mở modal xác nhận và bấm Hủy bỏ thì modal đóng lại mà không gọi archiveSession', async () => {
+    renderWithClient(<SessionList />)
+
+    await waitFor(() => {
+      expect(screen.getByText('Session Hoạt Động')).toBeInTheDocument()
+    })
+
+    // Mở modal
+    const archiveBtn = screen.getByRole('button', { name: /lưu trữ session/i })
+    fireEvent.click(archiveBtn)
+
+    expect(screen.getByText(/bạn có chắc chắn muốn chuyển session/i)).toBeInTheDocument()
+
+    // Bấm nút "Hủy bỏ"
+    const cancelBtn = screen.getByRole('button', { name: /hủy bỏ/i })
+    fireEvent.click(cancelBtn)
+
+    // Modal đóng lại và không gọi API
+    expect(screen.queryByText(/bạn có chắc chắn muốn chuyển session/i)).not.toBeInTheDocument()
+    expect(mockedArchiveSession).not.toHaveBeenCalled()
+  })
+
+  it('17. Hiển thị Empty state phù hợp cho tab Đã lưu trữ khi không có dữ liệu', async () => {
+    mockedListSessions.mockImplementation((params) => {
+      if (params?.status === 'archived') {
+        return Promise.resolve({
+          data: [],
+          meta: { total: 0 },
+        })
+      }
+      return Promise.resolve({
+        data: MOCK_ACTIVE_SESSIONS,
+        meta: { total: 1 },
+      })
+    })
+
+    renderWithClient(<SessionList />)
+
+    await waitFor(() => {
+      expect(screen.getByText('Session Hoạt Động')).toBeInTheDocument()
+    })
+
+    // Sang tab Đã lưu trữ
+    const archivedTab = screen.getByRole('button', { name: /đã lưu trữ/i })
+    fireEvent.click(archivedTab)
+
+    await waitFor(() => {
+      expect(screen.getByText(/không có session nào được lưu trữ/i)).toBeInTheDocument()
+      expect(screen.getByText(/các session được lưu trữ an toàn sẽ xuất hiện tại đây/i)).toBeInTheDocument()
     })
   })
 })
