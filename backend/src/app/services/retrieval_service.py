@@ -34,7 +34,11 @@ from sqlalchemy import Engine, Float, Integer, Select, cast, func, select, text
 from sqlalchemy.orm import Session
 
 from app.domain.models import Chunk, Document, SearchResult
-from app.services.ingestion_service import EmbeddingClient, MockEmbeddingClient
+from app.services.embedding_client import (
+    EmbeddingClient,
+    MockEmbeddingClient,
+    get_embedding_client,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -78,7 +82,7 @@ class RetrievalService:
         else:
             self._session = None
             self._engine = bind
-        self.embedding_client = embedding_client or MockEmbeddingClient()
+        self.embedding_client = embedding_client or get_embedding_client()
 
     @property
     def engine(self) -> Engine | None:
@@ -222,10 +226,7 @@ class RetrievalService:
 
         # Cosine distance: <=> trả về [0, 2] (0 = giống hệt, 2 = đối lập)
         # similarity = 1 - distance ∈ [-1, 1]; clip về [0, 1]
-        vec_literal = str(query_vector)
-        distance_expr = Chunk.embedding.op("<=>")(  # type: ignore[attr-defined]
-            func.cast(vec_literal, Chunk.embedding.type)  # type: ignore[attr-defined]
-        )
+        distance_expr = Chunk.embedding.cosine_distance(query_vector)  # type: ignore[attr-defined]
         similarity = (1.0 - cast(distance_expr, Float)).label("similarity")
 
         stmt: Select = (

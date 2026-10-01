@@ -23,23 +23,25 @@
 | **Phase 5.8** | Legacy Quarantine & Docs | ✅ DONE | `268ebb0` |
 | **Docker Hardening** | Multi-stage build, healthcheck, production runtime | ✅ DONE | `246825e` |
 | **Phase 5.9** | Session Lifecycle — Archive/Restore | ✅ DONE | `4c3855e` |
-| **Phase 6–12** | Professional Upgrade (AI Core, Canvas, Export…) | 🔵 PLANNED | — |
+| **Phase 6.3 (QW-1)** | Full TRIZ Canonical 39×39 Matrix & Bilingual Parameters | ✅ DONE | `f0a0885` |
+| **Phase 7.1 (QW-2)** | Wire Problem Canvas & Smart Tab Routing | ✅ DONE | `0ca4d8f` |
+| **Phase 9.1 (QW-5)** | Export Markdown GFM & Native Browser Print PDF | ✅ DONE | `bc9b1f3` |
+| **Phase 6.1 (QW-3)** | Real Embedding Engine (OpenAI & Gemini) & Polymorphic Factory | ✅ DONE | Pending commit |
+| **Phase 6–12** | Professional Upgrade (AI Core, Canvas, Export…) | 🔵 IN PROGRESS | — |
 
 ---
 
-## 📅 Phiên làm việc: 2026-09-30 (Phiên 2026-09-30 — Antigravity IDE)
+## 📅 Phiên làm việc: 2026-10-01 (Phase 6.1 — Real Embedding Engine & Factory)
 
 ### ✅ Đã hoàn thành trong phiên này
 
-| # | Task | Commit | Mô tả |
-|---|---|---|---|
-| 1 | **Phase 5.3–5.8 commit finalization** | `7d0f9fc` → `268ebb0` | Stage và commit sạch 6 phase riêng biệt |
-| 2 | **Docker Hardening** | `246825e` | Frontend multi-stage build (`next build` + Node slim runner), backend bỏ `--reload` và bind-mount, healthcheck `/health`, `service_healthy` condition chain, `restart: unless-stopped` |
-| 3 | **Smoke test Docker stack** | — | `curl /health` → 200, `curl /api/v1/sessions` → 200, `curl /sessions` (frontend) → 200 |
-| 4 | **Deployment docs** | `246825e` | `docs/DEPLOYMENT_GUIDE.md`, `docs/DOCKER_DEPLOYMENT_PLAN.md`, `docs/DOCKER_GAP_ANALYSIS.md` |
-| 5 | **Bug fix: POST /api/v1/sessions** | `4c3855e` | Thiếu `db.commit()` → session tạo xong không persist; fix + test coverage |
-| 6 | **Phase 5.9 — Session Archive/Restore** | `4c3855e` | Soft-delete pattern: `PATCH /sessions/{id}/archive`, `PATCH /sessions/{id}/restore`; mặc định list ẩn archived; `?status=archived` trả archived; frontend tabs Active/Archived với confirmation modal |
-| 7 | **Professional Upgrade Roadmap** | — | Phân tích toàn bộ mã nguồn, tạo plan Phase 6–12 lưu tại `docs/PROFESSIONAL_UPGRADE_ROADMAP.md` |
+| # | Task | Chi tiết |
+|---|---|---|
+| 1 | **Phase 6.1 — Embedding Client Engine** | Xây dựng `OpenAIEmbeddingClient` (`text-embedding-3-small`, 1536 dim) và `GeminiEmbeddingClient` (`text-embedding-004`, 1536 dim) |
+| 2 | **Polymorphic Factory** | `get_embedding_client(provider)` hỗ trợ `openai`, `gemini`, `mock` qua biến môi trường `EMBEDDING_PROVIDER` |
+| 3 | **Graceful Degradation & Resiliency** | Tự động fallback về `MockEmbeddingClient` khi thiếu API key hoặc sau 2 lần retry có exponential backoff |
+| 4 | **Re-embed CLI Script** | `backend/src/app/scripts/reembed_chunks.py` cho phép re-embed toàn bộ hoặc các chunk zero-vector theo batch |
+| 5 | **Test-First Coverage** | Unit test suite `test_embedding_clients.py` (13 tests) + Integration test `test_real_embedding_integration.py` (2 tests) pass 100% |
 
 ---
 

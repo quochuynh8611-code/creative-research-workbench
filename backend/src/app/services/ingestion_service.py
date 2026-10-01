@@ -203,36 +203,28 @@ class MarkdownChunker:
         return result
 
 
-# ──────────────────────────────────────────────
-# EmbeddingClient (Interface + MockClient)
-# ──────────────────────────────────────────────
+from app.services.embedding_client import (
+    EMBEDDING_DIM,
+    EmbeddingClient,
+    GeminiEmbeddingClient,
+    MockEmbeddingClient,
+    OpenAIEmbeddingClient,
+    get_embedding_client,
+)
 
-class EmbeddingClient(ABC):
-    """
-    Interface cho embedding client.
-    Implement interface này để swap MockClient ↔ OpenAIClient.
-    """
-
-    @abstractmethod
-    def embed(self, texts: list[str]) -> list[list[float]]:
-        """
-        Nhận list[str], trả về list[list[float]] với dim == EMBEDDING_DIM.
-        Thứ tự output phải tương ứng 1:1 với input.
-        """
-        ...
-
-
-class MockEmbeddingClient(EmbeddingClient):
-    """
-    Mock: trả về zero-vectors 1536 dim.
-    Dùng trong integration tests và development khi chưa có OpenAI API key.
-
-    NOTE: zero-vectors không có nghĩa về semantic — chỉ để pipeline chạy được.
-    Swap bằng OpenAIEmbeddingClient khi cần retrieval thực.
-    """
-
-    def embed(self, texts: list[str]) -> list[list[float]]:
-        return [[0.0] * EMBEDDING_DIM for _ in texts]
+__all__ = [
+    "DEFAULT_CHUNK_TOKENS",
+    "DEFAULT_OVERLAP_TOKENS",
+    "EMBEDDING_DIM",
+    "EmbeddingClient",
+    "FrontmatterParser",
+    "GeminiEmbeddingClient",
+    "IngestionService",
+    "MarkdownChunker",
+    "MockEmbeddingClient",
+    "OpenAIEmbeddingClient",
+    "get_embedding_client",
+]
 
 
 # ──────────────────────────────────────────────
@@ -245,7 +237,7 @@ class IngestionService:
 
     Args:
         engine:           SQLAlchemy Engine (PostgreSQL)
-        embedding_client: EmbeddingClient impl. Default: MockEmbeddingClient.
+        embedding_client: EmbeddingClient impl. Default: get_embedding_client().
         chunk_size:       Số token tối đa mỗi chunk. Default: 512.
         overlap:          Số token overlap giữa các chunk. Default: 50.
 
@@ -263,7 +255,7 @@ class IngestionService:
         overlap: int = DEFAULT_OVERLAP_TOKENS,
     ) -> None:
         self.engine = engine
-        self.embedding_client = embedding_client or MockEmbeddingClient()
+        self.embedding_client = embedding_client or get_embedding_client()
         self.chunker = MarkdownChunker(max_tokens=chunk_size, overlap_tokens=overlap)
 
     # ──────────────────────────────────────────
