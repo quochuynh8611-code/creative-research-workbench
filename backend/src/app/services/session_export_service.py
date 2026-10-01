@@ -12,6 +12,7 @@ from app.domain.models import (
     ResearchNote,
     ResearchSession,
 )
+from app.services.method_recommender import MethodRecommender
 
 
 def export_session_as_markdown(session: ResearchSession, db: Session) -> str:
@@ -79,10 +80,10 @@ def export_session_as_markdown(session: ResearchSession, db: Session) -> str:
             else str(frame.contradiction_type)
         )
         lines.extend([
-            f"- **Phát biểu bài toán gốc (Raw Statement):**",
+            "- **Phát biểu bài toán gốc (Raw Statement):**",
             f"  > {frame.raw_statement}",
             "",
-            f"- **Bài toán chuẩn hóa (Normalized Statement):**",
+            "- **Bài toán chuẩn hóa (Normalized Statement):**",
             f"  > {frame.normalized_statement or 'Chưa có chuẩn hóa'}",
             "",
             "| Thuộc tính | Chi tiết |",
@@ -105,11 +106,47 @@ def export_session_as_markdown(session: ResearchSession, db: Session) -> str:
         "",
     ])
 
-    if frame and (frame.improving_parameter or frame.worsening_parameter):
+    recommender = MethodRecommender(bind=db)
+    recommendations = recommender.recommend_methods(session.id)
+
+    if recommendations:
+        if frame and (frame.improving_parameter or frame.worsening_parameter):
+            lines.extend([
+                "Dựa trên phân tích ma trận giải quyết mâu thuẫn Altshuller (TRIZ 39×39 Matrix), các nguyên tắc sáng tạo tiềm năng được đề xuất:",
+                "",
+                f"- **Cặp thông số mâu thuẫn:** `{frame.improving_parameter or 'N/A'}` vs `{frame.worsening_parameter or 'N/A'}`",
+                "",
+            ])
+        for rec in recommendations:
+            p_id = rec.get("principle_id") or rec.get("id")
+            title = rec.get("title") or f"Principle {p_id}"
+            desc = rec.get("description", "")
+            explanation = rec.get("explanation", "")
+            lines.extend([
+                f"### #{p_id} — {title}",
+                "",
+            ])
+            if desc and desc.strip():
+                lines.extend([
+                    desc.strip(),
+                    "",
+                ])
+            if explanation and explanation.strip() and explanation.strip() != desc.strip():
+                lines.extend([
+                    f"> *Giải thích:* {explanation.strip()}",
+                    "",
+                ])
+            examples = rec.get("examples", [])
+            if examples:
+                lines.append("**Ví dụ ứng dụng:**")
+                for ex in examples:
+                    lines.append(f"- {ex}")
+                lines.append("")
+    elif frame and (frame.improving_parameter or frame.worsening_parameter):
         lines.extend([
-            "Dựa trên phân tích mâu thuẫn kỹ thuật Altshuller Matrix, các nguyên tắc sáng tạo tiềm năng được đề xuất để giải quyết mâu thuẫn giữa thông số cải thiện và thông số bị suy giảm.",
-            "",
             f"- **Cặp thông số mâu thuẫn:** `{frame.improving_parameter or 'N/A'}` vs `{frame.worsening_parameter or 'N/A'}`",
+            "",
+            "_Chưa có nguyên tắc cụ thể nào được ánh xạ cho cặp thông số này._",
             "",
         ])
     else:

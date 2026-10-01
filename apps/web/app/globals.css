@@ -72,3 +72,29 @@
     @apply bg-background text-foreground;
   }
 }
+
+@media print {
+  body {
+    background: #ffffff !important;
+    color: #000000 !important;
+  }
+
+  /* Hide navigation, action bars, tabs, and interactive chrome during print */
+  header,
+  nav,
+  .no-print,
+  button,
+  [role="tablist"],
+  a[href="/sessions"] {
+    display: none !important;
+  }
+
+  .shadow-sm,
+  .shadow-md {
+    box-shadow: none !important;
+  }
+
+  .border {
+    border-color: #e5e7eb !important;
+  }
+}

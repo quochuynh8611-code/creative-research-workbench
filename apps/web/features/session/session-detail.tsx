@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { ArrowLeft, Brain, Loader2, AlertCircle, Sparkles, FolderSearch, Lightbulb, BookOpen, Download } from 'lucide-react'
+import { ArrowLeft, Brain, Loader2, AlertCircle, Sparkles, FolderSearch, Lightbulb, BookOpen, Download, Printer } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import { DOMAIN_LABELS, STATUS_LABELS, STAGE_LABELS, WORKFLOW_STAGES, formatDate, cn } from '@/lib/utils'
 import { getSession, exportSessionMarkdown } from '@/lib/api-client'
@@ -84,6 +84,12 @@ export function SessionDetail({ sessionId }: SessionDetailProps) {
   const handleSaveAsNote = (draft: NoteDraft) => {
     setNoteDraft(draft)
     setActiveTab('notebook')
+  }
+
+  const handlePrintPdf = () => {
+    if (typeof window !== 'undefined') {
+      window.print()
+    }
   }
 
   const handleExportMarkdown = async () => {
@@ -206,12 +212,12 @@ export function SessionDetail({ sessionId }: SessionDetailProps) {
         </div>
 
         {/* Header Actions */}
-        <div className="flex items-center gap-2 self-start md:self-auto">
+        <div className="flex items-center gap-2 self-start md:self-auto no-print">
           <button
             type="button"
             onClick={handleExportMarkdown}
             disabled={isExporting}
-            className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-semibold border border-border bg-card hover:bg-accent hover:text-accent-foreground disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-sm"
+            className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-semibold border border-border bg-card hover:bg-accent hover:text-accent-foreground disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-sm cursor-pointer"
           >
             {isExporting ? (
               <>
@@ -224,6 +230,15 @@ export function SessionDetail({ sessionId }: SessionDetailProps) {
                 <span>Xuất Markdown</span>
               </>
             )}
+          </button>
+
+          <button
+            type="button"
+            onClick={handlePrintPdf}
+            className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-semibold border border-border bg-card hover:bg-accent hover:text-accent-foreground transition-all shadow-sm cursor-pointer"
+          >
+            <Printer className="w-3.5 h-3.5 text-muted-foreground" />
+            <span>In / Lưu PDF</span>
           </button>
         </div>
       </div>

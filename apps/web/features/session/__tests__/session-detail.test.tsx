@@ -386,13 +386,14 @@ describe('Phase 5.4 — Problem Intake & Structuring Canvas Tests', () => {
     })
   })
 
-  describe('9. Session Markdown Export Action', () => {
+  describe('9. Session Markdown & PDF Export Actions', () => {
     beforeEach(() => {
       window.URL.createObjectURL = jest.fn(() => 'blob:http://localhost/mock-blob')
       window.URL.revokeObjectURL = jest.fn()
+      window.print = jest.fn()
     })
 
-    it('render nút Xuất Markdown khi session load thành công', async () => {
+    it('render đầy đủ nút Xuất Markdown và In / Lưu PDF khi session load thành công', async () => {
       mockedGetSession.mockResolvedValue(MOCK_SESSION_WITH_FRAME)
       renderWithClient(<SessionDetail sessionId="ses-456" />)
 
@@ -401,6 +402,21 @@ describe('Phase 5.4 — Problem Intake & Structuring Canvas Tests', () => {
       })
 
       expect(screen.getByRole('button', { name: /Xuất Markdown/i })).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: /In \/ Lưu PDF/i })).toBeInTheDocument()
+    })
+
+    it('click nút In / Lưu PDF gọi window.print()', async () => {
+      mockedGetSession.mockResolvedValue(MOCK_SESSION_WITH_FRAME)
+      renderWithClient(<SessionDetail sessionId="ses-456" />)
+
+      await waitFor(() => {
+        expect(screen.getByText('Tối ưu độ bền và trọng lượng cánh tay robot')).toBeInTheDocument()
+      })
+
+      const printBtn = screen.getByRole('button', { name: /In \/ Lưu PDF/i })
+      fireEvent.click(printBtn)
+
+      expect(window.print).toHaveBeenCalledTimes(1)
     })
 
     it('click nút export gọi đúng api client và trigger download', async () => {
@@ -423,7 +439,7 @@ describe('Phase 5.4 — Problem Intake & Structuring Canvas Tests', () => {
       expect(window.URL.createObjectURL).toHaveBeenCalledWith(mockBlob)
     })
 
-    it('hiển thị trạng thái disabled/loading trong lúc export', async () => {
+    it('hiển thị trạng thái disabled/loading và ngăn chặn double-click trong lúc export', async () => {
       mockedGetSession.mockResolvedValue(MOCK_SESSION_WITH_FRAME)
       let resolveExport: (blob: Blob) => void = () => {}
       const exportPromise = new Promise<Blob>((resolve) => {
@@ -439,6 +455,10 @@ describe('Phase 5.4 — Problem Intake & Structuring Canvas Tests', () => {
 
       const exportBtn = screen.getByRole('button', { name: /Xuất Markdown/i })
       fireEvent.click(exportBtn)
+
+      // Double-click attempt
+      fireEvent.click(exportBtn)
+      expect(mockedExportSessionMarkdown).toHaveBeenCalledTimes(1)
 
       // Trong lúc pending
       expect(screen.getByRole('button', { name: /Đang xuất/i })).toBeDisabled()
