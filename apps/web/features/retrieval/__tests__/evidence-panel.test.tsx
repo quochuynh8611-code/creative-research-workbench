@@ -160,4 +160,34 @@ describe('Phase 5.6 — EvidencePanel Component Tests', () => {
       )
     })
   })
+
+  it('6. Kích hoạt callback onSaveAsNote với thông tin trích dẫn khi bấm nút Lưu vào sổ tay', async () => {
+    ;(apiClient.searchKnowledge as jest.Mock).mockResolvedValue(mockSearchResponse)
+    const onSaveAsNoteMock = jest.fn()
+    const queryClient = createTestQueryClient()
+
+    render(
+      <QueryClientProvider client={queryClient}>
+        <EvidencePanel
+          sessionId="sess-123"
+          initialQuery="mâu thuẫn thông số vật liệu"
+          onSaveAsNote={onSaveAsNoteMock}
+        />
+      </QueryClientProvider>
+    )
+
+    await screen.findByText('docs/ADR-001-architecture.md')
+
+    const saveBtns = screen.getAllByRole('button', { name: /lưu vào sổ tay|lưu thành ghi chú/i })
+    expect(saveBtns.length).toBeGreaterThan(0)
+    fireEvent.click(saveBtns[0])
+
+    expect(onSaveAsNoteMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        content: expect.stringContaining(mockSearchResponse.results[0].excerpt),
+        note_type: 'insight',
+        source_chunk_id: 'chunk-001',
+      })
+    )
+  })
 })

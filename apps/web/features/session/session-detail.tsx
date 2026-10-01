@@ -13,7 +13,7 @@ import { PrincipleSuggestions } from '@/features/ideation/principle-suggestions'
 import { EvidencePanel } from '@/features/retrieval/evidence-panel'
 import { TrizMatrixLookup } from '@/features/triz/triz-matrix-lookup'
 import { ResearchNotebook } from '@/features/notebook/research-notebook'
-import type { ProblemFrame, WorkflowStage, RecommendedMethod } from '@/lib/types'
+import type { ProblemFrame, WorkflowStage, RecommendedMethod, NoteDraft } from '@/lib/types'
 
 const TABS = [
   { id: 'intake', label: 'Nhập vấn đề', icon: Sparkles },
@@ -31,6 +31,7 @@ export function SessionDetail({ sessionId }: SessionDetailProps) {
   const [activeTab, setActiveTab] = useState<string>('intake')
   const [localProblemFrame, setLocalProblemFrame] = useState<ProblemFrame | null>(null)
   const [recommendedMethods, setRecommendedMethods] = useState<RecommendedMethod[]>([])
+  const [noteDraft, setNoteDraft] = useState<NoteDraft | null>(null)
 
   const {
     data: session,
@@ -48,6 +49,11 @@ export function SessionDetail({ sessionId }: SessionDetailProps) {
   const handleProblemFrameCreated = (frame: ProblemFrame) => {
     setLocalProblemFrame(frame)
     setActiveTab('structuring')
+  }
+
+  const handleSaveAsNote = (draft: NoteDraft) => {
+    setNoteDraft(draft)
+    setActiveTab('notebook')
   }
 
   if (isLoading) {
@@ -244,6 +250,7 @@ export function SessionDetail({ sessionId }: SessionDetailProps) {
               session.title
             }
             domain={typeof session.domain === 'string' ? session.domain : undefined}
+            onSaveAsNote={handleSaveAsNote}
           />
         )}
 
@@ -255,12 +262,17 @@ export function SessionDetail({ sessionId }: SessionDetailProps) {
             <PrincipleSuggestions
               methods={recommendedMethods}
               onSelectPrinciple={() => setActiveTab('notebook')}
+              onSaveAsNote={handleSaveAsNote}
             />
           </div>
         )}
 
         {activeTab === 'notebook' && (
-          <ResearchNotebook sessionId={session.id} />
+          <ResearchNotebook
+            sessionId={session.id}
+            initialDraft={noteDraft}
+            onClearDraft={() => setNoteDraft(null)}
+          />
         )}
       </div>
     </div>

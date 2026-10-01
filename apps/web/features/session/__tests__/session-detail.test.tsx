@@ -7,7 +7,14 @@ import { SessionDetail } from '../session-detail'
 import { IntakeForm } from '@/features/intake/intake-form'
 import { NormalizedView } from '@/features/structuring/normalized-view'
 import { ContradictionBadge } from '@/features/structuring/contradiction-badge'
-import { getSession, createProblemFrame } from '@/lib/api-client'
+import {
+  getSession,
+  createProblemFrame,
+  searchKnowledge,
+  listResearchNotes,
+  createResearchNote,
+  deleteResearchNote,
+} from '@/lib/api-client'
 import type { ProblemFrame, ResearchSession } from '@/lib/types'
 
 // Mock api-client
@@ -15,10 +22,16 @@ jest.mock('@/lib/api-client', () => ({
   getSession: jest.fn(),
   createProblemFrame: jest.fn(),
   nextStep: jest.fn(),
+  searchKnowledge: jest.fn(),
+  listResearchNotes: jest.fn(),
+  createResearchNote: jest.fn(),
+  deleteResearchNote: jest.fn(),
 }))
 
 const mockedGetSession = getSession as jest.MockedFunction<typeof getSession>
 const mockedCreateProblemFrame = createProblemFrame as jest.MockedFunction<typeof createProblemFrame>
+const mockedSearchKnowledge = searchKnowledge as jest.MockedFunction<typeof searchKnowledge>
+const mockedListResearchNotes = listResearchNotes as jest.MockedFunction<typeof listResearchNotes>
 
 function createTestQueryClient() {
   return new QueryClient({
@@ -77,6 +90,8 @@ const MOCK_SESSION_NEW: ResearchSession = {
 describe('Phase 5.4 — Problem Intake & Structuring Canvas Tests', () => {
   beforeEach(() => {
     jest.clearAllMocks()
+    mockedSearchKnowledge.mockResolvedValue({ results: [], latency_ms: 10 })
+    mockedListResearchNotes.mockResolvedValue({ data: [], meta: { total: 0 } })
   })
 
   describe('1. SessionDetail Component', () => {
@@ -247,6 +262,49 @@ describe('Phase 5.4 — Problem Intake & Structuring Canvas Tests', () => {
       fireEvent.click(ideationTab)
 
       expect(screen.getByText(/Chưa có gợi ý nguyên tắc sáng chế/i)).toBeInTheDocument()
+    })
+  })
+
+  describe('8. Save as Research Note Cross-Tab Flow', () => {
+    it('chuyển trích dẫn từ Retrieval sang Notebook và prefill nội dung', async () => {
+      mockedGetSession.mockResolvedValue(MOCK_SESSION_WITH_FRAME)
+      mockedSearchKnowledge.mockResolvedValueOnce({
+        results: [
+          {
+            chunk_id: 'chk-101',
+            source_ref: 'docs/ADR-001-architecture.md',
+            excerpt: 'Kiến trúc Workflow Engine cho phép chuyển tiếp trạng thái',
+            score: 0.92,
+            metadata: { topic: 'architecture' },
+          },
+        ],
+        latency_ms: 25,
+      })
+      mockedListResearchNotes.mockResolvedValue({
+        data: [],
+        meta: { total: 0 },
+      })
+
+      renderWithClient(<SessionDetail sessionId="ses-456" />)
+
+      await waitFor(() => {
+        expect(screen.getByText('Tối ưu độ bền và trọng lượng cánh tay robot')).toBeInTheDocument()
+      })
+
+      // Mở tab Retrieval
+      const retrievalTab = screen.getByRole('button', { name: /Tài liệu & Bằng chứng/i })
+      fireEvent.click(retrievalTab)
+
+      await screen.findByText('docs/ADR-001-architecture.md')
+
+      // Bấm nút Lưu vào sổ tay
+      const saveBtn = screen.getByRole('button', { name: /lưu vào sổ tay|lưu thành ghi chú/i })
+      fireEvent.click(saveBtn)
+
+      // Kiểm tra chuyển sang tab Notebook và form được điền sẵn trích dẫn
+      expect(await screen.findByText('Thêm ghi chú nghiên cứu')).toBeInTheDocument()
+      const textarea = screen.getByPlaceholderText(/nhập ghi chú nghiên cứu/i) as HTMLTextAreaElement
+      expect(textarea.value).toContain('Kiến trúc Workflow Engine cho phép chuyển tiếp trạng thái')
     })
   })
 })

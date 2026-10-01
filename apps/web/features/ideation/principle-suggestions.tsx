@@ -1,19 +1,21 @@
 'use client'
 
 import React from 'react'
-import { Lightbulb, CheckCircle2, ArrowRight, Sparkles, HelpCircle } from 'lucide-react'
+import { Lightbulb, CheckCircle2, ArrowRight, Sparkles, HelpCircle, Bookmark } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import type { RecommendedMethod } from '@/lib/types'
+import type { RecommendedMethod, NoteDraft } from '@/lib/types'
 
 interface PrincipleSuggestionsProps {
   methods?: RecommendedMethod[]
   onSelectPrinciple?: (method: RecommendedMethod) => void
+  onSaveAsNote?: (draft: NoteDraft) => void
   className?: string
 }
 
 export function PrincipleSuggestions({
   methods = [],
   onSelectPrinciple,
+  onSaveAsNote,
   className,
 }: PrincipleSuggestionsProps) {
   if (!methods || methods.length === 0) {
@@ -73,7 +75,22 @@ export function PrincipleSuggestions({
                 </p>
               </div>
 
-              <div className="pt-2 border-t border-border/50 flex items-center justify-end">
+              <div className="pt-2 border-t border-border/50 flex flex-wrap items-center justify-end gap-2">
+                {onSaveAsNote && (
+                  <button
+                    type="button"
+                    onClick={() =>
+                      onSaveAsNote({
+                        content: `[Nguyên tắc sáng tạo #${principleNum}: ${method.title}]\n${method.description}`,
+                        note_type: 'hypothesis',
+                      })
+                    }
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-amber-500/10 hover:bg-amber-500/20 text-amber-700 dark:text-amber-400 border border-amber-500/20 transition-all cursor-pointer"
+                  >
+                    <Bookmark className="w-3.5 h-3.5" />
+                    <span>Lưu vào sổ tay</span>
+                  </button>
+                )}
                 {onSelectPrinciple && (
                   <button
                     type="button"

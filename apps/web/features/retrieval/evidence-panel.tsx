@@ -5,12 +5,13 @@ import { FolderSearch, Search, Loader2, AlertCircle, ExternalLink, Bookmark, Spa
 import { useQuery } from '@tanstack/react-query'
 import { searchKnowledge } from '@/lib/api-client'
 import { cn } from '@/lib/utils'
-import type { SearchResultItem } from '@/lib/types'
+import type { SearchResultItem, NoteDraft } from '@/lib/types'
 
 interface EvidencePanelProps {
   sessionId: string
   initialQuery?: string
   domain?: string
+  onSaveAsNote?: (draft: NoteDraft) => void
   className?: string
 }
 
@@ -18,6 +19,7 @@ export function EvidencePanel({
   sessionId,
   initialQuery = '',
   domain,
+  onSaveAsNote,
   className,
 }: EvidencePanelProps) {
   const [searchInput, setSearchInput] = useState(initialQuery)
@@ -177,6 +179,25 @@ export function EvidencePanel({
                   <p className="text-xs text-muted-foreground leading-relaxed italic border-l-2 border-primary/40 pl-3">
                     &ldquo;{item.excerpt}&rdquo;
                   </p>
+
+                  {onSaveAsNote && (
+                    <div className="pt-2 border-t border-border/50 flex items-center justify-end">
+                      <button
+                        type="button"
+                        onClick={() =>
+                          onSaveAsNote({
+                            content: `[Trích dẫn từ ${item.source_ref}]\n"${item.excerpt}"`,
+                            note_type: 'insight',
+                            source_chunk_id: item.chunk_id || null,
+                          })
+                        }
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-primary/10 hover:bg-primary/20 text-primary border border-primary/20 transition-all cursor-pointer"
+                      >
+                        <Bookmark className="w-3.5 h-3.5" />
+                        <span>Lưu vào sổ tay</span>
+                      </button>
+                    </div>
+                  )}
                 </div>
               )
             })}

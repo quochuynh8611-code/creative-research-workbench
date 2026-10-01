@@ -49,4 +49,20 @@ describe('Phase 5.6 — PrincipleSuggestions Component Tests', () => {
 
     expect(onSelectMock).toHaveBeenCalledWith(mockMethods[0])
   })
+
+  it('4. Kích hoạt callback onSaveAsNote với thông tin nguyên tắc khi bấm nút Lưu vào sổ tay', () => {
+    const onSaveAsNoteMock = jest.fn()
+    render(<PrincipleSuggestions methods={mockMethods} onSaveAsNote={onSaveAsNoteMock} />)
+
+    const saveBtns = screen.getAllByRole('button', { name: /lưu vào sổ tay|lưu ghi chú/i })
+    expect(saveBtns.length).toBeGreaterThan(0)
+    fireEvent.click(saveBtns[0])
+
+    expect(onSaveAsNoteMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        content: expect.stringContaining('Parameter changes'),
+        note_type: 'hypothesis',
+      })
+    )
+  })
 })

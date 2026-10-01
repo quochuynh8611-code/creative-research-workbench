@@ -175,6 +175,12 @@ export interface DeleteResearchNoteResponse {
   session_id: string
 }
 
+export interface NoteDraft {
+  content: string
+  note_type: NoteType
+  source_chunk_id?: string | null
+}
+
 
 export interface KnowledgeChunk {
   id: string

@@ -1,16 +1,18 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import {
   listResearchNotes,
   createResearchNote,
   deleteResearchNote,
 } from '@/lib/api-client'
-import type { NoteType, CreateResearchNoteInput, ResearchNote } from '@/lib/types'
+import type { NoteType, CreateResearchNoteInput, ResearchNote, NoteDraft } from '@/lib/types'
 
 interface ResearchNotebookProps {
   sessionId: string
+  initialDraft?: NoteDraft | null
+  onClearDraft?: () => void
   className?: string
 }
 
@@ -30,12 +32,27 @@ const NOTE_TYPE_STYLES: Record<NoteType, string> = {
   action: 'bg-rose-50 text-rose-700 border-rose-200 dark:bg-rose-950/40 dark:text-rose-300 dark:border-rose-800',
 }
 
-export function ResearchNotebook({ sessionId, className = '' }: ResearchNotebookProps) {
+export function ResearchNotebook({
+  sessionId,
+  initialDraft,
+  onClearDraft,
+  className = '',
+}: ResearchNotebookProps) {
   const queryClient = useQueryClient()
-  const [content, setContent] = useState('')
-  const [noteType, setNoteType] = useState<NoteType>('insight')
+  const [content, setContent] = useState(initialDraft?.content || '')
+  const [noteType, setNoteType] = useState<NoteType>(initialDraft?.note_type || 'insight')
   const [validationError, setValidationError] = useState<string | null>(null)
   const [actionError, setActionError] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (initialDraft) {
+      setContent(initialDraft.content || '')
+      if (initialDraft.note_type) {
+        setNoteType(initialDraft.note_type)
+      }
+      setValidationError(null)
+    }
+  }, [initialDraft])
 
   const {
     data: notesResponse,
@@ -57,6 +74,7 @@ export function ResearchNotebook({ sessionId, className = '' }: ResearchNotebook
       setNoteType('insight')
       setValidationError(null)
       setActionError(null)
+      onClearDraft?.()
     },
     onError: (err: any) => {
       setActionError(err?.message || 'Không thể tạo ghi chú. Vui lòng thử lại.')
@@ -84,10 +102,16 @@ export function ResearchNotebook({ sessionId, className = '' }: ResearchNotebook
 
     setValidationError(null)
     setActionError(null)
-    createMutation.mutate({
+
+    const payload: CreateResearchNoteInput = {
       content: trimmed,
       note_type: noteType,
-    })
+    }
+    if (initialDraft?.source_chunk_id) {
+      payload.source_chunk_id = initialDraft.source_chunk_id
+    }
+
+    createMutation.mutate(payload)
   }
 
   const handleDelete = (noteId: string) => {

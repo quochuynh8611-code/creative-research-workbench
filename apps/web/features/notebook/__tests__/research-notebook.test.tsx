@@ -215,4 +215,56 @@ describe('ResearchNotebook Component', () => {
 
     expect(await screen.findByText('Phát hiện cơ chế phân tán nhiệt qua cấu trúc tổ ong')).toBeInTheDocument()
   })
+
+  // 7. InitialDraft prefill and clear
+  it('7. nhận initialDraft, điền sẵn vào form compose và gọi onClearDraft sau khi lưu thành công', async () => {
+    const mockResponse: ResearchNotesResponse = {
+      data: MOCK_NOTES,
+      meta: { total: 2 },
+    }
+    ;(apiClient.listResearchNotes as jest.Mock).mockResolvedValue(mockResponse)
+    ;(apiClient.createResearchNote as jest.Mock).mockResolvedValueOnce({
+      id: 'note-004',
+      session_id: 'ses-123',
+      content: 'Trích dẫn từ ADR-001 về kiến trúc',
+      note_type: 'insight',
+      source_chunk_id: 'chk-001',
+      created_at: '2026-10-01T11:00:00Z',
+    })
+
+    const onClearDraftMock = jest.fn()
+    const draft = {
+      content: 'Trích dẫn từ ADR-001 về kiến trúc',
+      note_type: 'insight' as const,
+      source_chunk_id: 'chk-001',
+    }
+
+    const queryClient = createTestQueryClient()
+    render(
+      <QueryClientProvider client={queryClient}>
+        <ResearchNotebook
+          sessionId="ses-123"
+          initialDraft={draft}
+          onClearDraft={onClearDraftMock}
+        />
+      </QueryClientProvider>
+    )
+
+    await screen.findByText('Phát hiện cơ chế phân tán nhiệt qua cấu trúc tổ ong')
+
+    const textarea = screen.getByPlaceholderText(/nhập ghi chú/i)
+    expect(textarea).toHaveValue('Trích dẫn từ ADR-001 về kiến trúc')
+
+    const submitBtn = screen.getByRole('button', { name: /lưu ghi chú|thêm ghi chú/i })
+    fireEvent.click(submitBtn)
+
+    await waitFor(() => {
+      expect(apiClient.createResearchNote).toHaveBeenCalledWith('ses-123', {
+        content: 'Trích dẫn từ ADR-001 về kiến trúc',
+        note_type: 'insight',
+        source_chunk_id: 'chk-001',
+      })
+      expect(onClearDraftMock).toHaveBeenCalled()
+    })
+  })
 })
