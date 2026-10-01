@@ -212,6 +212,9 @@ class ResearchSession(Base):
     problem_frames: Mapped[list[ProblemFrame]] = relationship(
         "ProblemFrame", back_populates="session", cascade="all, delete-orphan"
     )
+    research_notes: Mapped[list[ResearchNote]] = relationship(
+        "ResearchNote", back_populates="session", cascade="all, delete-orphan"
+    )
 
     __table_args__ = (
         Index("ix_sessions_status", "status"),
@@ -311,6 +314,60 @@ class Contradiction(Base):
 
     def __repr__(self) -> str:
         return f"<Contradiction id={self.id} type={self.type}>"
+
+
+# ──────────────────────────────────────────────
+# ResearchNote — Sổ tay ghi chép nghiên cứu (Phase 7.2)
+# ──────────────────────────────────────────────
+
+class ResearchNote(Base):
+    """
+    Ghi chú, giả thuyết, phát hiện hoặc quyết định trong phiên nghiên cứu.
+    Ref: docs/PHASE_6_7_EXECUTION_SPEC.md (Phase 7.2)
+    """
+    __tablename__ = "research_notes"
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
+    )
+    session_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("research_sessions.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    content: Mapped[str] = mapped_column(Text, nullable=False)
+    note_type: Mapped[str] = mapped_column(
+        String(32), nullable=False, default="insight"
+    )
+    source_chunk_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("chunks.id", ondelete="SET NULL"),
+        nullable=True,
+    )
+
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        onupdate=func.now(),
+        nullable=False,
+    )
+
+    # --- Relationships ---
+    session: Mapped[ResearchSession] = relationship(
+        "ResearchSession", back_populates="research_notes"
+    )
+    source_chunk: Mapped[Chunk | None] = relationship("Chunk")
+
+    __table_args__ = (
+        Index("ix_research_notes_session_id", "session_id"),
+        Index("ix_research_notes_note_type", "note_type"),
+    )
+
+    def __repr__(self) -> str:
+        return f"<ResearchNote id={self.id} type={self.note_type} session={self.session_id}>"
 
 
 # ──────────────────────────────────────────────

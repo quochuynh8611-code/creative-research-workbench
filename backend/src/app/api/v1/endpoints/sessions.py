@@ -10,7 +10,12 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
 
 from app.core.config import settings
-from app.domain.models import ProblemFrame, ResearchSession, SessionStatus
+from app.domain.models import (
+    ProblemFrame,
+    ResearchNote,
+    ResearchSession,
+    SessionStatus,
+)
 from app.services.method_recommender import MethodRecommender
 from app.services.problem_structuring_service import ProblemStructuringService
 from app.services.workflow_engine import (
@@ -107,6 +112,32 @@ class ProblemFrameCreateRequest(BaseModel):
         if not v or not v.strip():
             raise ValueError("raw_statement must not be empty or whitespace only")
         return v.strip()
+
+
+VALID_NOTE_TYPES = {"insight", "hypothesis", "decision", "question", "action"}
+
+
+class ResearchNoteCreate(BaseModel):
+    content: str = Field(..., min_length=1)
+    note_type: str = "insight"
+    source_chunk_id: Optional[uuid.UUID] = None
+
+    @field_validator("content")
+    @classmethod
+    def validate_content_not_whitespace(cls, v: str) -> str:
+        if not v or not v.strip():
+            raise ValueError("content must not be empty or whitespace only")
+        return v.strip()
+
+    @field_validator("note_type")
+    @classmethod
+    def validate_note_type(cls, v: str) -> str:
+        clean = (v or "").strip().lower()
+        if clean not in VALID_NOTE_TYPES:
+            raise ValueError(
+                f"Invalid note_type '{v}'. Must be one of: {sorted(list(VALID_NOTE_TYPES))}"
+            )
+        return clean
 
 
 # ──────────────────────────────────────────────
@@ -521,3 +552,140 @@ async def advance_stage(session_id: str, body: dict):
     if to_stage not in valid_stages:
         raise HTTPException(status_code=400, detail=f"Invalid stage. Must be one of: {valid_stages}")
     return {"data": {"session_id": session_id, "current_stage": to_stage}}
+
+
+# ──────────────────────────────────────────────
+# Research Notes Endpoints (Phase 7.2)
+# ──────────────────────────────────────────────
+
+@router.get("/{session_id}/notes")
+async def list_research_notes(
+    session_id: uuid.UUID,
+    db: Session | None = Depends(get_db),
+):
+    """Liệt kê tất cả research notes của một session (sắp xếp mới nhất trước)."""
+    if db is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"ResearchSession with id '{session_id}' not found.",
+        )
+
+    session_record = db.query(ResearchSession).filter_by(id=session_id).first()
+    if not session_record:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"ResearchSession with id '{session_id}' not found.",
+        )
+
+    notes = (
+        db.query(ResearchNote)
+        .filter_by(session_id=session_id)
+        .order_by(ResearchNote.created_at.desc(), ResearchNote.id.desc())
+        .all()
+    )
+
+    items = []
+    for n in notes:
+        items.append({
+            "id": str(n.id),
+            "session_id": str(n.session_id),
+            "content": n.content,
+            "note_type": n.note_type,
+            "source_chunk_id": str(n.source_chunk_id) if n.source_chunk_id else None,
+            "created_at": n.created_at.isoformat() if n.created_at else None,
+            "updated_at": n.updated_at.isoformat() if n.updated_at else None,
+        })
+
+    return {
+        "data": items,
+        "meta": {"total": len(items)},
+    }
+
+
+@router.post("/{session_id}/notes", status_code=status.HTTP_201_CREATED)
+async def create_research_note(
+    session_id: uuid.UUID,
+    body: ResearchNoteCreate,
+    db: Session | None = Depends(get_db),
+):
+    """Tạo một research note mới gắn với session."""
+    if db is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"ResearchSession with id '{session_id}' not found.",
+        )
+
+    session_record = db.query(ResearchSession).filter_by(id=session_id).first()
+    if not session_record:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"ResearchSession with id '{session_id}' not found.",
+        )
+
+    note = ResearchNote(
+        session_id=session_id,
+        content=body.content,
+        note_type=body.note_type,
+        source_chunk_id=body.source_chunk_id,
+    )
+    db.add(note)
+    db.flush()
+    db.commit()
+    db.refresh(note)
+
+    payload = {
+        "id": str(note.id),
+        "session_id": str(note.session_id),
+        "content": note.content,
+        "note_type": note.note_type,
+        "source_chunk_id": str(note.source_chunk_id) if note.source_chunk_id else None,
+        "created_at": note.created_at.isoformat() if note.created_at else None,
+        "updated_at": note.updated_at.isoformat() if note.updated_at else None,
+    }
+
+    return {
+        **payload,
+        "data": payload,
+    }
+
+
+@router.delete("/{session_id}/notes/{note_id}", status_code=status.HTTP_200_OK)
+async def delete_research_note(
+    session_id: uuid.UUID,
+    note_id: uuid.UUID,
+    db: Session | None = Depends(get_db),
+):
+    """Xóa một research note thuộc session."""
+    if db is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"ResearchSession with id '{session_id}' not found.",
+        )
+
+    session_record = db.query(ResearchSession).filter_by(id=session_id).first()
+    if not session_record:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"ResearchSession with id '{session_id}' not found.",
+        )
+
+    note = (
+        db.query(ResearchNote)
+        .filter_by(id=note_id, session_id=session_id)
+        .first()
+    )
+    if not note:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"ResearchNote with id '{note_id}' not found in session '{session_id}'.",
+        )
+
+    db.delete(note)
+    db.flush()
+    db.commit()
+
+    return {
+        "status": "deleted",
+        "id": str(note_id),
+        "session_id": str(session_id),
+    }
