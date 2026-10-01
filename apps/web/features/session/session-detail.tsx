@@ -12,6 +12,7 @@ import { WorkflowStepper } from '@/features/session/workflow-stepper'
 import { PrincipleSuggestions } from '@/features/ideation/principle-suggestions'
 import { EvidencePanel } from '@/features/retrieval/evidence-panel'
 import { TrizMatrixLookup } from '@/features/triz/triz-matrix-lookup'
+import { ResearchNotebook } from '@/features/notebook/research-notebook'
 import type { ProblemFrame, WorkflowStage, RecommendedMethod } from '@/lib/types'
 
 const TABS = [
@@ -259,13 +260,7 @@ export function SessionDetail({ sessionId }: SessionDetailProps) {
         )}
 
         {activeTab === 'notebook' && (
-          <div className="text-center py-16 px-4 rounded-xl border border-dashed border-border text-muted-foreground space-y-2">
-            <BookOpen className="w-10 h-10 mx-auto opacity-40 text-primary" />
-            <h3 className="text-base font-semibold text-foreground">Research Notebook</h3>
-            <p className="text-sm max-w-md mx-auto">
-              Lưu trữ ghi chú, giả thuyết và tổng hợp giải pháp nghiên cứu.
-            </p>
-          </div>
+          <ResearchNotebook sessionId={session.id} />
         )}
       </div>
     </div>

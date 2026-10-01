@@ -1,9 +1,13 @@
 import axios from 'axios'
 import type {
   CreateSessionInput,
+  CreateResearchNoteInput,
+  DeleteResearchNoteResponse,
   NextStepResponse,
   ProblemFrame,
   ProblemFrameCreateInput,
+  ResearchNote,
+  ResearchNotesResponse,
   ResearchSession,
   SearchRequest,
   SearchResponse,
@@ -143,5 +147,40 @@ export async function lookupTrizMatrix(params: TrizLookupQuery): Promise<TrizLoo
   const response = await apiClient.get<TrizLookupResponse>('/api/v1/triz/lookup', {
     params,
   })
+  return response.data
+}
+
+/**
+ * 12. Lấy danh sách Research Notes của một session.
+ */
+export async function listResearchNotes(sessionId: string): Promise<ResearchNotesResponse> {
+  const response = await apiClient.get<ResearchNotesResponse>(`/api/v1/sessions/${sessionId}/notes`)
+  return response.data
+}
+
+/**
+ * 13. Tạo mới một Research Note trong session.
+ */
+export async function createResearchNote(
+  sessionId: string,
+  input: CreateResearchNoteInput
+): Promise<ResearchNote> {
+  const response = await apiClient.post<{ data?: ResearchNote } & ResearchNote>(
+    `/api/v1/sessions/${sessionId}/notes`,
+    input
+  )
+  return response.data.data ?? response.data
+}
+
+/**
+ * 14. Xóa một Research Note theo id trong session.
+ */
+export async function deleteResearchNote(
+  sessionId: string,
+  noteId: string
+): Promise<DeleteResearchNoteResponse> {
+  const response = await apiClient.delete<DeleteResearchNoteResponse>(
+    `/api/v1/sessions/${sessionId}/notes/${noteId}`
+  )
   return response.data
 }

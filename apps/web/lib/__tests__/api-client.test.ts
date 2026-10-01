@@ -12,6 +12,7 @@
  *   - Contracts: docs/API_CONTRACTS.md, docs/DOMAIN_SCHEMA.md
  */
 
+import * as apiClientModule from '../api-client'
 import {
   listSessions,
   getSession,
@@ -24,11 +25,15 @@ import {
   getTrizParameters,
   getTrizPrinciples,
   lookupTrizMatrix,
+  listResearchNotes,
+  createResearchNote,
+  deleteResearchNote,
   apiClient,
 } from '../api-client'
 
 import type {
   CreateSessionInput,
+  CreateResearchNoteInput,
   ProblemFrameCreateInput,
   SearchRequest,
   TrizLookupQuery,
@@ -395,6 +400,80 @@ describe('Frontend API Client Contract Tests (Phase 5.2)', () => {
     expect(result.worsening_parameter.id).toBe(14)
     expect(result.principles).toHaveLength(1)
     expect(result.principles_count).toBe(1)
+  })
+
+  // 12. List Research Notes
+  it('12. listResearchNotes gọi GET /api/v1/sessions/{id}/notes và unwrap { data, meta }', async () => {
+    const sessionId = 'd9b2d20b-0001-0000-0000-000000000001'
+    const mockApiResponse = {
+      data: {
+        data: [
+          {
+            id: 'note-001',
+            session_id: sessionId,
+            content: 'Giả thuyết vật liệu xốp',
+            note_type: 'hypothesis',
+            created_at: '2026-10-01T10:00:00Z',
+          },
+        ],
+        meta: { total: 1 },
+      },
+    }
+
+    const spy = jest.spyOn(apiClient, 'get').mockResolvedValueOnce(mockApiResponse)
+
+    const result = await listResearchNotes(sessionId)
+
+    expect(spy).toHaveBeenCalledWith(`/api/v1/sessions/${sessionId}/notes`)
+    expect(result.data).toHaveLength(1)
+    expect(result.data[0].id).toBe('note-001')
+    expect(result.meta.total).toBe(1)
+  })
+
+  // 13. Create Research Note
+  it('13. createResearchNote gọi POST /api/v1/sessions/{id}/notes với payload đúng', async () => {
+    const sessionId = 'd9b2d20b-0001-0000-0000-000000000001'
+    const input: CreateResearchNoteInput = {
+      content: 'Insight từ tài liệu nghiên cứu',
+      note_type: 'insight',
+    }
+    const mockApiResponse = {
+      data: {
+        id: 'note-002',
+        session_id: sessionId,
+        content: input.content,
+        note_type: input.note_type,
+        created_at: '2026-10-01T10:05:00Z',
+      },
+    }
+
+    const spy = jest.spyOn(apiClient, 'post').mockResolvedValueOnce(mockApiResponse)
+
+    const result = await createResearchNote(sessionId, input)
+
+    expect(spy).toHaveBeenCalledWith(`/api/v1/sessions/${sessionId}/notes`, input)
+    expect(result.id).toBe('note-002')
+    expect(result.content).toBe(input.content)
+  })
+
+  // 14. Delete Research Note
+  it('14. deleteResearchNote gọi DELETE /api/v1/sessions/{id}/notes/{noteId}', async () => {
+    const sessionId = 'd9b2d20b-0001-0000-0000-000000000001'
+    const noteId = 'note-002'
+    const mockApiResponse = {
+      data: {
+        status: 'deleted',
+        id: noteId,
+        session_id: sessionId,
+      },
+    }
+
+    const spy = jest.spyOn(apiClient, 'delete').mockResolvedValueOnce(mockApiResponse)
+
+    const result = await deleteResearchNote(sessionId, noteId)
+
+    expect(spy).toHaveBeenCalledWith(`/api/v1/sessions/${sessionId}/notes/${noteId}`)
+    expect(result.status).toBe('deleted')
   })
 })
 

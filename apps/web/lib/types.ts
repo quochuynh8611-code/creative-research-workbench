@@ -154,8 +154,27 @@ export interface ResearchNote {
   session_id: string
   content: string
   note_type: NoteType
+  source_chunk_id?: string | null
   created_at: string
 }
+
+export interface ResearchNotesResponse {
+  data: ResearchNote[]
+  meta: { total: number }
+}
+
+export interface CreateResearchNoteInput {
+  content: string
+  note_type?: NoteType
+  source_chunk_id?: string | null
+}
+
+export interface DeleteResearchNoteResponse {
+  status: string
+  id: string
+  session_id: string
+}
+
 
 export interface KnowledgeChunk {
   id: string
