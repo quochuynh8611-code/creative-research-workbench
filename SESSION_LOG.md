@@ -5,7 +5,7 @@
 
 ---
 
-## 🚦 Trạng thái tổng quan (cập nhật: 2026-09-30)
+## 🚦 Trạng thái tổng quan (cập nhật: 2026-10-01)
 
 | Phase | Tên | Trạng thái | Commit cuối |
 |---|---|---|---|
@@ -29,7 +29,7 @@
 | **Phase 6.1 (QW-3)** | Real Embedding Engine (OpenAI & Gemini) & Polymorphic Factory | ✅ DONE | `13c4376` |
 | **Phase 6.2 (QW-4)** | LLM Problem Structuring Service & AI Trust Contract | ✅ DONE | `96efc84` |
 | **Phase 7.4** | Candidate Solutions Persistence & Session-Scoped REST API | ✅ DONE | `ef5614b` |
-| **Phase 7.2 (UI)** | Candidate Solutions UI & Canvas Integration in Ideation Tab | ✅ DONE | Pending commit |
+| **Phase 7.2 (UI)** | Candidate Solutions UI & Canvas Integration in Ideation Tab | ✅ DONE | `800bbff` |
 | **Phase 6–12** | Professional Upgrade (AI Core, Canvas, Export…) | 🔵 IN PROGRESS | — |
 
 ---
@@ -140,7 +140,7 @@
 
 ---
 
-## 📋 Danh sách commit đầy đủ (2026-09-29 → 2026-09-30)
+## 📋 Danh sách commit đầy đủ (2026-09-29 → 2026-10-01)
 
 | Hash | Ngày | Nội dung |
 |---|---|---|
@@ -162,6 +162,13 @@
 | `268ebb0` | 2026-09-30 10:31 | docs(architecture): quarantine legacy folders and consolidate canonical source of truth (phase 5.8) |
 | `246825e` | 2026-09-30 11:01 | chore(docker): harden deployment stack with multi-stage nextjs runner, healthchecks and deployment guide |
 | `4c3855e` | 2026-09-30 14:16 | feat(session): phase 5.9 session lifecycle — archive/restore soft-delete with tests and spec docs |
+| `f0a0885` | 2026-10-01 10:15 | feat(triz): finalize canonical 39x39 matrix specification, adr-003, and regression tests (phase-6.3) |
+| `0ca4d8f` | 2026-10-01 11:30 | feat(web): wire session detail page into real problem canvas with smart tab routing (phase-7.1) |
+| `bc9b1f3` | 2026-10-01 13:00 | feat(session): export session with triz principles and browser print pdf (phase-9.1) |
+| `13c4376` | 2026-10-01 14:45 | feat(embedding): implement real embedding engine and polymorphic factory (phase-6.1) |
+| `96efc84` | 2026-10-01 16:30 | feat(ai): implement llm problem structuring service with ai trust contract (phase-6.2) |
+| `ef5614b` | 2026-10-01 19:15 | feat(solutions): implement candidate solutions persistence and session-scoped rest api (phase-7.4) |
+| `800bbff` | 2026-10-01 20:26 | feat(ideation): implement candidate solutions ui and canvas integration (phase-7.2) |
 
 ---
 
