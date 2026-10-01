@@ -1,7 +1,11 @@
 import axios from 'axios'
 import type {
+  CandidateSolution,
+  CandidateSolutionsResponse,
+  CreateCandidateSolutionInput,
   CreateSessionInput,
   CreateResearchNoteInput,
+  DeleteCandidateSolutionResponse,
   DeleteResearchNoteResponse,
   NextStepResponse,
   ProblemFrame,
@@ -16,6 +20,7 @@ import type {
   TrizLookupResponse,
   TrizParametersResponse,
   TrizPrinciplesResponse,
+  UpdateCandidateSolutionInput,
 } from './types'
 
 export const apiClient = axios.create({
@@ -193,5 +198,57 @@ export async function exportSessionMarkdown(sessionId: string): Promise<Blob> {
     params: { format: 'md' },
     responseType: 'blob',
   })
+  return response.data
+}
+
+/**
+ * 16. Lấy danh sách Candidate Solutions của một session.
+ */
+export async function listCandidateSolutions(sessionId: string): Promise<CandidateSolutionsResponse> {
+  const response = await apiClient.get<CandidateSolutionsResponse>(
+    `/api/v1/sessions/${sessionId}/solutions`
+  )
+  return response.data
+}
+
+/**
+ * 17. Tạo mới một Candidate Solution trong session.
+ */
+export async function createCandidateSolution(
+  sessionId: string,
+  input: CreateCandidateSolutionInput
+): Promise<CandidateSolution> {
+  const response = await apiClient.post<{ data?: CandidateSolution } & CandidateSolution>(
+    `/api/v1/sessions/${sessionId}/solutions`,
+    input
+  )
+  return response.data.data ?? response.data
+}
+
+/**
+ * 18. Cập nhật trạng thái hoặc điểm số của Candidate Solution.
+ */
+export async function updateCandidateSolution(
+  sessionId: string,
+  solutionId: string,
+  input: UpdateCandidateSolutionInput
+): Promise<CandidateSolution> {
+  const response = await apiClient.patch<{ data?: CandidateSolution } & CandidateSolution>(
+    `/api/v1/sessions/${sessionId}/solutions/${solutionId}`,
+    input
+  )
+  return response.data.data ?? response.data
+}
+
+/**
+ * 19. Xóa một Candidate Solution theo id trong session.
+ */
+export async function deleteCandidateSolution(
+  sessionId: string,
+  solutionId: string
+): Promise<DeleteCandidateSolutionResponse> {
+  const response = await apiClient.delete<DeleteCandidateSolutionResponse>(
+    `/api/v1/sessions/${sessionId}/solutions/${solutionId}`
+  )
   return response.data
 }

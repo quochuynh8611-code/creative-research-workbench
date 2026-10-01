@@ -27,8 +27,24 @@
 | **Phase 7.1 (QW-2)** | Wire Problem Canvas & Smart Tab Routing | ✅ DONE | `0ca4d8f` |
 | **Phase 9.1 (QW-5)** | Export Markdown GFM & Native Browser Print PDF | ✅ DONE | `bc9b1f3` |
 | **Phase 6.1 (QW-3)** | Real Embedding Engine (OpenAI & Gemini) & Polymorphic Factory | ✅ DONE | `13c4376` |
-| **Phase 6.2 (QW-4)** | LLM Problem Structuring Service & AI Trust Contract | ✅ DONE | Pending commit |
+| **Phase 6.2 (QW-4)** | LLM Problem Structuring Service & AI Trust Contract | ✅ DONE | `96efc84` |
+| **Phase 7.4** | Candidate Solutions Persistence & Session-Scoped REST API | ✅ DONE | Pending commit |
 | **Phase 6–12** | Professional Upgrade (AI Core, Canvas, Export…) | 🔵 IN PROGRESS | — |
+
+---
+
+## 📅 Phiên làm việc: 2026-10-01 (Phase 7.4 — Candidate Solutions Persistence)
+
+### ✅ Đã hoàn thành trong phiên này
+
+| # | Task | Chi tiết |
+|---|---|---|
+| 1 | **ORM Model `CandidateSolution`** | Bổ sung class `CandidateSolution(Base)` khớp 100% với DDL Migration `002`, quan hệ `ResearchSession.candidate_solutions` (`cascade="all, delete-orphan"`) |
+| 2 | **Session-Scoped Endpoints** | Triển khai đầy đủ RESTful API trong `sessions.py`: `GET`, `POST`, `PATCH`, `DELETE /api/v1/sessions/{session_id}/solutions` |
+| 3 | **Session Isolation & IDOR Guard** | Kiểm tra ranh giới phiên đa tầng `WHERE id = :sol_id AND session_id = :session_id`, ngăn chặn hoàn toàn IDOR |
+| 4 | **Pydantic Validation & Sanitization** | Chặn title/mechanism whitespace, giới hạn status enum (`candidate`, `accepted`, `rejected`), scores `[0.0, 1.0]` |
+| 5 | **Frontend API Client & Contract Types** | Cập nhật `types.ts` và `api-client.ts` (`listCandidateSolutions`, `createCandidateSolution`, `updateCandidateSolution`, `deleteCandidateSolution`) |
+| 6 | **Test-First Suite** | 9 Integration tests (`test_candidate_solutions_api.py`) + 4 Frontend Contract tests (`api-client.test.ts`) đạt 100% PASS |
 
 ---
 

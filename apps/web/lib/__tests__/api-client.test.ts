@@ -475,5 +475,122 @@ describe('Frontend API Client Contract Tests (Phase 5.2)', () => {
     expect(spy).toHaveBeenCalledWith(`/api/v1/sessions/${sessionId}/notes/${noteId}`)
     expect(result.status).toBe('deleted')
   })
+
+  // 15. List Candidate Solutions
+  it('15. listCandidateSolutions gọi GET /api/v1/sessions/{id}/solutions và unwrap { data, meta }', async () => {
+    const sessionId = 'd9b2d20b-0001-0000-0000-000000000001'
+    const mockApiResponse = {
+      data: {
+        data: [
+          {
+            id: 'sol-001',
+            session_id: sessionId,
+            title: 'Màng ngăn composite',
+            mechanism: 'Cơ chế tự phục hồi',
+            status: 'candidate',
+            novelty_score: 0.8,
+            feasibility_score: 0.7,
+            risk_notes: null,
+            created_at: '2026-10-01T10:00:00Z',
+            updated_at: '2026-10-01T10:00:00Z',
+          },
+        ],
+        meta: { total: 1, session_id: sessionId },
+      },
+    }
+
+    const spy = jest.spyOn(apiClient, 'get').mockResolvedValueOnce(mockApiResponse)
+
+    const result = await apiClientModule.listCandidateSolutions(sessionId)
+
+    expect(spy).toHaveBeenCalledWith(`/api/v1/sessions/${sessionId}/solutions`)
+    expect(result.data).toHaveLength(1)
+    expect(result.data[0].id).toBe('sol-001')
+    expect(result.meta.total).toBe(1)
+  })
+
+  // 16. Create Candidate Solution
+  it('16. createCandidateSolution gọi POST /api/v1/sessions/{id}/solutions với payload đúng', async () => {
+    const sessionId = 'd9b2d20b-0001-0000-0000-000000000001'
+    const input = {
+      title: 'Màng nano polymer',
+      mechanism: 'Ngăn dendrite lithium',
+      novelty_score: 0.9,
+    }
+    const mockApiResponse = {
+      data: {
+        id: 'sol-002',
+        session_id: sessionId,
+        title: input.title,
+        mechanism: input.mechanism,
+        status: 'candidate',
+        novelty_score: 0.9,
+        feasibility_score: 0.0,
+        risk_notes: null,
+        created_at: '2026-10-01T10:10:00Z',
+        updated_at: '2026-10-01T10:10:00Z',
+      },
+    }
+
+    const spy = jest.spyOn(apiClient, 'post').mockResolvedValueOnce(mockApiResponse)
+
+    const result = await apiClientModule.createCandidateSolution(sessionId, input)
+
+    expect(spy).toHaveBeenCalledWith(`/api/v1/sessions/${sessionId}/solutions`, input)
+    expect(result.id).toBe('sol-002')
+    expect(result.title).toBe(input.title)
+  })
+
+  // 17. Update Candidate Solution
+  it('17. updateCandidateSolution gọi PATCH /api/v1/sessions/{id}/solutions/{solId}', async () => {
+    const sessionId = 'd9b2d20b-0001-0000-0000-000000000001'
+    const solutionId = 'sol-002'
+    const input = {
+      status: 'accepted' as const,
+      feasibility_score: 0.85,
+    }
+    const mockApiResponse = {
+      data: {
+        id: solutionId,
+        session_id: sessionId,
+        title: 'Màng nano polymer',
+        mechanism: 'Ngăn dendrite lithium',
+        status: 'accepted',
+        novelty_score: 0.9,
+        feasibility_score: 0.85,
+        risk_notes: null,
+        created_at: '2026-10-01T10:10:00Z',
+        updated_at: '2026-10-01T10:15:00Z',
+      },
+    }
+
+    const spy = jest.spyOn(apiClient, 'patch').mockResolvedValueOnce(mockApiResponse)
+
+    const result = await apiClientModule.updateCandidateSolution(sessionId, solutionId, input)
+
+    expect(spy).toHaveBeenCalledWith(`/api/v1/sessions/${sessionId}/solutions/${solutionId}`, input)
+    expect(result.status).toBe('accepted')
+    expect(result.feasibility_score).toBe(0.85)
+  })
+
+  // 18. Delete Candidate Solution
+  it('18. deleteCandidateSolution gọi DELETE /api/v1/sessions/{id}/solutions/{solId}', async () => {
+    const sessionId = 'd9b2d20b-0001-0000-0000-000000000001'
+    const solutionId = 'sol-002'
+    const mockApiResponse = {
+      data: {
+        status: 'deleted',
+        id: solutionId,
+        session_id: sessionId,
+      },
+    }
+
+    const spy = jest.spyOn(apiClient, 'delete').mockResolvedValueOnce(mockApiResponse)
+
+    const result = await apiClientModule.deleteCandidateSolution(sessionId, solutionId)
+
+    expect(spy).toHaveBeenCalledWith(`/api/v1/sessions/${sessionId}/solutions/${solutionId}`)
+    expect(result.status).toBe('deleted')
+  })
 })
 

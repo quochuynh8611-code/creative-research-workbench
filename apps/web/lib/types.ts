@@ -135,12 +135,43 @@ export interface CandidateSolution {
   session_id: string
   title: string
   mechanism: string
-  linked_methods: string[]
-  cited_sources: SourceRef[]
-  novelty_score: number
-  feasibility_score: number
-  risk_notes: string
   status: SolutionStatus
+  novelty_score?: number | null
+  feasibility_score?: number | null
+  risk_notes?: string | null
+  created_at?: string | null
+  updated_at?: string | null
+  linked_methods?: string[]
+  cited_sources?: SourceRef[]
+}
+
+export interface CandidateSolutionsResponse {
+  data: CandidateSolution[]
+  meta: { total: number; session_id?: string }
+}
+
+export interface CreateCandidateSolutionInput {
+  title: string
+  mechanism: string
+  status?: SolutionStatus
+  novelty_score?: number
+  feasibility_score?: number
+  risk_notes?: string | null
+}
+
+export interface UpdateCandidateSolutionInput {
+  title?: string
+  mechanism?: string
+  status?: SolutionStatus
+  novelty_score?: number
+  feasibility_score?: number
+  risk_notes?: string | null
+}
+
+export interface DeleteCandidateSolutionResponse {
+  status: string
+  id: string
+  session_id: string
 }
 
 export interface SourceRef {

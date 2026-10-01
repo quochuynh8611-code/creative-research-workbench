@@ -11,6 +11,7 @@ from sqlalchemy.orm import Session
 
 from app.core.config import settings
 from app.domain.models import (
+    CandidateSolution,
     ProblemFrame,
     ResearchNote,
     ResearchSession,
@@ -134,6 +135,7 @@ class AIProblemAnalysisRequest(BaseModel):
 
 
 VALID_NOTE_TYPES = {"insight", "hypothesis", "decision", "question", "action"}
+VALID_SOLUTION_STATUSES = {"candidate", "accepted", "rejected"}
 
 
 class ResearchNoteCreate(BaseModel):
@@ -157,6 +159,78 @@ class ResearchNoteCreate(BaseModel):
                 f"Invalid note_type '{v}'. Must be one of: {sorted(list(VALID_NOTE_TYPES))}"
             )
         return clean
+
+
+class CandidateSolutionCreate(BaseModel):
+    title: str = Field(..., min_length=1, max_length=512)
+    mechanism: str = Field(..., min_length=1)
+    status: str = "candidate"
+    novelty_score: Optional[float] = Field(default=0.0, ge=0.0, le=1.0)
+    feasibility_score: Optional[float] = Field(default=0.0, ge=0.0, le=1.0)
+    risk_notes: Optional[str] = None
+
+    @field_validator("title")
+    @classmethod
+    def validate_title_not_whitespace(cls, v: str) -> str:
+        if not v or not v.strip():
+            raise ValueError("title must not be empty or whitespace only")
+        return v.strip()
+
+    @field_validator("mechanism")
+    @classmethod
+    def validate_mechanism_not_whitespace(cls, v: str) -> str:
+        if not v or not v.strip():
+            raise ValueError("mechanism must not be empty or whitespace only")
+        return v.strip()
+
+    @field_validator("status")
+    @classmethod
+    def validate_status(cls, v: str) -> str:
+        clean = (v or "").strip().lower()
+        if clean not in VALID_SOLUTION_STATUSES:
+            raise ValueError(
+                f"Invalid status '{v}'. Must be one of: {sorted(list(VALID_SOLUTION_STATUSES))}"
+            )
+        return clean
+
+
+class CandidateSolutionUpdate(BaseModel):
+    title: Optional[str] = Field(default=None, min_length=1, max_length=512)
+    mechanism: Optional[str] = Field(default=None, min_length=1)
+    status: Optional[str] = None
+    novelty_score: Optional[float] = Field(default=None, ge=0.0, le=1.0)
+    feasibility_score: Optional[float] = Field(default=None, ge=0.0, le=1.0)
+    risk_notes: Optional[str] = None
+
+    @field_validator("title")
+    @classmethod
+    def validate_title_not_whitespace(cls, v: Optional[str]) -> Optional[str]:
+        if v is not None:
+            if not v or not v.strip():
+                raise ValueError("title must not be empty or whitespace only")
+            return v.strip()
+        return None
+
+    @field_validator("mechanism")
+    @classmethod
+    def validate_mechanism_not_whitespace(cls, v: Optional[str]) -> Optional[str]:
+        if v is not None:
+            if not v or not v.strip():
+                raise ValueError("mechanism must not be empty or whitespace only")
+            return v.strip()
+        return None
+
+    @field_validator("status")
+    @classmethod
+    def validate_status(cls, v: Optional[str]) -> Optional[str]:
+        if v is not None:
+            clean = (v or "").strip().lower()
+            if clean not in VALID_SOLUTION_STATUSES:
+                raise ValueError(
+                    f"Invalid status '{v}'. Must be one of: {sorted(list(VALID_SOLUTION_STATUSES))}"
+                )
+            return clean
+        return None
 
 
 # ──────────────────────────────────────────────
@@ -758,6 +832,214 @@ async def delete_research_note(
     return {
         "status": "deleted",
         "id": str(note_id),
+        "session_id": str(session_id),
+    }
+
+
+# ──────────────────────────────────────────────
+# Candidate Solutions Endpoints (Phase 7.4)
+# ──────────────────────────────────────────────
+
+@router.get("/{session_id}/solutions")
+async def list_candidate_solutions(
+    session_id: uuid.UUID,
+    db: Session | None = Depends(get_db),
+):
+    """Liệt kê tất cả candidate solutions của một session (sắp xếp mới nhất trước)."""
+    if db is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"ResearchSession with id '{session_id}' not found.",
+        )
+
+    session_record = db.query(ResearchSession).filter_by(id=session_id).first()
+    if not session_record:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"ResearchSession with id '{session_id}' not found.",
+        )
+
+    solutions = (
+        db.query(CandidateSolution)
+        .filter_by(session_id=session_id)
+        .order_by(CandidateSolution.created_at.desc(), CandidateSolution.id.desc())
+        .all()
+    )
+
+    data = []
+    for s in solutions:
+        data.append({
+            "id": str(s.id),
+            "session_id": str(s.session_id),
+            "title": s.title,
+            "mechanism": s.mechanism,
+            "status": s.status,
+            "novelty_score": s.novelty_score,
+            "feasibility_score": s.feasibility_score,
+            "risk_notes": s.risk_notes,
+            "created_at": s.created_at.isoformat() if s.created_at else None,
+            "updated_at": s.updated_at.isoformat() if s.updated_at else None,
+        })
+
+    return {
+        "data": data,
+        "meta": {"total": len(data), "session_id": str(session_id)},
+    }
+
+
+@router.post("/{session_id}/solutions", status_code=status.HTTP_201_CREATED)
+async def create_candidate_solution(
+    session_id: uuid.UUID,
+    body: CandidateSolutionCreate,
+    db: Session | None = Depends(get_db),
+):
+    """Tạo một candidate solution mới gắn với session."""
+    if db is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"ResearchSession with id '{session_id}' not found.",
+        )
+
+    session_record = db.query(ResearchSession).filter_by(id=session_id).first()
+    if not session_record:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"ResearchSession with id '{session_id}' not found.",
+        )
+
+    solution = CandidateSolution(
+        session_id=session_id,
+        title=body.title,
+        mechanism=body.mechanism,
+        status=body.status,
+        novelty_score=body.novelty_score if body.novelty_score is not None else 0.0,
+        feasibility_score=body.feasibility_score if body.feasibility_score is not None else 0.0,
+        risk_notes=body.risk_notes,
+    )
+    db.add(solution)
+    db.flush()
+    db.commit()
+    db.refresh(solution)
+
+    return {
+        "data": {
+            "id": str(solution.id),
+            "session_id": str(solution.session_id),
+            "title": solution.title,
+            "mechanism": solution.mechanism,
+            "status": solution.status,
+            "novelty_score": solution.novelty_score,
+            "feasibility_score": solution.feasibility_score,
+            "risk_notes": solution.risk_notes,
+            "created_at": solution.created_at.isoformat() if solution.created_at else None,
+            "updated_at": solution.updated_at.isoformat() if solution.updated_at else None,
+        }
+    }
+
+
+@router.patch("/{session_id}/solutions/{solution_id}")
+async def update_candidate_solution(
+    session_id: uuid.UUID,
+    solution_id: uuid.UUID,
+    body: CandidateSolutionUpdate,
+    db: Session | None = Depends(get_db),
+):
+    """Cập nhật trạng thái, điểm số hoặc nội dung của candidate solution."""
+    if db is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"ResearchSession with id '{session_id}' not found.",
+        )
+
+    session_record = db.query(ResearchSession).filter_by(id=session_id).first()
+    if not session_record:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"ResearchSession with id '{session_id}' not found.",
+        )
+
+    solution = (
+        db.query(CandidateSolution)
+        .filter_by(id=solution_id, session_id=session_id)
+        .first()
+    )
+    if not solution:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"CandidateSolution with id '{solution_id}' not found in session '{session_id}'.",
+        )
+
+    if body.title is not None:
+        solution.title = body.title
+    if body.mechanism is not None:
+        solution.mechanism = body.mechanism
+    if body.status is not None:
+        solution.status = body.status
+    if body.novelty_score is not None:
+        solution.novelty_score = body.novelty_score
+    if body.feasibility_score is not None:
+        solution.feasibility_score = body.feasibility_score
+    if body.risk_notes is not None:
+        solution.risk_notes = body.risk_notes
+
+    db.flush()
+    db.commit()
+    db.refresh(solution)
+
+    return {
+        "data": {
+            "id": str(solution.id),
+            "session_id": str(solution.session_id),
+            "title": solution.title,
+            "mechanism": solution.mechanism,
+            "status": solution.status,
+            "novelty_score": solution.novelty_score,
+            "feasibility_score": solution.feasibility_score,
+            "risk_notes": solution.risk_notes,
+            "created_at": solution.created_at.isoformat() if solution.created_at else None,
+            "updated_at": solution.updated_at.isoformat() if solution.updated_at else None,
+        }
+    }
+
+
+@router.delete("/{session_id}/solutions/{solution_id}")
+async def delete_candidate_solution(
+    session_id: uuid.UUID,
+    solution_id: uuid.UUID,
+    db: Session | None = Depends(get_db),
+):
+    """Xóa một candidate solution thuộc session."""
+    if db is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"ResearchSession with id '{session_id}' not found.",
+        )
+
+    session_record = db.query(ResearchSession).filter_by(id=session_id).first()
+    if not session_record:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"ResearchSession with id '{session_id}' not found.",
+        )
+
+    solution = (
+        db.query(CandidateSolution)
+        .filter_by(id=solution_id, session_id=session_id)
+        .first()
+    )
+    if not solution:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"CandidateSolution with id '{solution_id}' not found in session '{session_id}'.",
+        )
+
+    db.delete(solution)
+    db.flush()
+    db.commit()
+
+    return {
+        "status": "deleted",
+        "id": str(solution_id),
         "session_id": str(session_id),
     }
 

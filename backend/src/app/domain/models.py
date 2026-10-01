@@ -22,6 +22,7 @@ from sqlalchemy import (
     Boolean,
     DateTime,
     Enum,
+    Float,
     ForeignKey,
     Index,
     Integer,
@@ -215,6 +216,9 @@ class ResearchSession(Base):
     research_notes: Mapped[list[ResearchNote]] = relationship(
         "ResearchNote", back_populates="session", cascade="all, delete-orphan"
     )
+    candidate_solutions: Mapped[list[CandidateSolution]] = relationship(
+        "CandidateSolution", back_populates="session", cascade="all, delete-orphan"
+    )
 
     __table_args__ = (
         Index("ix_sessions_status", "status"),
@@ -368,6 +372,61 @@ class ResearchNote(Base):
 
     def __repr__(self) -> str:
         return f"<ResearchNote id={self.id} type={self.note_type} session={self.session_id}>"
+
+
+# ──────────────────────────────────────────────
+# CandidateSolution — Giải pháp ứng viên (Phase 7.4)
+# ──────────────────────────────────────────────
+
+class CandidateSolution(Base):
+    """
+    Giải pháp sáng tạo ứng viên được đề xuất trong phiên nghiên cứu.
+    Ref: docs/PHASE_6_7_EXECUTION_SPEC.md (Phase 7.4)
+    """
+    __tablename__ = "candidate_solutions"
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
+    )
+    session_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("research_sessions.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    title: Mapped[str] = mapped_column(String(512), nullable=False)
+    mechanism: Mapped[str] = mapped_column(Text, nullable=False)
+    status: Mapped[str] = mapped_column(
+        String(32), nullable=False, default="candidate"
+    )
+    novelty_score: Mapped[float | None] = mapped_column(
+        Float, nullable=True, default=0.0
+    )
+    feasibility_score: Mapped[float | None] = mapped_column(
+        Float, nullable=True, default=0.0
+    )
+    risk_notes: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        onupdate=func.now(),
+        nullable=False,
+    )
+
+    # --- Relationships ---
+    session: Mapped[ResearchSession] = relationship(
+        "ResearchSession", back_populates="candidate_solutions"
+    )
+
+    __table_args__ = (
+        Index("ix_candidate_solutions_session_id", "session_id"),
+    )
+
+    def __repr__(self) -> str:
+        return f"<CandidateSolution id={self.id} title='{self.title[:30]}' status={self.status}>"
 
 
 # ──────────────────────────────────────────────
