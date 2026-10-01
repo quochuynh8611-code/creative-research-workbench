@@ -4,7 +4,7 @@ import uuid
 from datetime import datetime, timezone
 from typing import Any, Generator, Optional
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Response, status
 from pydantic import BaseModel, Field, field_validator
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
@@ -18,6 +18,7 @@ from app.domain.models import (
 )
 from app.services.method_recommender import MethodRecommender
 from app.services.problem_structuring_service import ProblemStructuringService
+from app.services.session_export_service import export_session_as_markdown
 from app.services.workflow_engine import (
     InvalidTransitionError,
     WorkflowEngine,
@@ -689,3 +690,51 @@ async def delete_research_note(
         "id": str(note_id),
         "session_id": str(session_id),
     }
+
+
+# ──────────────────────────────────────────────
+# Session Export Endpoint (Phase 9.1)
+# ──────────────────────────────────────────────
+
+@router.get("/{session_id}/export")
+async def export_session(
+    session_id: uuid.UUID,
+    format: str = "md",
+    db: Session | None = Depends(get_db),
+):
+    """
+    Xuất báo cáo toàn bộ phiên nghiên cứu ra định dạng Markdown (GFM).
+    - Hỗ trợ format: md, markdown (mặc định: md)
+    - Trả về Content-Type: text/markdown; charset=utf-8
+    - Header Content-Disposition đính kèm file session_{id}.md
+    """
+    clean_format = (format or "").strip().lower()
+    if clean_format not in {"md", "markdown"}:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Unsupported export format '{format}'. Supported formats: md, markdown",
+        )
+
+    if db is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"ResearchSession with id '{session_id}' not found.",
+        )
+
+    session_record = db.query(ResearchSession).filter_by(id=session_id).first()
+    if not session_record:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"ResearchSession with id '{session_id}' not found.",
+        )
+
+    markdown_text = export_session_as_markdown(session_record, db)
+    filename = f"session_{session_id}.md"
+
+    return Response(
+        content=markdown_text,
+        media_type="text/markdown; charset=utf-8",
+        headers={
+            "Content-Disposition": f'attachment; filename="{filename}"',
+        },
+    )
