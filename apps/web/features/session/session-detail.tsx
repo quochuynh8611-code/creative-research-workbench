@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { ArrowLeft, Brain, Loader2, AlertCircle, Sparkles, FolderSearch, Lightbulb, BookOpen, Download } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
@@ -29,6 +29,7 @@ interface SessionDetailProps {
 
 export function SessionDetail({ sessionId }: SessionDetailProps) {
   const [activeTab, setActiveTab] = useState<string>('intake')
+  const [hasInitializedTab, setHasInitializedTab] = useState<boolean>(false)
   const [localProblemFrame, setLocalProblemFrame] = useState<ProblemFrame | null>(null)
   const [recommendedMethods, setRecommendedMethods] = useState<RecommendedMethod[]>([])
   const [noteDraft, setNoteDraft] = useState<NoteDraft | null>(null)
@@ -46,6 +47,33 @@ export function SessionDetail({ sessionId }: SessionDetailProps) {
     queryFn: () => getSession(sessionId),
   })
 
+  // Smart initial tab determination based on persisted session state
+  useEffect(() => {
+    if (session && !hasInitializedTab) {
+      if (session.problem_frame) {
+        const stage = session.workflow_state || session.current_stage
+        if (stage === 'retrieval') {
+          setActiveTab('retrieval')
+        } else if (stage === 'ideation') {
+          setActiveTab('ideation')
+        } else {
+          setActiveTab('structuring')
+        }
+      } else {
+        setActiveTab('intake')
+      }
+      setHasInitializedTab(true)
+    }
+  }, [session, hasInitializedTab])
+
+  // Reset tab initialization flag if sessionId changes
+  useEffect(() => {
+    setHasInitializedTab(false)
+    setLocalProblemFrame(null)
+    setNoteDraft(null)
+    setExportError(null)
+  }, [sessionId])
+
   const effectiveProblemFrame = localProblemFrame || session?.problem_frame || null
 
   const handleProblemFrameCreated = (frame: ProblemFrame) => {
@@ -59,6 +87,7 @@ export function SessionDetail({ sessionId }: SessionDetailProps) {
   }
 
   const handleExportMarkdown = async () => {
+    if (isExporting) return
     setIsExporting(true)
     setExportError(null)
     try {

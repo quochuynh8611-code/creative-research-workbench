@@ -121,8 +121,83 @@ describe('Phase 5.4 — Problem Intake & Structuring Canvas Tests', () => {
         expect(screen.getByText('Tối ưu độ bền và trọng lượng cánh tay robot')).toBeInTheDocument()
       })
 
-      expect(screen.getByText(/Kỹ thuật/i)).toBeInTheDocument()
+      expect(screen.getByText('Kỹ thuật')).toBeInTheDocument()
       expect(screen.getByText(/robotics/i)).toBeInTheDocument()
+    })
+
+    it('tự động khởi tạo active tab là structuring khi session có problem_frame và workflow_state là structuring', async () => {
+      mockedGetSession.mockResolvedValue(MOCK_SESSION_WITH_FRAME)
+      renderWithClient(<SessionDetail sessionId="ses-456" />)
+
+      await waitFor(() => {
+        expect(screen.getByText('Tối ưu độ bền và trọng lượng cánh tay robot')).toBeInTheDocument()
+      })
+
+      // Hiển thị trực tiếp Problem Canvas (NormalizedView)
+      expect(screen.getByText(/Bài toán đã chuẩn hóa/i)).toBeInTheDocument()
+      expect(screen.getByText(MOCK_SESSION_WITH_FRAME.problem_frame!.normalized_statement!)).toBeInTheDocument()
+    })
+
+    it('tự động khởi tạo active tab là retrieval khi session có problem_frame và workflow_state là retrieval', async () => {
+      const mockSessionRetrieval: ResearchSession = {
+        ...MOCK_SESSION_WITH_FRAME,
+        workflow_state: 'retrieval',
+      }
+      mockedGetSession.mockResolvedValue(mockSessionRetrieval)
+      renderWithClient(<SessionDetail sessionId="ses-456" />)
+
+      await waitFor(() => {
+        expect(screen.getByText(/Bằng chứng & Tài liệu trích dẫn/i)).toBeInTheDocument()
+      })
+    })
+
+    it('tự động khởi tạo active tab là intake khi session mới chưa có problem_frame', async () => {
+      mockedGetSession.mockResolvedValue(MOCK_SESSION_NEW)
+      renderWithClient(<SessionDetail sessionId="ses-123" />)
+
+      await waitFor(() => {
+        expect(screen.getByText('Giảm tiêu hao năng lượng hệ thống làm mát')).toBeInTheDocument()
+      })
+
+      // Active tab là intake form
+      expect(screen.getByRole('button', { name: /Lưu và chuyển sang Phân tích cấu trúc/i })).toBeInTheDocument()
+    })
+
+    it('hiển thị empty state thân thiện khi ở tab structuring nhưng chưa có problem_frame và cho phép quay về intake', async () => {
+      mockedGetSession.mockResolvedValue(MOCK_SESSION_NEW)
+      renderWithClient(<SessionDetail sessionId="ses-123" />)
+
+      await waitFor(() => {
+        expect(screen.getByText('Giảm tiêu hao năng lượng hệ thống làm mát')).toBeInTheDocument()
+      })
+
+      // Click sang tab Phân tích cấu trúc
+      const structuringBtns = screen.getAllByRole('button', { name: /^Phân tích cấu trúc$/i })
+      fireEvent.click(structuringBtns[0])
+
+      // Kiểm tra empty state
+      expect(screen.getByText(/Chưa có phân tích cấu trúc bài toán/i)).toBeInTheDocument()
+
+      // Bấm nút CTA "Nhập vấn đề ngay"
+      const ctaBtn = screen.getByRole('button', { name: /Nhập vấn đề ngay/i })
+      fireEvent.click(ctaBtn)
+
+      // Chuyển lại tab Intake
+      expect(screen.getByRole('button', { name: /Lưu và chuyển sang Phân tích cấu trúc/i })).toBeInTheDocument()
+    })
+
+    it('cho phép điều hướng từ Problem Canvas sang Retrieval bằng nút Tiến hành tra cứu', async () => {
+      mockedGetSession.mockResolvedValue(MOCK_SESSION_WITH_FRAME)
+      renderWithClient(<SessionDetail sessionId="ses-456" />)
+
+      await waitFor(() => {
+        expect(screen.getByText(/Bài toán đã chuẩn hóa/i)).toBeInTheDocument()
+      })
+
+      const proceedBtn = screen.getByRole('button', { name: /Tiến hành tra cứu tài liệu & nguyên tắc/i })
+      fireEvent.click(proceedBtn)
+
+      expect(await screen.findByText(/Bằng chứng & Tài liệu trích dẫn/i)).toBeInTheDocument()
     })
   })
 
