@@ -14,6 +14,7 @@ import {
   listResearchNotes,
   createResearchNote,
   deleteResearchNote,
+  exportSessionMarkdown,
 } from '@/lib/api-client'
 import type { ProblemFrame, ResearchSession } from '@/lib/types'
 
@@ -26,12 +27,14 @@ jest.mock('@/lib/api-client', () => ({
   listResearchNotes: jest.fn(),
   createResearchNote: jest.fn(),
   deleteResearchNote: jest.fn(),
+  exportSessionMarkdown: jest.fn(),
 }))
 
 const mockedGetSession = getSession as jest.MockedFunction<typeof getSession>
 const mockedCreateProblemFrame = createProblemFrame as jest.MockedFunction<typeof createProblemFrame>
 const mockedSearchKnowledge = searchKnowledge as jest.MockedFunction<typeof searchKnowledge>
 const mockedListResearchNotes = listResearchNotes as jest.MockedFunction<typeof listResearchNotes>
+const mockedExportSessionMarkdown = exportSessionMarkdown as jest.MockedFunction<typeof exportSessionMarkdown>
 
 function createTestQueryClient() {
   return new QueryClient({
@@ -305,6 +308,97 @@ describe('Phase 5.4 — Problem Intake & Structuring Canvas Tests', () => {
       expect(await screen.findByText('Thêm ghi chú nghiên cứu')).toBeInTheDocument()
       const textarea = screen.getByPlaceholderText(/nhập ghi chú nghiên cứu/i) as HTMLTextAreaElement
       expect(textarea.value).toContain('Kiến trúc Workflow Engine cho phép chuyển tiếp trạng thái')
+    })
+  })
+
+  describe('9. Session Markdown Export Action', () => {
+    beforeEach(() => {
+      window.URL.createObjectURL = jest.fn(() => 'blob:http://localhost/mock-blob')
+      window.URL.revokeObjectURL = jest.fn()
+    })
+
+    it('render nút Xuất Markdown khi session load thành công', async () => {
+      mockedGetSession.mockResolvedValue(MOCK_SESSION_WITH_FRAME)
+      renderWithClient(<SessionDetail sessionId="ses-456" />)
+
+      await waitFor(() => {
+        expect(screen.getByText('Tối ưu độ bền và trọng lượng cánh tay robot')).toBeInTheDocument()
+      })
+
+      expect(screen.getByRole('button', { name: /Xuất Markdown/i })).toBeInTheDocument()
+    })
+
+    it('click nút export gọi đúng api client và trigger download', async () => {
+      mockedGetSession.mockResolvedValue(MOCK_SESSION_WITH_FRAME)
+      const mockBlob = new Blob(['# Markdown content'], { type: 'text/markdown' })
+      mockedExportSessionMarkdown.mockResolvedValueOnce(mockBlob)
+
+      renderWithClient(<SessionDetail sessionId="ses-456" />)
+
+      await waitFor(() => {
+        expect(screen.getByText('Tối ưu độ bền và trọng lượng cánh tay robot')).toBeInTheDocument()
+      })
+
+      const exportBtn = screen.getByRole('button', { name: /Xuất Markdown/i })
+      fireEvent.click(exportBtn)
+
+      await waitFor(() => {
+        expect(mockedExportSessionMarkdown).toHaveBeenCalledWith('ses-456')
+      })
+      expect(window.URL.createObjectURL).toHaveBeenCalledWith(mockBlob)
+    })
+
+    it('hiển thị trạng thái disabled/loading trong lúc export', async () => {
+      mockedGetSession.mockResolvedValue(MOCK_SESSION_WITH_FRAME)
+      let resolveExport: (blob: Blob) => void = () => {}
+      const exportPromise = new Promise<Blob>((resolve) => {
+        resolveExport = resolve
+      })
+      mockedExportSessionMarkdown.mockReturnValueOnce(exportPromise)
+
+      renderWithClient(<SessionDetail sessionId="ses-456" />)
+
+      await waitFor(() => {
+        expect(screen.getByText('Tối ưu độ bền và trọng lượng cánh tay robot')).toBeInTheDocument()
+      })
+
+      const exportBtn = screen.getByRole('button', { name: /Xuất Markdown/i })
+      fireEvent.click(exportBtn)
+
+      // Trong lúc pending
+      expect(screen.getByRole('button', { name: /Đang xuất/i })).toBeDisabled()
+
+      // Hoàn thành export
+      resolveExport(new Blob(['# Content']))
+      await waitFor(() => {
+        expect(screen.getByRole('button', { name: /Xuất Markdown/i })).not.toBeDisabled()
+      })
+    })
+
+    it('hiển thị lỗi khi export thất bại và không thay đổi active tab', async () => {
+      mockedGetSession.mockResolvedValue(MOCK_SESSION_WITH_FRAME)
+      mockedExportSessionMarkdown.mockRejectedValueOnce(new Error('Lỗi kết nối máy chủ khi xuất Markdown'))
+
+      renderWithClient(<SessionDetail sessionId="ses-456" />)
+
+      await waitFor(() => {
+        expect(screen.getByText('Tối ưu độ bền và trọng lượng cánh tay robot')).toBeInTheDocument()
+      })
+
+      // Chọn tab Tài liệu & Bằng chứng trước
+      const retrievalTab = screen.getByRole('button', { name: /Tài liệu & Bằng chứng/i })
+      fireEvent.click(retrievalTab)
+      expect(screen.getByText(/Bằng chứng & Tài liệu trích dẫn/i)).toBeInTheDocument()
+
+      const exportBtn = screen.getByRole('button', { name: /Xuất Markdown/i })
+      fireEvent.click(exportBtn)
+
+      await waitFor(() => {
+        expect(screen.getByText(/Lỗi kết nối máy chủ khi xuất Markdown/i)).toBeInTheDocument()
+      })
+
+      // Active tab vẫn là Tài liệu & Bằng chứng
+      expect(screen.getByText(/Bằng chứng & Tài liệu trích dẫn/i)).toBeInTheDocument()
     })
   })
 })

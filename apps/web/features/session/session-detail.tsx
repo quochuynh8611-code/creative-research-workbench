@@ -2,10 +2,10 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import { ArrowLeft, Brain, Loader2, AlertCircle, Sparkles, FolderSearch, Lightbulb, BookOpen } from 'lucide-react'
+import { ArrowLeft, Brain, Loader2, AlertCircle, Sparkles, FolderSearch, Lightbulb, BookOpen, Download } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import { DOMAIN_LABELS, STATUS_LABELS, STAGE_LABELS, WORKFLOW_STAGES, formatDate, cn } from '@/lib/utils'
-import { getSession } from '@/lib/api-client'
+import { getSession, exportSessionMarkdown } from '@/lib/api-client'
 import { IntakeForm } from '@/features/intake/intake-form'
 import { NormalizedView } from '@/features/structuring/normalized-view'
 import { WorkflowStepper } from '@/features/session/workflow-stepper'
@@ -32,6 +32,8 @@ export function SessionDetail({ sessionId }: SessionDetailProps) {
   const [localProblemFrame, setLocalProblemFrame] = useState<ProblemFrame | null>(null)
   const [recommendedMethods, setRecommendedMethods] = useState<RecommendedMethod[]>([])
   const [noteDraft, setNoteDraft] = useState<NoteDraft | null>(null)
+  const [isExporting, setIsExporting] = useState<boolean>(false)
+  const [exportError, setExportError] = useState<string | null>(null)
 
   const {
     data: session,
@@ -54,6 +56,26 @@ export function SessionDetail({ sessionId }: SessionDetailProps) {
   const handleSaveAsNote = (draft: NoteDraft) => {
     setNoteDraft(draft)
     setActiveTab('notebook')
+  }
+
+  const handleExportMarkdown = async () => {
+    setIsExporting(true)
+    setExportError(null)
+    try {
+      const blob = await exportSessionMarkdown(sessionId)
+      const url = window.URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `session_${sessionId}.md`
+      document.body.appendChild(a)
+      a.click()
+      a.remove()
+      window.URL.revokeObjectURL(url)
+    } catch (err: any) {
+      setExportError(err?.message || 'Có lỗi xảy ra khi xuất file Markdown')
+    } finally {
+      setIsExporting(false)
+    }
   }
 
   if (isLoading) {
@@ -153,7 +175,46 @@ export function SessionDetail({ sessionId }: SessionDetailProps) {
             )}
           </div>
         </div>
+
+        {/* Header Actions */}
+        <div className="flex items-center gap-2 self-start md:self-auto">
+          <button
+            type="button"
+            onClick={handleExportMarkdown}
+            disabled={isExporting}
+            className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-semibold border border-border bg-card hover:bg-accent hover:text-accent-foreground disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-sm"
+          >
+            {isExporting ? (
+              <>
+                <Loader2 className="w-3.5 h-3.5 animate-spin text-primary" />
+                <span>Đang xuất...</span>
+              </>
+            ) : (
+              <>
+                <Download className="w-3.5 h-3.5 text-muted-foreground" />
+                <span>Xuất Markdown</span>
+              </>
+            )}
+          </button>
+        </div>
       </div>
+
+      {/* Export Error Alert */}
+      {exportError && (
+        <div className="p-3 rounded-xl border border-destructive/30 bg-destructive/10 text-xs text-destructive flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2">
+            <AlertCircle className="w-4 h-4 shrink-0" />
+            <span>{exportError}</span>
+          </div>
+          <button
+            type="button"
+            onClick={() => setExportError(null)}
+            className="text-destructive hover:underline text-[11px] font-medium"
+          >
+            Đóng
+          </button>
+        </div>
+      )}
 
       {/* Workflow Stepper */}
       <WorkflowStepper

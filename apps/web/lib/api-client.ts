@@ -184,3 +184,14 @@ export async function deleteResearchNote(
   )
   return response.data
 }
+
+/**
+ * 15. Xuất nội dung research session ra file Markdown (.md).
+ */
+export async function exportSessionMarkdown(sessionId: string): Promise<Blob> {
+  const response = await apiClient.get<Blob>(`/api/v1/sessions/${sessionId}/export`, {
+    params: { format: 'md' },
+    responseType: 'blob',
+  })
+  return response.data
+}
