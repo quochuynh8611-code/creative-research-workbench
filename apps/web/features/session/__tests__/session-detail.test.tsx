@@ -14,6 +14,10 @@ import {
   listResearchNotes,
   createResearchNote,
   deleteResearchNote,
+  listCandidateSolutions,
+  createCandidateSolution,
+  updateCandidateSolution,
+  deleteCandidateSolution,
   exportSessionMarkdown,
 } from '@/lib/api-client'
 import type { ProblemFrame, ResearchSession } from '@/lib/types'
@@ -27,6 +31,10 @@ jest.mock('@/lib/api-client', () => ({
   listResearchNotes: jest.fn(),
   createResearchNote: jest.fn(),
   deleteResearchNote: jest.fn(),
+  listCandidateSolutions: jest.fn(),
+  createCandidateSolution: jest.fn(),
+  updateCandidateSolution: jest.fn(),
+  deleteCandidateSolution: jest.fn(),
   exportSessionMarkdown: jest.fn(),
 }))
 
@@ -34,6 +42,7 @@ const mockedGetSession = getSession as jest.MockedFunction<typeof getSession>
 const mockedCreateProblemFrame = createProblemFrame as jest.MockedFunction<typeof createProblemFrame>
 const mockedSearchKnowledge = searchKnowledge as jest.MockedFunction<typeof searchKnowledge>
 const mockedListResearchNotes = listResearchNotes as jest.MockedFunction<typeof listResearchNotes>
+const mockedListCandidateSolutions = listCandidateSolutions as jest.MockedFunction<typeof listCandidateSolutions>
 const mockedExportSessionMarkdown = exportSessionMarkdown as jest.MockedFunction<typeof exportSessionMarkdown>
 
 function createTestQueryClient() {
@@ -95,6 +104,7 @@ describe('Phase 5.4 — Problem Intake & Structuring Canvas Tests', () => {
     jest.clearAllMocks()
     mockedSearchKnowledge.mockResolvedValue({ results: [], latency_ms: 10 })
     mockedListResearchNotes.mockResolvedValue({ data: [], meta: { total: 0 } })
+    mockedListCandidateSolutions.mockResolvedValue({ data: [], meta: { total: 0, session_id: 'ses-456' } })
   })
 
   describe('1. SessionDetail Component', () => {
@@ -328,7 +338,7 @@ describe('Phase 5.4 — Problem Intake & Structuring Canvas Tests', () => {
   })
 
   describe('7. Ideation & Principle Suggestions Integration in SessionDetail', () => {
-    it('hiển thị Principle Suggestions khi người dùng chọn tab Ý tưởng & Nguyên tắc', async () => {
+    it('hiển thị Principle Suggestions và Candidate Solutions khi người dùng chọn tab Ý tưởng & Nguyên tắc', async () => {
       mockedGetSession.mockResolvedValue(MOCK_SESSION_WITH_FRAME)
       renderWithClient(<SessionDetail sessionId="ses-456" />)
 
@@ -340,6 +350,7 @@ describe('Phase 5.4 — Problem Intake & Structuring Canvas Tests', () => {
       fireEvent.click(ideationTab)
 
       expect(screen.getByText(/Chưa có gợi ý nguyên tắc sáng chế/i)).toBeInTheDocument()
+      expect(screen.getByText(/Giải pháp sáng tạo ứng viên/i)).toBeInTheDocument()
     })
   })
 

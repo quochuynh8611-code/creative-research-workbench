@@ -28,8 +28,22 @@
 | **Phase 9.1 (QW-5)** | Export Markdown GFM & Native Browser Print PDF | ✅ DONE | `bc9b1f3` |
 | **Phase 6.1 (QW-3)** | Real Embedding Engine (OpenAI & Gemini) & Polymorphic Factory | ✅ DONE | `13c4376` |
 | **Phase 6.2 (QW-4)** | LLM Problem Structuring Service & AI Trust Contract | ✅ DONE | `96efc84` |
-| **Phase 7.4** | Candidate Solutions Persistence & Session-Scoped REST API | ✅ DONE | Pending commit |
+| **Phase 7.4** | Candidate Solutions Persistence & Session-Scoped REST API | ✅ DONE | `ef5614b` |
+| **Phase 7.2 (UI)** | Candidate Solutions UI & Canvas Integration in Ideation Tab | ✅ DONE | Pending commit |
 | **Phase 6–12** | Professional Upgrade (AI Core, Canvas, Export…) | 🔵 IN PROGRESS | — |
+
+---
+
+## 📅 Phiên làm việc: 2026-10-01 (Phase 7.2 UI — Candidate Solutions UI & Canvas Integration)
+
+### ✅ Đã hoàn thành trong phiên này
+
+| # | Task | Chi tiết |
+|---|---|---|
+| 1 | **Component `CandidateSolutions`** | Tạo `apps/web/features/ideation/candidate-solutions.tsx` cô lập với TanStack Query (`useQuery` + `useMutation`), filter status tabs, score meters (Novelty/Feasibility), form compose giải pháp |
+| 2 | **Canvas Integration** | Tích hợp `CandidateSolutions` vào tab `ideation` trong `session-detail.tsx`, hiển thị song song với `TrizMatrixLookup` và `PrincipleSuggestions` |
+| 3 | **Interactive Status Workflow** | Hỗ trợ nút thao tác nhanh: `Chấp nhận` (`accepted`), `Từ chối` (`rejected`), `Xem xét lại` (`candidate`) kèm styling HSL/Tailwind rõ ràng |
+| 4 | **Test-First Suite** | 10 Unit tests trong `candidate-solutions.test.tsx` + 1 Integration test trong `session-detail.test.tsx` (100% PASS, 100/100 frontend tests) |
 
 ---
 

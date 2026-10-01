@@ -10,6 +10,7 @@ import { IntakeForm } from '@/features/intake/intake-form'
 import { NormalizedView } from '@/features/structuring/normalized-view'
 import { WorkflowStepper } from '@/features/session/workflow-stepper'
 import { PrincipleSuggestions } from '@/features/ideation/principle-suggestions'
+import { CandidateSolutions } from '@/features/ideation/candidate-solutions'
 import { EvidencePanel } from '@/features/retrieval/evidence-panel'
 import { TrizMatrixLookup } from '@/features/triz/triz-matrix-lookup'
 import { ResearchNotebook } from '@/features/notebook/research-notebook'
@@ -369,6 +370,7 @@ export function SessionDetail({ sessionId }: SessionDetailProps) {
               onSelectPrinciple={() => setActiveTab('notebook')}
               onSaveAsNote={handleSaveAsNote}
             />
+            <CandidateSolutions sessionId={sessionId} />
           </div>
         )}
 
