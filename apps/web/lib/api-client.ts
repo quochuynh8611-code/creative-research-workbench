@@ -8,6 +8,10 @@ import type {
   SearchRequest,
   SearchResponse,
   SessionListResponse,
+  TrizLookupQuery,
+  TrizLookupResponse,
+  TrizParametersResponse,
+  TrizPrinciplesResponse,
 } from './types'
 
 export const apiClient = axios.create({
@@ -116,3 +120,28 @@ export async function restoreSession(sessionId: string): Promise<ResearchSession
   return response.data.data ?? response.data
 }
 
+/**
+ * 9. Lấy danh mục 39 thông số kỹ thuật TRIZ song ngữ (Altshuller 1985).
+ */
+export async function getTrizParameters(): Promise<TrizParametersResponse> {
+  const response = await apiClient.get<TrizParametersResponse>('/api/v1/triz/parameters')
+  return response.data
+}
+
+/**
+ * 10. Lấy danh mục 40 nguyên tắc sáng tạo TRIZ kèm metadata giải thích & ví dụ.
+ */
+export async function getTrizPrinciples(): Promise<TrizPrinciplesResponse> {
+  const response = await apiClient.get<TrizPrinciplesResponse>('/api/v1/triz/principles')
+  return response.data
+}
+
+/**
+ * 11. Tra cứu ma trận mâu thuẫn kỹ thuật Altshuller 39x39 một cách tất định.
+ */
+export async function lookupTrizMatrix(params: TrizLookupQuery): Promise<TrizLookupResponse> {
+  const response = await apiClient.get<TrizLookupResponse>('/api/v1/triz/lookup', {
+    params,
+  })
+  return response.data
+}

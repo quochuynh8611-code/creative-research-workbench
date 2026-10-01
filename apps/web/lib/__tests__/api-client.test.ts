@@ -21,6 +21,9 @@ import {
   searchKnowledge,
   archiveSession,
   restoreSession,
+  getTrizParameters,
+  getTrizPrinciples,
+  lookupTrizMatrix,
   apiClient,
 } from '../api-client'
 
@@ -28,6 +31,7 @@ import type {
   CreateSessionInput,
   ProblemFrameCreateInput,
   SearchRequest,
+  TrizLookupQuery,
 } from '../types'
 
 jest.mock('../api-client', () => {
@@ -290,6 +294,107 @@ describe('Frontend API Client Contract Tests (Phase 5.2)', () => {
     expect(spy).toHaveBeenCalledWith(`/api/v1/sessions/${sessionId}/restore`)
     expect(result.id).toBe(sessionId)
     expect(result.status).toBe('active')
+  })
+
+  // 9. Get TRIZ Parameters
+  it('9. getTrizParameters gọi GET /api/v1/triz/parameters và unwrap { data, meta }', async () => {
+    const mockApiResponse = {
+      data: {
+        data: [
+          {
+            id: 1,
+            code: 'weight_moving',
+            name_vi: 'Trọng lượng vật thể di động',
+            name_en: 'Weight of moving object',
+            description: 'Khối lượng của vật thể chuyển động',
+          },
+        ],
+        meta: { total: 39 },
+      },
+    }
+
+    const spy = jest.spyOn(apiClient, 'get').mockResolvedValueOnce(mockApiResponse)
+
+    const result = await getTrizParameters()
+
+    expect(spy).toHaveBeenCalledWith('/api/v1/triz/parameters')
+    expect(result.data).toHaveLength(1)
+    expect(result.data[0].code).toBe('weight_moving')
+    expect(result.meta.total).toBe(39)
+  })
+
+  // 10. Get TRIZ Principles
+  it('10. getTrizPrinciples gọi GET /api/v1/triz/principles và unwrap { data, meta }', async () => {
+    const mockApiResponse = {
+      data: {
+        data: [
+          {
+            id: 1,
+            principle_id: 1,
+            name_vi: 'Nguyên tắc Phân đoạn',
+            name_en: 'Segmentation',
+            description: 'Chia đối tượng thành các phần độc lập',
+            explanation: 'Phân rã hệ thống thành các khối nhỏ',
+            examples: ['Cửa cuốn xếp lớp'],
+          },
+        ],
+        meta: { total: 40 },
+      },
+    }
+
+    const spy = jest.spyOn(apiClient, 'get').mockResolvedValueOnce(mockApiResponse)
+
+    const result = await getTrizPrinciples()
+
+    expect(spy).toHaveBeenCalledWith('/api/v1/triz/principles')
+    expect(result.data).toHaveLength(1)
+    expect(result.data[0].principle_id).toBe(1)
+    expect(result.meta.total).toBe(40)
+  })
+
+  // 11. Lookup TRIZ Matrix
+  it('11. lookupTrizMatrix gọi GET /api/v1/triz/lookup với params { improving, worsening }', async () => {
+    const query: TrizLookupQuery = { improving: 17, worsening: 14 }
+    const mockApiResponse = {
+      data: {
+        improving_parameter: {
+          id: 17,
+          code: 'temperature',
+          name_vi: 'Nhiệt độ',
+          name_en: 'Temperature',
+        },
+        worsening_parameter: {
+          id: 14,
+          code: 'strength',
+          name_vi: 'Độ bền / Độ cứng',
+          name_en: 'Strength',
+        },
+        is_diagonal: false,
+        principles: [
+          {
+            id: 35,
+            principle_id: 35,
+            name_vi: 'Chuyển đổi thông số',
+            name_en: 'Parameter changes',
+            description: 'Thay đổi trạng thái vật lý',
+          },
+        ],
+        principles_count: 1,
+      },
+    }
+
+    const spy = jest.spyOn(apiClient, 'get').mockResolvedValueOnce(mockApiResponse)
+
+    const result = await lookupTrizMatrix(query)
+
+    expect(spy).toHaveBeenCalledWith('/api/v1/triz/lookup', {
+      params: query,
+    })
+    expect(result.is_diagonal).toBe(false)
+    expect(result.improving_parameter.id).toBe(17)
+    expect(result.worsening_parameter.id).toBe(14)
+    expect(result.principles).toHaveLength(1)
+    expect(result.principles_count).toBe(1)
   })
 })
 

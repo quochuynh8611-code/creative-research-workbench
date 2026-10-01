@@ -165,3 +165,48 @@ export interface KnowledgeChunk {
   topic: TopicType
   tags: string[]
 }
+
+// ──────────────────────────────────────────────
+// Canonical TRIZ Catalog & Matrix Types
+// ──────────────────────────────────────────────
+
+export interface TrizParameter {
+  id: number
+  code: string
+  name_vi: string
+  name_en: string
+  description?: string
+}
+
+export interface TrizParametersResponse {
+  data: TrizParameter[]
+  meta: { total: number }
+}
+
+export interface TrizPrinciple {
+  id: number
+  principle_id: number
+  name_vi: string
+  name_en: string
+  description: string
+  explanation?: string
+  examples?: string[]
+}
+
+export interface TrizPrinciplesResponse {
+  data: TrizPrinciple[]
+  meta: { total: number }
+}
+
+export interface TrizLookupQuery {
+  improving: number
+  worsening: number
+}
+
+export interface TrizLookupResponse {
+  improving_parameter: TrizParameter
+  worsening_parameter: TrizParameter
+  is_diagonal: boolean
+  principles: TrizPrinciple[]
+  principles_count: number
+}
