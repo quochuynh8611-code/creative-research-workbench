@@ -11,6 +11,7 @@ import { NormalizedView } from '@/features/structuring/normalized-view'
 import { WorkflowStepper } from '@/features/session/workflow-stepper'
 import { PrincipleSuggestions } from '@/features/ideation/principle-suggestions'
 import { EvidencePanel } from '@/features/retrieval/evidence-panel'
+import { TrizMatrixLookup } from '@/features/triz/triz-matrix-lookup'
 import type { ProblemFrame, WorkflowStage, RecommendedMethod } from '@/lib/types'
 
 const TABS = [
@@ -246,10 +247,15 @@ export function SessionDetail({ sessionId }: SessionDetailProps) {
         )}
 
         {activeTab === 'ideation' && (
-          <PrincipleSuggestions
-            methods={recommendedMethods}
-            onSelectPrinciple={() => setActiveTab('notebook')}
-          />
+          <div className="space-y-8">
+            <TrizMatrixLookup
+              onSelectPrinciple={() => setActiveTab('notebook')}
+            />
+            <PrincipleSuggestions
+              methods={recommendedMethods}
+              onSelectPrinciple={() => setActiveTab('notebook')}
+            />
+          </div>
         )}
 
         {activeTab === 'notebook' && (
