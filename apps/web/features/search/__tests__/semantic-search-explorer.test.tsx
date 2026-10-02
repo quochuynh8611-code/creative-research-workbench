@@ -1366,4 +1366,136 @@ describe('SemanticSearchExplorer Component Tests (Phase 10.3 Increment 1 - 6)', 
       expect(rehydratedEl).not.toHaveClass('line-clamp-3')
     })
   })
+
+  describe('Phase 10.3 Increment 13: Result Distribution Metrics & Quick Context Summary Chips', () => {
+    it('Scenario 41: Render chính xác các chip metrics (tổng, khớp từ khóa, chuẩn vàng)', async () => {
+      mockSearchParams = new URLSearchParams('q=ma+sát')
+
+      mockedSearchKnowledge.mockResolvedValueOnce({
+        results: [
+          {
+            chunk_id: 'chk-1',
+            source_ref: 'docs/1.md',
+            excerpt: 'Giảm ma sát trong ổ bi.',
+            score: 0.95,
+            metadata: { golden: true },
+          },
+          {
+            chunk_id: 'chk-2',
+            source_ref: 'docs/2.md',
+            excerpt: 'Ma sát bề mặt tiếp xúc.',
+            score: 0.85,
+            metadata: { golden: false },
+          },
+          {
+            chunk_id: 'chk-3',
+            source_ref: 'docs/3.md',
+            excerpt: 'Tối ưu cấu trúc cơ khí chung.',
+            score: 0.75,
+            metadata: { golden: false },
+          },
+        ],
+        latency_ms: 5.0,
+      })
+
+      renderWithClient(<SemanticSearchExplorer />)
+
+      await screen.findByText('Giảm ma sát trong ổ bi.')
+
+      expect(screen.getByText(/kết quả tìm thấy/i)).toHaveTextContent('3 kết quả tìm thấy')
+      expect(screen.getByText('2 khớp từ khóa')).toBeInTheDocument()
+      expect(screen.getByText('1 chuẩn vàng')).toBeInTheDocument()
+    })
+
+    it('Scenario 42: Tự động ẩn chip khớp từ khóa và chuẩn vàng khi count bằng 0', async () => {
+      mockSearchParams = new URLSearchParams('q=bền+bỉ')
+
+      mockedSearchKnowledge.mockResolvedValueOnce({
+        results: [
+          {
+            chunk_id: 'chk-1',
+            source_ref: 'docs/1.md',
+            excerpt: 'Tài liệu không khớp từ khóa.',
+            score: 0.70,
+            metadata: { golden: false },
+          },
+          {
+            chunk_id: 'chk-2',
+            source_ref: 'docs/2.md',
+            excerpt: 'Tài liệu khác cũng không khớp.',
+            score: 0.65,
+            metadata: { golden: false },
+          },
+        ],
+        latency_ms: 4.0,
+      })
+
+      renderWithClient(<SemanticSearchExplorer />)
+
+      await screen.findByText('Tài liệu không khớp từ khóa.')
+
+      expect(screen.getByText(/kết quả tìm thấy/i)).toHaveTextContent('2 kết quả tìm thấy')
+      expect(screen.queryByText(/\d+ khớp từ khóa/i)).not.toBeInTheDocument()
+      expect(screen.queryByText(/\d+ chuẩn vàng/i)).not.toBeInTheDocument()
+    })
+
+    it('Scenario 43: Hiển thị context Hiển thị D / N mục khi chọn tab phân đoạn nguồn', async () => {
+      mockSearchParams = new URLSearchParams('q=nghiên+cứu')
+
+      mockedSearchKnowledge.mockResolvedValueOnce({
+        results: [
+          {
+            chunk_id: 'chk-cs-1',
+            source_ref: 'docs/cs1.md',
+            excerpt: 'Case study 1.',
+            score: 0.90,
+            metadata: { source_type: 'case_study' },
+          },
+          {
+            chunk_id: 'chk-cs-2',
+            source_ref: 'docs/cs2.md',
+            excerpt: 'Case study 2.',
+            score: 0.85,
+            metadata: { source_type: 'case_study' },
+          },
+          {
+            chunk_id: 'chk-rp-1',
+            source_ref: 'docs/rp1.md',
+            excerpt: 'Research paper 1.',
+            score: 0.95,
+            metadata: { source_type: 'research_paper' },
+          },
+          {
+            chunk_id: 'chk-rp-2',
+            source_ref: 'docs/rp2.md',
+            excerpt: 'Research paper 2.',
+            score: 0.80,
+            metadata: { source_type: 'research_paper' },
+          },
+        ],
+        latency_ms: 6.0,
+      })
+
+      renderWithClient(<SemanticSearchExplorer />)
+
+      await screen.findByText('Case study 1.')
+
+      // Trước khi click tab: không có chip Hiển thị D / N
+      expect(screen.queryByText(/Hiển thị \d+ \/ \d+ mục/i)).not.toBeInTheDocument()
+
+      // Click tab Case Study
+      const caseStudyTab = screen.getByRole('button', { name: /Case Study/i })
+      fireEvent.click(caseStudyTab)
+
+      // Hiển thị 2 / 4 mục
+      expect(screen.getByText('Hiển thị 2 / 4 mục')).toBeInTheDocument()
+
+      // Click quay lại tab Tất cả
+      const allTab = screen.getByRole('button', { name: /Tất cả/i })
+      fireEvent.click(allTab)
+
+      // Chip Hiển thị D / N bị ẩn
+      expect(screen.queryByText(/Hiển thị \d+ \/ \d+ mục/i)).not.toBeInTheDocument()
+    })
+  })
 })

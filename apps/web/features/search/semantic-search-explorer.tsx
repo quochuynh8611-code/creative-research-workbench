@@ -150,6 +150,43 @@ export function sortSearchResults(
   return items
 }
 
+export interface ResultDistributionMetrics {
+  totalCount: number
+  keywordMatchCount: number
+  goldenCount: number
+}
+
+export function calculateResultMetrics(
+  results: SearchResultItem[],
+  query: string
+): ResultDistributionMetrics {
+  if (!results || results.length === 0) {
+    return {
+      totalCount: 0,
+      keywordMatchCount: 0,
+      goldenCount: 0,
+    }
+  }
+
+  let keywordMatchCount = 0
+  let goldenCount = 0
+
+  for (const item of results) {
+    if (checkDirectKeywordMatch(query, item.excerpt, item.source_ref)) {
+      keywordMatchCount++
+    }
+    if (item.metadata?.golden) {
+      goldenCount++
+    }
+  }
+
+  return {
+    totalCount: results.length,
+    keywordMatchCount,
+    goldenCount,
+  }
+}
+
 export function SemanticSearchExplorer() {
   const searchParams = useSearchParams()
   const router = useRouter()
@@ -429,6 +466,10 @@ export function SemanticSearchExplorer() {
     }
     return sortSearchResults(list, sortBy, submittedQuery)
   }, [results, activeSourceBucket, sortBy, submittedQuery])
+
+  const metrics = useMemo(() => {
+    return calculateResultMetrics(results, submittedQuery)
+  }, [results, submittedQuery])
 
   return (
     <div className="space-y-6 max-w-6xl mx-auto px-4 py-8">
@@ -766,6 +807,27 @@ export function SemanticSearchExplorer() {
                         </>
                       )}
                     </span>
+
+                    {/* Result Distribution Metrics Chips */}
+                    {metrics.keywordMatchCount > 0 && (
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-medium bg-violet-500/10 text-violet-600 dark:text-violet-400 border border-violet-500/20">
+                        <Sparkles className="w-2.5 h-2.5" />
+                        <span>{metrics.keywordMatchCount} khớp từ khóa</span>
+                      </span>
+                    )}
+
+                    {metrics.goldenCount > 0 && (
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-medium bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20">
+                        <Star className="w-2.5 h-2.5 fill-amber-500 text-amber-500" />
+                        <span>{metrics.goldenCount} chuẩn vàng</span>
+                      </span>
+                    )}
+
+                    {activeSourceBucket !== 'all' && (
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-medium bg-muted text-muted-foreground border border-border">
+                        <span>Hiển thị {displayedResults.length} / {results.length} mục</span>
+                      </span>
+                    )}
                   </div>
 
                   {data?.latency_ms !== undefined && (
