@@ -4,8 +4,8 @@ import { render, screen, waitFor, fireEvent } from '@testing-library/react'
 import '@testing-library/jest-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { SemanticSearchExplorer } from '../semantic-search-explorer'
-import { searchKnowledge, createResearchNote } from '@/lib/api-client'
-import type { SearchResponse, ResearchNote } from '@/lib/types'
+import { searchKnowledge, createResearchNote, listResearchNotes } from '@/lib/api-client'
+import type { SearchResponse, ResearchNote, ResearchNotesResponse } from '@/lib/types'
 
 let mockSearchParams = new URLSearchParams()
 const mockReplace = jest.fn()
@@ -23,10 +23,12 @@ jest.mock('next/navigation', () => ({
 jest.mock('@/lib/api-client', () => ({
   searchKnowledge: jest.fn(),
   createResearchNote: jest.fn(),
+  listResearchNotes: jest.fn(),
 }))
 
 const mockedSearchKnowledge = searchKnowledge as jest.MockedFunction<typeof searchKnowledge>
 const mockedCreateResearchNote = createResearchNote as jest.MockedFunction<typeof createResearchNote>
+const mockedListResearchNotes = listResearchNotes as jest.MockedFunction<typeof listResearchNotes>
 
 function createTestQueryClient() {
   return new QueryClient({
@@ -46,9 +48,10 @@ function renderWithClient(ui: React.ReactElement, queryClient = createTestQueryC
   }
 }
 
-describe('SemanticSearchExplorer Component Tests (Phase 10.3 Increment 1)', () => {
+describe('SemanticSearchExplorer Component Tests (Phase 10.3 Increment 1 - 5)', () => {
   beforeEach(() => {
     jest.clearAllMocks()
+    mockedListResearchNotes.mockResolvedValue({ data: [], meta: { total: 0 } })
   })
 
   it('Scenario 1: Hiển thị initial blank state với banner và các gợi ý từ khóa', () => {
@@ -385,5 +388,126 @@ describe('SemanticSearchExplorer Component Tests (Phase 10.3 Increment 1)', () =
     expect(await screen.findByText('Nguyên tắc phân đoạn.')).toBeInTheDocument()
     expect(screen.queryByRole('link', { name: /Quay lại Session/i })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /Đính kèm vào Session/i })).not.toBeInTheDocument()
+    expect(mockedListResearchNotes).not.toHaveBeenCalled()
+  })
+
+  describe('Phase 10.3 Increment 5: Contextual Evidence Pre-hydration & Duplicate Guard', () => {
+    it('Scenario 12: Tự động gọi listResearchNotes và hydrate badge "Đã đính kèm" cho các chunk đã có trong session', async () => {
+      mockSearchParams = new URLSearchParams('q=mâu+thuẫn&session_id=d9b2d20b-0001-0000-0000-000000000001')
+
+      mockedSearchKnowledge.mockResolvedValueOnce({
+        results: [
+          {
+            chunk_id: 'chk-already-attached',
+            source_ref: 'docs/ADR-001.md',
+            excerpt: 'Đoạn trích đã được lưu trước đó.',
+            score: 0.95,
+            metadata: {},
+          },
+          {
+            chunk_id: 'chk-new-item',
+            source_ref: 'docs/ADR-002.md',
+            excerpt: 'Đoạn trích mới chưa đính kèm.',
+            score: 0.88,
+            metadata: {},
+          },
+        ],
+        latency_ms: 12.0,
+      })
+
+      mockedListResearchNotes.mockResolvedValueOnce({
+        data: [
+          {
+            id: 'note-existing-1',
+            session_id: 'd9b2d20b-0001-0000-0000-000000000001',
+            content: 'Ghi chú cũ',
+            note_type: 'insight',
+            source_chunk_id: 'chk-already-attached',
+            created_at: '2026-10-02T08:00:00Z',
+          },
+        ],
+        meta: { total: 1 },
+      })
+
+      renderWithClient(<SemanticSearchExplorer />)
+
+      // Chờ API listResearchNotes được gọi với đúng sessionId
+      await waitFor(() => {
+        expect(mockedListResearchNotes).toHaveBeenCalledWith('d9b2d20b-0001-0000-0000-000000000001')
+      })
+
+      // Item 1 (đã có trong notes) hiển thị badge Đã đính kèm
+      expect(await screen.findByText('Đoạn trích đã được lưu trước đó.')).toBeInTheDocument()
+      expect(screen.getByText(/Đã đính kèm/i)).toBeInTheDocument()
+
+      // Item 2 (chưa có trong notes) hiển thị nút Đính kèm vào Session
+      expect(screen.getByText('Đoạn trích mới chưa đính kèm.')).toBeInTheDocument()
+      const attachButtons = screen.getAllByRole('button', { name: /Đính kèm vào Session/i })
+      expect(attachButtons.length).toBe(1)
+    })
+
+    it('Scenario 13: Không gọi listResearchNotes khi không có session_id (Standalone Mode)', async () => {
+      mockSearchParams = new URLSearchParams('q=nguyên+tắc')
+
+      mockedSearchKnowledge.mockResolvedValueOnce({
+        results: [
+          {
+            chunk_id: 'chk-triz-1',
+            source_ref: 'docs/triz.md',
+            excerpt: 'Nguyên tắc 1.',
+            score: 0.9,
+            metadata: {},
+          },
+        ],
+        latency_ms: 5.0,
+      })
+
+      renderWithClient(<SemanticSearchExplorer />)
+
+      await screen.findByText('Nguyên tắc 1.')
+      expect(mockedListResearchNotes).not.toHaveBeenCalled()
+    })
+
+    it('Scenario 14: Người dùng không thể thực hiện đính kèm trùng lặp cho chunk đã nằm trong tập attachedChunkIds', async () => {
+      mockSearchParams = new URLSearchParams('q=triz&session_id=d9b2d20b-0001-0000-0000-000000000001')
+
+      mockedSearchKnowledge.mockResolvedValueOnce({
+        results: [
+          {
+            chunk_id: 'chk-duplicate-test',
+            source_ref: 'docs/duplicate.md',
+            excerpt: 'Nội dung trùng lặp.',
+            score: 0.92,
+            metadata: {},
+          },
+        ],
+        latency_ms: 5.0,
+      })
+
+      mockedListResearchNotes.mockResolvedValueOnce({
+        data: [
+          {
+            id: 'note-01',
+            session_id: 'd9b2d20b-0001-0000-0000-000000000001',
+            content: 'Ghi chú',
+            note_type: 'insight',
+            source_chunk_id: 'chk-duplicate-test',
+            created_at: '2026-10-02T08:00:00Z',
+          },
+        ],
+        meta: { total: 1 },
+      })
+
+      renderWithClient(<SemanticSearchExplorer />)
+
+      // Chờ badge Đã đính kèm hiển thị
+      expect(await screen.findByText(/Đã đính kèm/i)).toBeInTheDocument()
+
+      // Nút Đính kèm không tồn tại
+      expect(screen.queryByRole('button', { name: /Đính kèm vào Session/i })).not.toBeInTheDocument()
+
+      // API createResearchNote không bao giờ được gọi
+      expect(mockedCreateResearchNote).not.toHaveBeenCalled()
+    })
   })
 })

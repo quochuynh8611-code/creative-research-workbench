@@ -23,7 +23,7 @@ import {
   Bookmark,
 } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
-import { searchKnowledge, createResearchNote } from '@/lib/api-client'
+import { searchKnowledge, createResearchNote, listResearchNotes } from '@/lib/api-client'
 import { cn } from '@/lib/utils'
 import type { SearchResultItem } from '@/lib/types'
 import {
@@ -137,6 +137,30 @@ export function SemanticSearchExplorer() {
     staleTime: 30_000,
   })
 
+  // Pre-hydrate existing notes if in Contextual Mode (session_id present)
+  const { data: existingNotesResponse } = useQuery({
+    queryKey: ['sessions', sessionId, 'notes'],
+    queryFn: () => listResearchNotes(sessionId),
+    enabled: Boolean(sessionId),
+  })
+
+  useEffect(() => {
+    const rawNotes = (existingNotesResponse as any)?.data || (Array.isArray(existingNotesResponse) ? existingNotesResponse : [])
+    if (rawNotes && rawNotes.length > 0) {
+      const chunkIdsFromNotes = rawNotes
+        .map((n: any) => n.source_chunk_id)
+        .filter((id: any): id is string => Boolean(id))
+
+      if (chunkIdsFromNotes.length > 0) {
+        setAttachedChunkIds((prev) => {
+          const next = new Set(prev)
+          chunkIdsFromNotes.forEach((id: string) => next.add(id))
+          return next
+        })
+      }
+    }
+  }, [existingNotesResponse])
+
   const syncUrl = (newState: {
     query: string
     topic?: string
@@ -198,7 +222,7 @@ export function SemanticSearchExplorer() {
   }
 
   const handleAttachToSession = async (item: SearchResultItem) => {
-    if (!sessionId || !item.chunk_id) return
+    if (!sessionId || !item.chunk_id || attachedChunkIds.has(item.chunk_id) || attachingChunkId) return
     try {
       setAttachingChunkId(item.chunk_id)
       const scorePercent = Math.round(item.score * 100)
