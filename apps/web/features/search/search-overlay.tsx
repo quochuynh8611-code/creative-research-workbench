@@ -1,11 +1,23 @@
 'use client'
 
 import React, { useState, useEffect, useRef } from 'react'
-import { Search, X, Loader2, AlertCircle, Bookmark, Sparkles, CornerDownLeft, Command } from 'lucide-react'
+import { useRouter } from 'next/navigation'
+import {
+  Search,
+  X,
+  Loader2,
+  AlertCircle,
+  Bookmark,
+  Sparkles,
+  CornerDownLeft,
+  Command,
+  ArrowUpRight,
+} from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import { searchKnowledge } from '@/lib/api-client'
 import { cn } from '@/lib/utils'
 import type { SearchResultItem } from '@/lib/types'
+import { buildSearchExplorerUrl } from './search-utils'
 
 interface SearchOverlayProps {
   defaultOpen?: boolean
@@ -28,6 +40,7 @@ export function SearchOverlay({
   onClose,
   onSelectResult,
 }: SearchOverlayProps) {
+  const router = useRouter()
   const [internalIsOpen, setInternalIsOpen] = useState(defaultOpen)
   const [searchTerm, setSearchTerm] = useState('')
   const [debouncedQuery, setDebouncedQuery] = useState('')
@@ -100,11 +113,21 @@ export function SearchOverlay({
     handleClose()
   }
 
+  const handleOpenInExplorer = () => {
+    const queryToUse = searchTerm.trim() || debouncedQuery
+    if (queryToUse) {
+      const url = buildSearchExplorerUrl({ query: queryToUse })
+      router.push(url)
+      handleClose()
+    }
+  }
+
   if (!isVisible) {
     return null
   }
 
   const results = data?.results || []
+  const hasQuery = Boolean(searchTerm.trim() || debouncedQuery)
 
   return (
     <div
@@ -149,6 +172,23 @@ export function SearchOverlay({
 
         {/* Content Area */}
         <div className="flex-1 overflow-y-auto p-4 space-y-4">
+          {/* CTA Banner to Open in Search Explorer when query is present */}
+          {hasQuery && (
+            <div className="flex items-center justify-between p-3 rounded-xl bg-primary/5 border border-primary/20 text-xs">
+              <span className="text-muted-foreground">
+                Muốn khám phá chi tiết với các bộ lọc sâu và toàn bộ kết quả?
+              </span>
+              <button
+                type="button"
+                onClick={handleOpenInExplorer}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary text-primary-foreground font-semibold hover:bg-primary/90 transition-all shadow-sm shrink-0 cursor-pointer"
+              >
+                <span>Mở trong Search Explorer</span>
+                <ArrowUpRight className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          )}
+
           {/* Suggestions when query is empty */}
           {!debouncedQuery && !isLoading && (
             <div className="space-y-3 py-2">
@@ -203,8 +243,9 @@ export function SearchOverlay({
           {/* Results List */}
           {!isLoading && !isError && results.length > 0 && (
             <div className="space-y-2.5">
-              <div className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider px-1">
-                Kết quả tìm kiếm ({results.length})
+              <div className="flex items-center justify-between text-[11px] font-bold text-muted-foreground uppercase tracking-wider px-1">
+                <span>Kết quả tìm kiếm ({results.length})</span>
+                <span className="text-[10px] font-normal normal-case text-muted-foreground">Nhấp để xem tài liệu</span>
               </div>
               {results.map((item, idx) => {
                 const scorePercent = Math.round((item.score || 0) * 100)

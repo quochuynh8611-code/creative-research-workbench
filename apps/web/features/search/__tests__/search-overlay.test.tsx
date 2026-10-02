@@ -7,6 +7,13 @@ import { SearchOverlay } from '../search-overlay'
 import * as apiClient from '@/lib/api-client'
 import type { SearchResponse } from '@/lib/types'
 
+const mockPush = jest.fn()
+jest.mock('next/navigation', () => ({
+  useRouter: () => ({
+    push: mockPush,
+  }),
+}))
+
 jest.mock('@/lib/api-client', () => ({
   searchKnowledge: jest.fn(),
 }))
@@ -217,5 +224,55 @@ describe('Phase 5.7 — SearchOverlay Component Tests', () => {
       fireEvent.click(firstResult)
       expect(onSelectMock).toHaveBeenCalledWith(mockSearchResponse.results[0])
     }
+  })
+
+  it('8. Render CTA "Mở trong Search Explorer" khi có từ khóa tìm kiếm', async () => {
+    ;(apiClient.searchKnowledge as jest.Mock).mockResolvedValue(mockSearchResponse)
+    const queryClient = createTestQueryClient()
+
+    render(
+      <QueryClientProvider client={queryClient}>
+        <SearchOverlay defaultOpen={true} />
+      </QueryClientProvider>
+    )
+
+    const input = screen.getByPlaceholderText(/Tìm kiếm trong kho tri thức/i)
+    fireEvent.change(input, { target: { value: 'mâu thuẫn kỹ thuật' } })
+
+    act(() => {
+      jest.advanceTimersByTime(350)
+    })
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: /Mở trong Search Explorer/i })).toBeInTheDocument()
+    })
+  })
+
+  it('9. Click CTA "Mở trong Search Explorer" điều hướng tới /search với query params và đóng overlay', async () => {
+    ;(apiClient.searchKnowledge as jest.Mock).mockResolvedValue(mockSearchResponse)
+    const queryClient = createTestQueryClient()
+
+    render(
+      <QueryClientProvider client={queryClient}>
+        <SearchOverlay defaultOpen={true} />
+      </QueryClientProvider>
+    )
+
+    const input = screen.getByPlaceholderText(/Tìm kiếm trong kho tri thức/i)
+    fireEvent.change(input, { target: { value: 'nguyên tắc triz' } })
+
+    act(() => {
+      jest.advanceTimersByTime(350)
+    })
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: /Mở trong Search Explorer/i })).toBeInTheDocument()
+    })
+
+    const ctaBtn = screen.getByRole('button', { name: /Mở trong Search Explorer/i })
+    fireEvent.click(ctaBtn)
+
+    expect(mockPush).toHaveBeenCalledWith('/search?q=nguy%C3%AAn+t%E1%BA%AFc+triz')
+    expect(screen.queryByPlaceholderText(/Tìm kiếm trong kho tri thức/i)).not.toBeInTheDocument()
   })
 })

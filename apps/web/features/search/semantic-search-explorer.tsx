@@ -1,6 +1,7 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
+import { useSearchParams, useRouter } from 'next/navigation'
 import {
   Search,
   Sparkles,
@@ -20,6 +21,11 @@ import { useQuery } from '@tanstack/react-query'
 import { searchKnowledge } from '@/lib/api-client'
 import { cn } from '@/lib/utils'
 import type { SearchResultItem } from '@/lib/types'
+import {
+  parseSearchExplorerParams,
+  buildSearchExplorerUrl,
+  buildSearchPayload,
+} from './search-utils'
 
 const QUICK_SUGGESTIONS = [
   'mâu thuẫn kỹ thuật',
@@ -49,13 +55,43 @@ const SOURCE_TYPE_OPTIONS = [
 ]
 
 export function SemanticSearchExplorer() {
-  const [searchInput, setSearchInput] = useState('')
-  const [submittedQuery, setSubmittedQuery] = useState('')
-  const [selectedTopic, setSelectedTopic] = useState('')
-  const [selectedSourceType, setSelectedSourceType] = useState('')
-  const [goldenOnly, setGoldenOnly] = useState(false)
-  const [selectedPhase, setSelectedPhase] = useState('')
-  const [topK, setTopK] = useState(10)
+  const searchParams = useSearchParams()
+  const router = useRouter()
+
+  // Parse initial state from URL parameters
+  const initialState = parseSearchExplorerParams(searchParams)
+
+  const [searchInput, setSearchInput] = useState(initialState.query)
+  const [submittedQuery, setSubmittedQuery] = useState(initialState.query)
+  const [selectedTopic, setSelectedTopic] = useState(initialState.topic || '')
+  const [selectedSourceType, setSelectedSourceType] = useState(initialState.source_type || '')
+  const [goldenOnly, setGoldenOnly] = useState(initialState.golden || false)
+  const [selectedPhase, setSelectedPhase] = useState(initialState.phase || '')
+  const [topK, setTopK] = useState(initialState.top_k || 10)
+
+  // Re-sync if URL params change externally
+  useEffect(() => {
+    const nextState = parseSearchExplorerParams(searchParams)
+    if (nextState.query !== submittedQuery) {
+      setSearchInput(nextState.query)
+      setSubmittedQuery(nextState.query)
+    }
+    if (nextState.topic !== selectedTopic) {
+      setSelectedTopic(nextState.topic || '')
+    }
+    if (nextState.source_type !== selectedSourceType) {
+      setSelectedSourceType(nextState.source_type || '')
+    }
+    if (nextState.golden !== goldenOnly) {
+      setGoldenOnly(nextState.golden || false)
+    }
+    if (nextState.phase !== selectedPhase) {
+      setSelectedPhase(nextState.phase || '')
+    }
+    if (nextState.top_k !== topK) {
+      setTopK(nextState.top_k || 10)
+    }
+  }, [searchParams])
 
   // Build active filters payload
   const activeFilters: Record<string, any> = {}
@@ -74,25 +110,58 @@ export function SemanticSearchExplorer() {
   } = useQuery({
     queryKey: ['semantic-explorer-search', submittedQuery, activeFilters, topK],
     queryFn: () =>
-      searchKnowledge({
-        query: submittedQuery,
-        top_k: topK,
-        filters: Object.keys(activeFilters).length > 0 ? activeFilters : undefined,
-      }),
+      searchKnowledge(
+        buildSearchPayload({
+          query: submittedQuery,
+          top_k: topK,
+          topic: selectedTopic,
+          source_type: selectedSourceType,
+          golden: goldenOnly,
+          phase: selectedPhase,
+        })
+      ),
     enabled: Boolean(submittedQuery.trim()),
     staleTime: 30_000,
   })
+
+  const syncUrl = (newState: {
+    query: string
+    topic?: string
+    source_type?: string
+    golden?: boolean
+    phase?: string
+    top_k?: number
+  }) => {
+    const url = buildSearchExplorerUrl(newState)
+    router.replace(url)
+  }
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     if (searchInput.trim()) {
       setSubmittedQuery(searchInput.trim())
+      syncUrl({
+        query: searchInput.trim(),
+        topic: selectedTopic,
+        source_type: selectedSourceType,
+        golden: goldenOnly,
+        phase: selectedPhase,
+        top_k: topK,
+      })
     }
   }
 
   const handleSelectSuggestion = (suggestion: string) => {
     setSearchInput(suggestion)
     setSubmittedQuery(suggestion)
+    syncUrl({
+      query: suggestion,
+      topic: selectedTopic,
+      source_type: selectedSourceType,
+      golden: goldenOnly,
+      phase: selectedPhase,
+      top_k: topK,
+    })
   }
 
   const handleResetFilters = () => {
@@ -101,6 +170,11 @@ export function SemanticSearchExplorer() {
     setGoldenOnly(false)
     setSelectedPhase('')
     setTopK(10)
+    // Synchronize URL to clear stale parameters but preserve query
+    const targetUrl = buildSearchExplorerUrl({
+      query: submittedQuery,
+    })
+    router.replace(targetUrl)
   }
 
   const results: SearchResultItem[] = data?.results || []

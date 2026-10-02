@@ -7,6 +7,18 @@ import { SemanticSearchExplorer } from '../semantic-search-explorer'
 import { searchKnowledge } from '@/lib/api-client'
 import type { SearchResponse } from '@/lib/types'
 
+let mockSearchParams = new URLSearchParams()
+const mockReplace = jest.fn()
+const mockPush = jest.fn()
+
+jest.mock('next/navigation', () => ({
+  useSearchParams: () => mockSearchParams,
+  useRouter: () => ({
+    replace: mockReplace,
+    push: mockPush,
+  }),
+}))
+
 // Mock api-client
 jest.mock('@/lib/api-client', () => ({
   searchKnowledge: jest.fn(),
@@ -209,5 +221,64 @@ describe('SemanticSearchExplorer Component Tests (Phase 10.3 Increment 1)', () =
         screen.getByText(/Không tìm thấy đoạn tri thức nào phù hợp/i)
       ).toBeInTheDocument()
     })
+  })
+
+  it('Scenario 7: Hydrate query, topic, golden, top_k từ URL parameters khi tải trang', async () => {
+    mockSearchParams = new URLSearchParams('q=pin+lithium&golden=true&top_k=20&topic=contradiction')
+
+    mockedSearchKnowledge.mockResolvedValueOnce({
+      results: [
+        {
+          chunk_id: 'chk-battery-01',
+          source_ref: 'docs/case_studies_battery.md',
+          excerpt: 'Giải pháp làm mát pin lithium dạng mô đun.',
+          score: 0.95,
+          metadata: {
+            golden: true,
+            topic: 'contradiction',
+          },
+        },
+      ],
+      latency_ms: 14.2,
+    })
+
+    renderWithClient(<SemanticSearchExplorer />)
+
+    // Tự động gọi API với payload hydrate từ URL
+    await waitFor(() => {
+      expect(mockedSearchKnowledge).toHaveBeenCalledWith({
+        query: 'pin lithium',
+        top_k: 20,
+        filters: {
+          golden: true,
+          topic: 'contradiction',
+        },
+      })
+    })
+
+    // Input và filter controls phản ánh đúng state từ URL
+    const input = screen.getByPlaceholderText(/Nhập câu hỏi hoặc từ khóa nghiên cứu/i) as HTMLInputElement
+    expect(input.value).toBe('pin lithium')
+
+    const goldenCheckbox = screen.getByRole('checkbox') as HTMLInputElement
+    expect(goldenCheckbox.checked).toBe(true)
+
+    expect(await screen.findByText('Giải pháp làm mát pin lithium dạng mô đun.')).toBeInTheDocument()
+  })
+
+  it('Scenario 8: Nhấp "Đặt lại" xóa các filters và cập nhật URL loại bỏ stale parameters', async () => {
+    mockSearchParams = new URLSearchParams('q=triz&golden=true&topic=contradiction')
+
+    mockedSearchKnowledge.mockResolvedValue({
+      results: [],
+      latency_ms: 5.0,
+    })
+
+    renderWithClient(<SemanticSearchExplorer />)
+
+    const resetBtn = await screen.findByRole('button', { name: /Đặt lại/i })
+    fireEvent.click(resetBtn)
+
+    expect(mockReplace).toHaveBeenCalledWith('/search?q=triz')
   })
 })

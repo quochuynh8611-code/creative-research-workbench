@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import { SemanticSearchExplorer } from "@/features/search/semantic-search-explorer";
 
 export const metadata = {
@@ -6,5 +7,9 @@ export const metadata = {
 };
 
 export default function SearchPage() {
-  return <SemanticSearchExplorer />;
+  return (
+    <Suspense fallback={<div className="p-8 text-center text-sm text-muted-foreground">Đang tải công cụ tìm kiếm...</div>}>
+      <SemanticSearchExplorer />
+    </Suspense>
+  );
 }
