@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useMemo } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import {
@@ -85,6 +85,7 @@ export function SemanticSearchExplorer() {
   const [expandedChunkIds, setExpandedChunkIds] = useState<Set<string>>(new Set())
   const [attachingChunkId, setAttachingChunkId] = useState<string | null>(null)
   const [copiedChunkId, setCopiedChunkId] = useState<string | null>(null)
+  const [activeSourceBucket, setActiveSourceBucket] = useState<string>('all')
 
   const toggleExpandChunk = (chunkId: string) => {
     setExpandedChunkIds((prev) => {
@@ -318,6 +319,25 @@ export function SemanticSearchExplorer() {
   const results: SearchResultItem[] = data?.results || []
   const hasSearched = Boolean(submittedQuery.trim())
   const hasActiveFilters = Boolean(selectedTopic || selectedSourceType || goldenOnly || selectedPhase || topK !== 10)
+
+  // Calculate source bucket counts from current results
+  const sourceCounts = useMemo(() => {
+    const counts: Record<string, number> = {}
+    results.forEach((item) => {
+      const st = item.metadata?.source_type || 'other'
+      counts[st] = (counts[st] || 0) + 1
+    })
+    return counts
+  }, [results])
+
+  const availableSourceBuckets = useMemo(() => {
+    return Object.keys(sourceCounts).filter((st) => sourceCounts[st] > 0)
+  }, [sourceCounts])
+
+  const displayedResults = useMemo(() => {
+    if (activeSourceBucket === 'all') return results
+    return results.filter((item) => (item.metadata?.source_type || 'other') === activeSourceBucket)
+  }, [results, activeSourceBucket])
 
   return (
     <div className="space-y-6 max-w-6xl mx-auto px-4 py-8">
@@ -732,9 +752,55 @@ export function SemanticSearchExplorer() {
                 )}
               </div>
 
+              {/* In-View Source Segment Tabs */}
+              {availableSourceBuckets.length >= 2 && (
+                <div className="flex items-center gap-1.5 p-1 rounded-xl bg-muted/40 border border-border w-fit overflow-x-auto max-w-full">
+                  <button
+                    type="button"
+                    onClick={() => setActiveSourceBucket('all')}
+                    className={cn(
+                      'px-3 py-1.5 rounded-lg text-xs font-semibold transition-all whitespace-nowrap cursor-pointer',
+                      activeSourceBucket === 'all'
+                        ? 'bg-background text-foreground shadow-sm'
+                        : 'text-muted-foreground hover:text-foreground'
+                    )}
+                  >
+                    <span>Tất cả</span>
+                    <span className="ml-1.5 px-1.5 py-0.2 rounded-full text-[10px] bg-muted font-mono">
+                      {results.length}
+                    </span>
+                  </button>
+                  {availableSourceBuckets.map((st) => {
+                    const opt = SOURCE_TYPE_OPTIONS.find((o) => o.value === st)
+                    const label = opt ? opt.label : st
+                    const count = sourceCounts[st]
+                    const isActive = activeSourceBucket === st
+
+                    return (
+                      <button
+                        key={st}
+                        type="button"
+                        onClick={() => setActiveSourceBucket(st)}
+                        className={cn(
+                          'px-3 py-1.5 rounded-lg text-xs font-semibold transition-all whitespace-nowrap cursor-pointer',
+                          isActive
+                            ? 'bg-background text-foreground shadow-sm'
+                            : 'text-muted-foreground hover:text-foreground'
+                        )}
+                      >
+                        <span>{label}</span>
+                        <span className="ml-1.5 px-1.5 py-0.2 rounded-full text-[10px] bg-muted font-mono">
+                          {count}
+                        </span>
+                      </button>
+                    )
+                  })}
+                </div>
+              )}
+
               {/* Cards List */}
               <div className="space-y-3.5">
-                {results.map((item) => {
+                {displayedResults.map((item) => {
                   const scorePercent = Math.round(item.score * 100)
                   const meta = item.metadata || {}
 

@@ -913,4 +913,157 @@ describe('SemanticSearchExplorer Component Tests (Phase 10.3 Increment 1 - 6)', 
       )
     })
   })
+
+  describe('Phase 10.3 Increment 10: Result Source Buckets & In-View Quick Segment Tabs', () => {
+    const mockMultiSourceResults = [
+      {
+        chunk_id: 'chk-g1',
+        source_ref: 'docs/golden1.md',
+        excerpt: 'Đoạn trích Golden 1.',
+        score: 0.95,
+        metadata: { source_type: 'golden_kb' },
+      },
+      {
+        chunk_id: 'chk-g2',
+        source_ref: 'docs/golden2.md',
+        excerpt: 'Đoạn trích Golden 2.',
+        score: 0.92,
+        metadata: { source_type: 'golden_kb' },
+      },
+      {
+        chunk_id: 'chk-cs1',
+        source_ref: 'docs/case1.md',
+        excerpt: 'Đoạn trích Case Study 1.',
+        score: 0.88,
+        metadata: { source_type: 'case_study' },
+      },
+    ]
+
+    it('Scenario 28: Render Segment Tabs với badge đếm khi có từ 2 source types trở lên', async () => {
+      mockSearchParams = new URLSearchParams('q=nguồn+tri+thức')
+
+      mockedSearchKnowledge.mockResolvedValueOnce({
+        results: mockMultiSourceResults,
+        latency_ms: 6.0,
+      })
+
+      renderWithClient(<SemanticSearchExplorer />)
+
+      // Chờ hiển thị kết quả
+      expect(await screen.findByText('Đoạn trích Golden 1.')).toBeInTheDocument()
+      expect(screen.getByText('Đoạn trích Golden 2.')).toBeInTheDocument()
+      expect(screen.getByText('Đoạn trích Case Study 1.')).toBeInTheDocument()
+
+      // Segment Tabs
+      expect(screen.getByRole('button', { name: /Tất cả/i })).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: /Golden Knowledge Base/i })).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: /Case Study/i })).toBeInTheDocument()
+    })
+
+    it('Scenario 29: Click chọn tab nguồn lọc kết quả client-side mà không gọi lại API', async () => {
+      mockSearchParams = new URLSearchParams('q=nguồn+tri+thức')
+
+      mockedSearchKnowledge.mockResolvedValueOnce({
+        results: mockMultiSourceResults,
+        latency_ms: 6.0,
+      })
+
+      renderWithClient(<SemanticSearchExplorer />)
+
+      await screen.findByText('Đoạn trích Golden 1.')
+
+      const caseStudyTab = screen.getByRole('button', { name: /Case Study/i })
+      fireEvent.click(caseStudyTab)
+
+      // Chỉ còn hiển thị Case Study
+      expect(screen.getByText('Đoạn trích Case Study 1.')).toBeInTheDocument()
+      expect(screen.queryByText('Đoạn trích Golden 1.')).not.toBeInTheDocument()
+      expect(screen.queryByText('Đoạn trích Golden 2.')).not.toBeInTheDocument()
+
+      // Không gọi searchKnowledge thêm lần nào
+      expect(mockedSearchKnowledge).toHaveBeenCalledTimes(1)
+    })
+
+    it('Scenario 30: Ẩn Segment Tabs khi tất cả kết quả cùng 1 loại nguồn', async () => {
+      mockSearchParams = new URLSearchParams('q=chỉ+golden')
+
+      mockedSearchKnowledge.mockResolvedValueOnce({
+        results: [
+          {
+            chunk_id: 'chk-g1',
+            source_ref: 'docs/golden1.md',
+            excerpt: 'Đoạn trích Golden 1.',
+            score: 0.95,
+            metadata: { source_type: 'golden_kb' },
+          },
+          {
+            chunk_id: 'chk-g2',
+            source_ref: 'docs/golden2.md',
+            excerpt: 'Đoạn trích Golden 2.',
+            score: 0.92,
+            metadata: { source_type: 'golden_kb' },
+          },
+        ],
+        latency_ms: 5.0,
+      })
+
+      renderWithClient(<SemanticSearchExplorer />)
+
+      await screen.findByText('Đoạn trích Golden 1.')
+      await screen.findByText('Đoạn trích Golden 2.')
+
+      // Không có segment tabs
+      expect(screen.queryByRole('button', { name: /Tất cả \d+/i })).not.toBeInTheDocument()
+      expect(screen.queryByRole('button', { name: /Golden Knowledge Base \d+/i })).not.toBeInTheDocument()
+    })
+
+    it('Scenario 31: Bảo toàn tương tác thẻ khi chuyển qua lại giữa các tab phân đoạn', async () => {
+      const longExcerpt1 =
+        'Tài liệu Golden 1 với nội dung rất dài vượt quá 160 ký tự để kích hoạt nút xem đầy đủ đoạn trích trong hệ thống phân tích TRIZ và các nguyên lý sáng chế kỹ thuật cơ khí nâng cao.'
+
+      mockSearchParams = new URLSearchParams('q=nguồn+tri+thức')
+
+      mockedSearchKnowledge.mockResolvedValueOnce({
+        results: [
+          {
+            chunk_id: 'chk-g1',
+            source_ref: 'docs/golden1.md',
+            excerpt: longExcerpt1,
+            score: 0.95,
+            metadata: { source_type: 'golden_kb' },
+          },
+          {
+            chunk_id: 'chk-cs1',
+            source_ref: 'docs/case1.md',
+            excerpt: 'Đoạn trích Case Study 1.',
+            score: 0.88,
+            metadata: { source_type: 'case_study' },
+          },
+        ],
+        latency_ms: 6.0,
+      })
+
+      renderWithClient(<SemanticSearchExplorer />)
+
+      const excerptEl = await screen.findByText(longExcerpt1)
+      const expandBtn = screen.getByRole('button', { name: /Xem đầy đủ đoạn trích/i })
+
+      // Mở rộng đoạn trích
+      fireEvent.click(expandBtn)
+      expect(excerptEl).not.toHaveClass('line-clamp-3')
+
+      // Chuyển sang tab Case Study
+      const caseStudyTab = screen.getByRole('button', { name: /Case Study/i })
+      fireEvent.click(caseStudyTab)
+      expect(screen.queryByText(longExcerpt1)).not.toBeInTheDocument()
+
+      // Chuyển lại tab Tất cả
+      const allTab = screen.getByRole('button', { name: /Tất cả/i })
+      fireEvent.click(allTab)
+
+      // Đoạn trích vẫn giữ trạng thái mở rộng
+      const rehydratedExcerpt = await screen.findByText(longExcerpt1)
+      expect(rehydratedExcerpt).not.toHaveClass('line-clamp-3')
+    })
+  })
 })
