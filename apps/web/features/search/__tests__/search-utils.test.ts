@@ -161,4 +161,29 @@ describe('Search Utils Tests (Phase 10.3 Increment 2)', () => {
       expect(parsed2.session_id).toBe('d9b2d20b-0001-0000-0000-000000000002')
     })
   })
+
+  describe('From Tab Parameter Integration (Phase 10.3 Increment 6)', () => {
+    it('12. buildSearchExplorerUrl serialize from_tab chính xác', () => {
+      const url = buildSearchExplorerUrl({
+        query: 'máy bơm nhiệt',
+        session_id: 'sess-123',
+        from_tab: 'retrieval',
+      })
+      expect(url).toContain('from_tab=retrieval')
+      expect(url).toContain('session_id=sess-123')
+    })
+
+    it('13. parseSearchExplorerParams parse from_tab từ URLSearchParams và Record params', () => {
+      const parsed1 = parseSearchExplorerParams(
+        new URLSearchParams('q=triz&from_tab=retrieval')
+      )
+      expect(parsed1.from_tab).toBe('retrieval')
+
+      const parsed2 = parseSearchExplorerParams({
+        q: 'triz',
+        fromTab: 'notes',
+      })
+      expect(parsed2.from_tab).toBe('notes')
+    })
+  })
 })

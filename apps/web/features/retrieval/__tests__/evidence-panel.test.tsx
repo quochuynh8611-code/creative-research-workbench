@@ -216,7 +216,7 @@ describe('Phase 5.6 & Phase 10.3 — EvidencePanel Component Tests', () => {
       expect(ctaBtn).toBeInTheDocument()
     })
 
-    it('8. Click CTA "Mở trong Search Explorer" điều hướng sang /search với query hiện tại và sessionId', async () => {
+    it('8. Click CTA "Mở trong Search Explorer" điều hướng sang /search với query hiện tại, sessionId và from_tab', async () => {
       ;(apiClient.searchKnowledge as jest.Mock).mockResolvedValueOnce({ results: [], latency_ms: 10 })
       const queryClient = createTestQueryClient()
 
@@ -233,7 +233,7 @@ describe('Phase 5.6 & Phase 10.3 — EvidencePanel Component Tests', () => {
       fireEvent.click(ctaBtn)
 
       expect(mockPush).toHaveBeenCalledTimes(1)
-      expect(mockPush).toHaveBeenCalledWith('/search?q=m%C3%A1y+b%C6%A1m+nhi%E1%BB%87t+mini&session_id=sess-456')
+      expect(mockPush).toHaveBeenCalledWith('/search?q=m%C3%A1y+b%C6%A1m+nhi%E1%BB%87t+mini&session_id=sess-456&from_tab=retrieval')
     })
 
     it('9. Click CTA ưu tiên searchInput nếu người dùng thay đổi từ khóa trong ô tìm kiếm', async () => {
@@ -256,10 +256,10 @@ describe('Phase 5.6 & Phase 10.3 — EvidencePanel Component Tests', () => {
       fireEvent.click(ctaBtn)
 
       expect(mockPush).toHaveBeenCalledTimes(1)
-      expect(mockPush).toHaveBeenCalledWith('/search?q=nguy%C3%AAn+t%E1%BA%AFc+triz+m%E1%BB%9Bi&session_id=sess-789')
+      expect(mockPush).toHaveBeenCalledWith('/search?q=nguy%C3%AAn+t%E1%BA%AFc+triz+m%E1%BB%9Bi&session_id=sess-789&from_tab=retrieval')
     })
 
-    it('10. Click CTA fallback an toàn khi không có query nào (chỉ mang theo session_id)', async () => {
+    it('10. Click CTA fallback an toàn khi không có query nào (chỉ mang theo session_id và from_tab)', async () => {
       ;(apiClient.searchKnowledge as jest.Mock).mockResolvedValueOnce({ results: [], latency_ms: 10 })
       const queryClient = createTestQueryClient()
 
@@ -276,7 +276,7 @@ describe('Phase 5.6 & Phase 10.3 — EvidencePanel Component Tests', () => {
       fireEvent.click(ctaBtn)
 
       expect(mockPush).toHaveBeenCalledTimes(1)
-      expect(mockPush).toHaveBeenCalledWith('/search?session_id=sess-blank')
+      expect(mockPush).toHaveBeenCalledWith('/search?session_id=sess-blank&from_tab=retrieval')
     })
   })
 })

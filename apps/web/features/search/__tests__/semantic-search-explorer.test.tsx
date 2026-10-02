@@ -4,8 +4,8 @@ import { render, screen, waitFor, fireEvent } from '@testing-library/react'
 import '@testing-library/jest-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { SemanticSearchExplorer } from '../semantic-search-explorer'
-import { searchKnowledge, createResearchNote, listResearchNotes } from '@/lib/api-client'
-import type { SearchResponse, ResearchNote, ResearchNotesResponse } from '@/lib/types'
+import { searchKnowledge, createResearchNote, listResearchNotes, getSession } from '@/lib/api-client'
+import type { SearchResponse, ResearchNote, ResearchNotesResponse, ResearchSession } from '@/lib/types'
 
 let mockSearchParams = new URLSearchParams()
 const mockReplace = jest.fn()
@@ -24,11 +24,13 @@ jest.mock('@/lib/api-client', () => ({
   searchKnowledge: jest.fn(),
   createResearchNote: jest.fn(),
   listResearchNotes: jest.fn(),
+  getSession: jest.fn(),
 }))
 
 const mockedSearchKnowledge = searchKnowledge as jest.MockedFunction<typeof searchKnowledge>
 const mockedCreateResearchNote = createResearchNote as jest.MockedFunction<typeof createResearchNote>
 const mockedListResearchNotes = listResearchNotes as jest.MockedFunction<typeof listResearchNotes>
+const mockedGetSession = getSession as jest.MockedFunction<typeof getSession>
 
 function createTestQueryClient() {
   return new QueryClient({
@@ -48,10 +50,17 @@ function renderWithClient(ui: React.ReactElement, queryClient = createTestQueryC
   }
 }
 
-describe('SemanticSearchExplorer Component Tests (Phase 10.3 Increment 1 - 5)', () => {
+describe('SemanticSearchExplorer Component Tests (Phase 10.3 Increment 1 - 6)', () => {
   beforeEach(() => {
     jest.clearAllMocks()
     mockedListResearchNotes.mockResolvedValue({ data: [], meta: { total: 0 } })
+    mockedGetSession.mockResolvedValue({
+      id: 'default-session',
+      title: 'Bài toán kỹ thuật mẫu',
+      domain: 'technical',
+      status: 'active',
+      tags: [],
+    } as any)
   })
 
   it('Scenario 1: Hiển thị initial blank state với banner và các gợi ý từ khóa', () => {
@@ -508,6 +517,113 @@ describe('SemanticSearchExplorer Component Tests (Phase 10.3 Increment 1 - 5)', 
 
       // API createResearchNote không bao giờ được gọi
       expect(mockedCreateResearchNote).not.toHaveBeenCalled()
+    })
+  })
+
+  describe('Phase 10.3 Increment 6: Contextual Session Enrichment, Evidence Counter & Tab-Aware Roundtrip', () => {
+    it('Scenario 15: Contextual banner hiển thị session title, domain badge và evidence counter', async () => {
+      mockSearchParams = new URLSearchParams('q=nhiệt&session_id=sess-pump-999&from_tab=retrieval')
+
+      mockedSearchKnowledge.mockResolvedValueOnce({
+        results: [
+          {
+            chunk_id: 'chk-1',
+            source_ref: 'docs/heat_pump.md',
+            excerpt: 'Máy bơm nhiệt.',
+            score: 0.9,
+            metadata: {},
+          },
+        ],
+        latency_ms: 10.0,
+      })
+
+      mockedGetSession.mockResolvedValueOnce({
+        id: 'sess-pump-999',
+        title: 'Hệ thống bơm nhiệt mini tiết kiệm điện',
+        domain: 'technical',
+        status: 'active',
+        tags: ['thermal', 'energy'],
+      } as any)
+
+      mockedListResearchNotes.mockResolvedValueOnce({
+        data: [
+          {
+            id: 'n1',
+            session_id: 'sess-pump-999',
+            content: 'note 1',
+            note_type: 'insight',
+            source_chunk_id: 'chk-1',
+            created_at: '2026-10-02T10:00:00Z',
+          },
+        ],
+        meta: { total: 1 },
+      })
+
+      renderWithClient(<SemanticSearchExplorer />)
+
+      // Chờ getSession được gọi
+      await waitFor(() => {
+        expect(mockedGetSession).toHaveBeenCalledWith('sess-pump-999')
+      })
+
+      // Hiển thị session title và domain badge
+      expect(await screen.findByText('Hệ thống bơm nhiệt mini tiết kiệm điện')).toBeInTheDocument()
+      expect(screen.getByText('technical')).toBeInTheDocument()
+
+      // Hiển thị evidence counter
+      const counterEl = screen.getByText(/bằng chứng vào sổ tay/i)
+      expect(counterEl).toHaveTextContent('Đã lưu 1 bằng chứng vào sổ tay')
+
+      // Link Quay lại Session có tab=retrieval
+      const backLink = screen.getByRole('link', { name: /Quay lại Session/i })
+      expect(backLink).toHaveAttribute('href', '/sessions/sess-pump-999?tab=retrieval')
+    })
+
+    it('Scenario 16: Quick Copy Citation sao chép format markdown vào clipboard và đổi trạng thái', async () => {
+      mockSearchParams = new URLSearchParams('q=nguyên+tắc')
+
+      const mockWriteText = jest.fn().mockResolvedValue(undefined)
+      Object.assign(navigator, {
+        clipboard: {
+          writeText: mockWriteText,
+        },
+      })
+
+      mockedSearchKnowledge.mockResolvedValueOnce({
+        results: [
+          {
+            chunk_id: 'chk-cite-1',
+            source_ref: 'docs/triz_p35.md',
+            excerpt: 'Biến đổi trạng thái vật lý.',
+            score: 0.95,
+            metadata: {},
+          },
+        ],
+        latency_ms: 5.0,
+      })
+
+      renderWithClient(<SemanticSearchExplorer />)
+
+      await screen.findByText('Biến đổi trạng thái vật lý.')
+
+      const copyBtn = screen.getByRole('button', { name: /Trích dẫn|Sao chép/i })
+      fireEvent.click(copyBtn)
+
+      expect(mockWriteText).toHaveBeenCalledWith('[docs/triz_p35.md]\n"Biến đổi trạng thái vật lý."')
+      expect(await screen.findByText(/Đã chép/i)).toBeInTheDocument()
+    })
+
+    it('Scenario 17: Standalone Mode không gọi getSession', async () => {
+      mockSearchParams = new URLSearchParams('q=độc+lập')
+
+      mockedSearchKnowledge.mockResolvedValueOnce({
+        results: [],
+        latency_ms: 5.0,
+      })
+
+      renderWithClient(<SemanticSearchExplorer />)
+
+      expect(mockedGetSession).not.toHaveBeenCalled()
     })
   })
 })

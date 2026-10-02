@@ -58,8 +58,13 @@ export function EvidencePanel({
     const url = buildSearchExplorerUrl({
       query: queryToUse || undefined,
       session_id: sessionId,
+      from_tab: 'retrieval',
     })
-    router.push(url)
+    if (router?.push) {
+      router.push(url)
+    } else if (typeof window !== 'undefined') {
+      window.location.href = url
+    }
   }
 
   const results: SearchResultItem[] = data?.results || []

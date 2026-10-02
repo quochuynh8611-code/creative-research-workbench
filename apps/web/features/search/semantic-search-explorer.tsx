@@ -21,9 +21,10 @@ import {
   Plus,
   Check,
   Bookmark,
+  Copy,
 } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
-import { searchKnowledge, createResearchNote, listResearchNotes } from '@/lib/api-client'
+import { searchKnowledge, createResearchNote, listResearchNotes, getSession } from '@/lib/api-client'
 import { cn } from '@/lib/utils'
 import type { SearchResultItem } from '@/lib/types'
 import {
@@ -74,10 +75,12 @@ export function SemanticSearchExplorer() {
   const [selectedPhase, setSelectedPhase] = useState(initialState.phase || '')
   const [topK, setTopK] = useState(initialState.top_k || 10)
   const [sessionId, setSessionId] = useState(initialState.session_id || '')
+  const [fromTab, setFromTab] = useState(initialState.from_tab || '')
 
   // Track attached chunks for this session
   const [attachedChunkIds, setAttachedChunkIds] = useState<Set<string>>(new Set())
   const [attachingChunkId, setAttachingChunkId] = useState<string | null>(null)
+  const [copiedChunkId, setCopiedChunkId] = useState<string | null>(null)
 
   // Re-sync if URL params change externally
   useEffect(() => {
@@ -103,6 +106,9 @@ export function SemanticSearchExplorer() {
     }
     if (nextState.session_id !== sessionId) {
       setSessionId(nextState.session_id || '')
+    }
+    if (nextState.from_tab !== fromTab) {
+      setFromTab(nextState.from_tab || '')
     }
   }, [searchParams])
 
@@ -144,6 +150,13 @@ export function SemanticSearchExplorer() {
     enabled: Boolean(sessionId),
   })
 
+  // Load session metadata if in Contextual Mode
+  const { data: sessionData } = useQuery({
+    queryKey: ['sessions', sessionId],
+    queryFn: () => getSession(sessionId),
+    enabled: Boolean(sessionId),
+  })
+
   useEffect(() => {
     const rawNotes = (existingNotesResponse as any)?.data || (Array.isArray(existingNotesResponse) ? existingNotesResponse : [])
     if (rawNotes && rawNotes.length > 0) {
@@ -169,10 +182,12 @@ export function SemanticSearchExplorer() {
     phase?: string
     top_k?: number
     session_id?: string
+    from_tab?: string
   }) => {
     const url = buildSearchExplorerUrl({
       ...newState,
       session_id: sessionId || newState.session_id,
+      from_tab: fromTab || newState.from_tab,
     })
     router.replace(url)
   }
@@ -189,6 +204,7 @@ export function SemanticSearchExplorer() {
         phase: selectedPhase,
         top_k: topK,
         session_id: sessionId,
+        from_tab: fromTab,
       })
     }
   }
@@ -204,6 +220,7 @@ export function SemanticSearchExplorer() {
       phase: selectedPhase,
       top_k: topK,
       session_id: sessionId,
+      from_tab: fromTab,
     })
   }
 
@@ -213,10 +230,11 @@ export function SemanticSearchExplorer() {
     setGoldenOnly(false)
     setSelectedPhase('')
     setTopK(10)
-    // Synchronize URL to clear stale parameters but preserve query and session_id
+    // Synchronize URL to clear stale parameters but preserve query, session_id and from_tab
     const targetUrl = buildSearchExplorerUrl({
       query: submittedQuery,
       session_id: sessionId || undefined,
+      from_tab: fromTab || undefined,
     })
     router.replace(targetUrl)
   }
@@ -240,6 +258,15 @@ export function SemanticSearchExplorer() {
     }
   }
 
+  const handleCopyCitation = (item: SearchResultItem) => {
+    const citationText = `[${item.source_ref}]\n"${item.excerpt}"`
+    if (typeof navigator !== 'undefined' && navigator.clipboard?.writeText) {
+      navigator.clipboard.writeText(citationText)
+      setCopiedChunkId(item.chunk_id)
+      setTimeout(() => setCopiedChunkId(null), 2000)
+    }
+  }
+
   const results: SearchResultItem[] = data?.results || []
   const hasSearched = Boolean(submittedQuery.trim())
 
@@ -249,15 +276,26 @@ export function SemanticSearchExplorer() {
       <div className="space-y-4 border-b border-border pb-6">
         {sessionId && (
           <div className="flex flex-wrap items-center justify-between gap-3 p-3.5 rounded-2xl bg-primary/5 border border-primary/20 text-xs">
-            <div className="flex items-center gap-2 text-primary font-medium">
-              <Bookmark className="w-4 h-4 shrink-0" />
-              <span>
-                Đang tìm kiếm tài liệu cho Session:{' '}
-                <strong className="font-mono text-foreground font-semibold">{sessionId}</strong>
-              </span>
+            <div className="flex items-center gap-2.5">
+              <Bookmark className="w-4 h-4 text-primary shrink-0" />
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="font-semibold text-foreground">
+                    {sessionData?.title || 'Phiên nghiên cứu'}
+                  </span>
+                  {sessionData?.domain && (
+                    <span className="px-2 py-0.5 rounded-md bg-primary/10 text-primary text-[10px] font-semibold">
+                      {sessionData.domain}
+                    </span>
+                  )}
+                </div>
+                <p className="text-[11px] text-muted-foreground mt-0.5">
+                  Đã lưu <strong className="text-foreground">{attachedChunkIds.size}</strong> bằng chứng vào sổ tay
+                </p>
+              </div>
             </div>
             <Link
-              href={`/sessions/${sessionId}`}
+              href={`/sessions/${sessionId}${fromTab ? `?tab=${fromTab}` : ''}`}
               className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-background border border-border text-foreground hover:bg-muted transition-colors font-medium shadow-sm"
             >
               <ArrowLeft className="w-3.5 h-3.5" />
@@ -576,31 +614,53 @@ export function SemanticSearchExplorer() {
                         {item.excerpt}
                       </p>
 
-                      {/* Contextual Mode Action: Attach to Session */}
-                      {sessionId && (
-                        <div className="pt-1 flex items-center justify-end">
-                          {attachedChunkIds.has(item.chunk_id) ? (
-                            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-xs font-semibold border border-emerald-500/20 shadow-xs">
-                              <Check className="w-3.5 h-3.5" />
-                              <span>Đã đính kèm</span>
-                            </span>
+                      {/* Card Actions Bar */}
+                      <div className="pt-1 flex items-center justify-between gap-2 border-t border-border/40">
+                        <button
+                          type="button"
+                          onClick={() => handleCopyCitation(item)}
+                          className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors border border-transparent hover:border-border cursor-pointer"
+                          title="Sao chép trích dẫn Markdown"
+                        >
+                          {copiedChunkId === item.chunk_id ? (
+                            <>
+                              <Check className="w-3.5 h-3.5 text-emerald-500" />
+                              <span className="text-emerald-600 dark:text-emerald-400 text-xs font-semibold">Đã chép</span>
+                            </>
                           ) : (
-                            <button
-                              type="button"
-                              onClick={() => handleAttachToSession(item)}
-                              disabled={attachingChunkId === item.chunk_id}
-                              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-primary/30 bg-primary/10 hover:bg-primary/20 text-primary text-xs font-semibold transition-all cursor-pointer disabled:opacity-50 shadow-xs"
-                            >
-                              {attachingChunkId === item.chunk_id ? (
-                                <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                              ) : (
-                                <Plus className="w-3.5 h-3.5" />
-                              )}
-                              <span>Đính kèm vào Session</span>
-                            </button>
+                            <>
+                              <Copy className="w-3.5 h-3.5" />
+                              <span>Trích dẫn</span>
+                            </>
                           )}
-                        </div>
-                      )}
+                        </button>
+
+                        {/* Contextual Mode Action: Attach to Session */}
+                        {sessionId && (
+                          <div>
+                            {attachedChunkIds.has(item.chunk_id) ? (
+                              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-xs font-semibold border border-emerald-500/20 shadow-xs">
+                                <Check className="w-3.5 h-3.5" />
+                                <span>Đã đính kèm</span>
+                              </span>
+                            ) : (
+                              <button
+                                type="button"
+                                onClick={() => handleAttachToSession(item)}
+                                disabled={attachingChunkId === item.chunk_id}
+                                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-primary/30 bg-primary/10 hover:bg-primary/20 text-primary text-xs font-semibold transition-all cursor-pointer disabled:opacity-50 shadow-xs"
+                              >
+                                {attachingChunkId === item.chunk_id ? (
+                                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                ) : (
+                                  <Plus className="w-3.5 h-3.5" />
+                                )}
+                                <span>Đính kèm vào Session</span>
+                              </button>
+                            )}
+                          </div>
+                        )}
+                      </div>
                     </article>
                   )
                 })}
