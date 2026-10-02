@@ -1165,4 +1165,205 @@ describe('SemanticSearchExplorer Component Tests (Phase 10.3 Increment 1 - 6)', 
       expect(screen.queryByText('Khớp từ khóa')).not.toBeInTheDocument()
     })
   })
+
+  describe('Phase 10.3 Increment 12: In-View Result Ordering & Priority Sort Controls', () => {
+    it('Scenario 36: Hiển thị mặc định theo thứ tự relevance (RRF score)', async () => {
+      mockSearchParams = new URLSearchParams('q=ma+sát')
+
+      mockedSearchKnowledge.mockResolvedValueOnce({
+        results: [
+          {
+            chunk_id: 'chk-1',
+            source_ref: 'docs/1.md',
+            excerpt: 'Tài liệu số 1 cơ học.',
+            score: 0.95,
+            metadata: {},
+          },
+          {
+            chunk_id: 'chk-2',
+            source_ref: 'docs/2.md',
+            excerpt: 'Tài liệu số 2 ma sát vòng bi.',
+            score: 0.85,
+            metadata: {},
+          },
+        ],
+        latency_ms: 5.0,
+      })
+
+      renderWithClient(<SemanticSearchExplorer />)
+
+      await screen.findByText('Tài liệu số 1 cơ học.')
+      await screen.findByText('Tài liệu số 2 ma sát vòng bi.')
+
+      const sortSelect = screen.getByLabelText('Sắp xếp kết quả') as HTMLSelectElement
+      expect(sortSelect.value).toBe('relevance')
+
+      const excerpts = screen.getAllByText(/Tài liệu số/i)
+      expect(excerpts[0]).toHaveTextContent('Tài liệu số 1 cơ học.')
+      expect(excerpts[1]).toHaveTextContent('Tài liệu số 2 ma sát vòng bi.')
+    })
+
+    it('Scenario 37: Chọn sắp xếp keyword_first đẩy item có keyword match lên trước', async () => {
+      mockSearchParams = new URLSearchParams('q=ma+sát')
+
+      mockedSearchKnowledge.mockResolvedValueOnce({
+        results: [
+          {
+            chunk_id: 'chk-1',
+            source_ref: 'docs/1.md',
+            excerpt: 'Tài liệu số 1 cơ học tổng quát.',
+            score: 0.95,
+            metadata: {},
+          },
+          {
+            chunk_id: 'chk-2',
+            source_ref: 'docs/2.md',
+            excerpt: 'Tài liệu số 2 ma sát vòng bi nâng cao.',
+            score: 0.78,
+            metadata: {},
+          },
+        ],
+        latency_ms: 5.0,
+      })
+
+      renderWithClient(<SemanticSearchExplorer />)
+
+      await screen.findByText('Tài liệu số 1 cơ học tổng quát.')
+
+      const sortSelect = screen.getByLabelText('Sắp xếp kết quả')
+      fireEvent.change(sortSelect, { target: { value: 'keyword_first' } })
+
+      const excerpts = screen.getAllByText(/Tài liệu số/i)
+      expect(excerpts[0]).toHaveTextContent('Tài liệu số 2 ma sát vòng bi nâng cao.')
+      expect(excerpts[1]).toHaveTextContent('Tài liệu số 1 cơ học tổng quát.')
+    })
+
+    it('Scenario 38: Chọn sắp xếp golden_first đẩy item Golden lên trước', async () => {
+      mockSearchParams = new URLSearchParams('q=nguyên+lý')
+
+      mockedSearchKnowledge.mockResolvedValueOnce({
+        results: [
+          {
+            chunk_id: 'chk-regular',
+            source_ref: 'docs/reg.md',
+            excerpt: 'Báo cáo nguyên lý thường.',
+            score: 0.96,
+            metadata: { golden: false },
+          },
+          {
+            chunk_id: 'chk-golden',
+            source_ref: 'docs/gold.md',
+            excerpt: 'Chuẩn vàng nguyên lý sáng chế.',
+            score: 0.82,
+            metadata: { golden: true },
+          },
+        ],
+        latency_ms: 5.0,
+      })
+
+      renderWithClient(<SemanticSearchExplorer />)
+
+      await screen.findByText('Báo cáo nguyên lý thường.')
+
+      const sortSelect = screen.getByLabelText('Sắp xếp kết quả')
+      fireEvent.change(sortSelect, { target: { value: 'golden_first' } })
+
+      const excerpts = screen.getAllByText(/(Báo cáo|Chuẩn vàng) nguyên lý/i)
+      expect(excerpts[0]).toHaveTextContent('Chuẩn vàng nguyên lý sáng chế.')
+      expect(excerpts[1]).toHaveTextContent('Báo cáo nguyên lý thường.')
+    })
+
+    it('Scenario 39: Sắp xếp kết hợp chính xác với tab phân đoạn nguồn (source segment)', async () => {
+      mockSearchParams = new URLSearchParams('q=nguyên+lý')
+
+      mockedSearchKnowledge.mockResolvedValueOnce({
+        results: [
+          {
+            chunk_id: 'chk-cs-1',
+            source_ref: 'docs/cs1.md',
+            excerpt: 'Case study thường 1.',
+            score: 0.95,
+            metadata: { source_type: 'case_study', golden: false },
+          },
+          {
+            chunk_id: 'chk-cs-2',
+            source_ref: 'docs/cs2.md',
+            excerpt: 'Case study chuẩn vàng 2.',
+            score: 0.85,
+            metadata: { source_type: 'case_study', golden: true },
+          },
+          {
+            chunk_id: 'chk-rp-1',
+            source_ref: 'docs/rp1.md',
+            excerpt: 'Research paper 1.',
+            score: 0.99,
+            metadata: { source_type: 'research_paper', golden: true },
+          },
+        ],
+        latency_ms: 6.0,
+      })
+
+      renderWithClient(<SemanticSearchExplorer />)
+
+      await screen.findByText('Case study thường 1.')
+
+      // Đổi sort sang golden_first
+      const sortSelect = screen.getByLabelText('Sắp xếp kết quả')
+      fireEvent.change(sortSelect, { target: { value: 'golden_first' } })
+
+      // Chọn tab Case Study
+      const caseStudyTab = screen.getByRole('button', { name: /Case Study/i })
+      fireEvent.click(caseStudyTab)
+
+      // Chỉ hiển thị 2 case studies và chk-cs-2 (golden) lên trước chk-cs-1
+      expect(screen.queryByText('Research paper 1.')).not.toBeInTheDocument()
+
+      const excerpts = screen.getAllByText(/Case study (chuẩn vàng|thường)/i)
+      expect(excerpts[0]).toHaveTextContent('Case study chuẩn vàng 2.')
+      expect(excerpts[1]).toHaveTextContent('Case study thường 1.')
+    })
+
+    it('Scenario 40: Đổi sort mode giữ nguyên trạng thái mở rộng đoạn trích', async () => {
+      const longExcerpt =
+        'Đoạn trích nghiên cứu dài hơn 160 ký tự về nguyên tắc phân nhỏ trong sáng chế kỹ thuật TRIZ nhằm tối ưu hóa trọng lượng, nâng cao hiệu suất hoạt động và sức bền kết cấu cơ khí của toàn bộ hệ thống.'
+
+      mockSearchParams = new URLSearchParams('q=phân+nhỏ')
+
+      mockedSearchKnowledge.mockResolvedValueOnce({
+        results: [
+          {
+            chunk_id: 'chk-long',
+            source_ref: 'docs/long.md',
+            excerpt: longExcerpt,
+            score: 0.91,
+            metadata: {},
+          },
+          {
+            chunk_id: 'chk-short',
+            source_ref: 'docs/short.md',
+            excerpt: 'Đoạn trích ngắn.',
+            score: 0.88,
+            metadata: {},
+          },
+        ],
+        latency_ms: 5.0,
+      })
+
+      renderWithClient(<SemanticSearchExplorer />)
+
+      const excerptEl = await screen.findByText(longExcerpt)
+      const expandBtn = screen.getByRole('button', { name: /Xem đầy đủ đoạn trích/i })
+
+      fireEvent.click(expandBtn)
+      expect(excerptEl).not.toHaveClass('line-clamp-3')
+
+      // Đổi sort mode
+      const sortSelect = screen.getByLabelText('Sắp xếp kết quả')
+      fireEvent.change(sortSelect, { target: { value: 'keyword_first' } })
+
+      // Đoạn trích vẫn mở rộng
+      const rehydratedEl = await screen.findByText(longExcerpt)
+      expect(rehydratedEl).not.toHaveClass('line-clamp-3')
+    })
+  })
 })

@@ -116,6 +116,40 @@ export function checkDirectKeywordMatch(
   return tokens.some((token) => targetText.includes(token))
 }
 
+export type SearchSortMode = 'relevance' | 'keyword_first' | 'golden_first'
+
+export function sortSearchResults(
+  items: SearchResultItem[],
+  sortMode: SearchSortMode,
+  query: string
+): SearchResultItem[] {
+  if (!items || items.length === 0) return []
+  if (sortMode === 'relevance') {
+    return [...items]
+  }
+  if (sortMode === 'keyword_first') {
+    return [...items].sort((a, b) => {
+      const matchA = checkDirectKeywordMatch(query, a.excerpt, a.source_ref) ? 1 : 0
+      const matchB = checkDirectKeywordMatch(query, b.excerpt, b.source_ref) ? 1 : 0
+      if (matchA !== matchB) {
+        return matchB - matchA
+      }
+      return b.score - a.score
+    })
+  }
+  if (sortMode === 'golden_first') {
+    return [...items].sort((a, b) => {
+      const goldA = a.metadata?.golden ? 1 : 0
+      const goldB = b.metadata?.golden ? 1 : 0
+      if (goldA !== goldB) {
+        return goldB - goldA
+      }
+      return b.score - a.score
+    })
+  }
+  return items
+}
+
 export function SemanticSearchExplorer() {
   const searchParams = useSearchParams()
   const router = useRouter()
@@ -139,6 +173,7 @@ export function SemanticSearchExplorer() {
   const [attachingChunkId, setAttachingChunkId] = useState<string | null>(null)
   const [copiedChunkId, setCopiedChunkId] = useState<string | null>(null)
   const [activeSourceBucket, setActiveSourceBucket] = useState<string>('all')
+  const [sortBy, setSortBy] = useState<SearchSortMode>('relevance')
 
   const toggleExpandChunk = (chunkId: string) => {
     setExpandedChunkIds((prev) => {
@@ -388,9 +423,12 @@ export function SemanticSearchExplorer() {
   }, [sourceCounts])
 
   const displayedResults = useMemo(() => {
-    if (activeSourceBucket === 'all') return results
-    return results.filter((item) => (item.metadata?.source_type || 'other') === activeSourceBucket)
-  }, [results, activeSourceBucket])
+    let list = results
+    if (activeSourceBucket !== 'all') {
+      list = results.filter((item) => (item.metadata?.source_type || 'other') === activeSourceBucket)
+    }
+    return sortSearchResults(list, sortBy, submittedQuery)
+  }, [results, activeSourceBucket, sortBy, submittedQuery])
 
   return (
     <div className="space-y-6 max-w-6xl mx-auto px-4 py-8">
@@ -805,51 +843,74 @@ export function SemanticSearchExplorer() {
                 )}
               </div>
 
-              {/* In-View Source Segment Tabs */}
-              {availableSourceBuckets.length >= 2 && (
-                <div className="flex items-center gap-1.5 p-1 rounded-xl bg-muted/40 border border-border w-fit overflow-x-auto max-w-full">
-                  <button
-                    type="button"
-                    onClick={() => setActiveSourceBucket('all')}
-                    className={cn(
-                      'px-3 py-1.5 rounded-lg text-xs font-semibold transition-all whitespace-nowrap cursor-pointer',
-                      activeSourceBucket === 'all'
-                        ? 'bg-background text-foreground shadow-sm'
-                        : 'text-muted-foreground hover:text-foreground'
-                    )}
-                  >
-                    <span>Tất cả</span>
-                    <span className="ml-1.5 px-1.5 py-0.2 rounded-full text-[10px] bg-muted font-mono">
-                      {results.length}
-                    </span>
-                  </button>
-                  {availableSourceBuckets.map((st) => {
-                    const opt = SOURCE_TYPE_OPTIONS.find((o) => o.value === st)
-                    const label = opt ? opt.label : st
-                    const count = sourceCounts[st]
-                    const isActive = activeSourceBucket === st
+              {/* Results Toolbar: Source Segment Tabs & Sort Controls */}
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                {/* In-View Source Segment Tabs */}
+                {availableSourceBuckets.length >= 2 ? (
+                  <div className="flex items-center gap-1.5 p-1 rounded-xl bg-muted/40 border border-border overflow-x-auto max-w-full">
+                    <button
+                      type="button"
+                      onClick={() => setActiveSourceBucket('all')}
+                      className={cn(
+                        'px-3 py-1.5 rounded-lg text-xs font-semibold transition-all whitespace-nowrap cursor-pointer',
+                        activeSourceBucket === 'all'
+                          ? 'bg-background text-foreground shadow-sm'
+                          : 'text-muted-foreground hover:text-foreground'
+                      )}
+                    >
+                      <span>Tất cả</span>
+                      <span className="ml-1.5 px-1.5 py-0.2 rounded-full text-[10px] bg-muted font-mono">
+                        {results.length}
+                      </span>
+                    </button>
+                    {availableSourceBuckets.map((st) => {
+                      const opt = SOURCE_TYPE_OPTIONS.find((o) => o.value === st)
+                      const label = opt ? opt.label : st
+                      const count = sourceCounts[st]
+                      const isActive = activeSourceBucket === st
 
-                    return (
-                      <button
-                        key={st}
-                        type="button"
-                        onClick={() => setActiveSourceBucket(st)}
-                        className={cn(
-                          'px-3 py-1.5 rounded-lg text-xs font-semibold transition-all whitespace-nowrap cursor-pointer',
-                          isActive
-                            ? 'bg-background text-foreground shadow-sm'
-                            : 'text-muted-foreground hover:text-foreground'
-                        )}
-                      >
-                        <span>{label}</span>
-                        <span className="ml-1.5 px-1.5 py-0.2 rounded-full text-[10px] bg-muted font-mono">
-                          {count}
-                        </span>
-                      </button>
-                    )
-                  })}
+                      return (
+                        <button
+                          key={st}
+                          type="button"
+                          onClick={() => setActiveSourceBucket(st)}
+                          className={cn(
+                            'px-3 py-1.5 rounded-lg text-xs font-semibold transition-all whitespace-nowrap cursor-pointer',
+                            isActive
+                              ? 'bg-background text-foreground shadow-sm'
+                              : 'text-muted-foreground hover:text-foreground'
+                          )}
+                        >
+                          <span>{label}</span>
+                          <span className="ml-1.5 px-1.5 py-0.2 rounded-full text-[10px] bg-muted font-mono">
+                            {count}
+                          </span>
+                        </button>
+                      )
+                    })}
+                  </div>
+                ) : (
+                  <div />
+                )}
+
+                {/* Sort / Priority Mode Selector */}
+                <div className="flex items-center gap-2 ml-auto">
+                  <span className="text-xs text-muted-foreground flex items-center gap-1">
+                    <SlidersHorizontal className="w-3 h-3 text-muted-foreground" />
+                    <span>Sắp xếp:</span>
+                  </span>
+                  <select
+                    aria-label="Sắp xếp kết quả"
+                    value={sortBy}
+                    onChange={(e) => setSortBy(e.target.value as SearchSortMode)}
+                    className="text-xs font-medium rounded-xl border border-input bg-card px-2.5 py-1.5 text-foreground focus:outline-none focus:ring-2 focus:ring-primary shadow-sm cursor-pointer"
+                  >
+                    <option value="relevance">Độ liên quan (RRF)</option>
+                    <option value="keyword_first">Ưu tiên khớp từ khóa</option>
+                    <option value="golden_first">Ưu tiên chuẩn vàng</option>
+                  </select>
                 </div>
-              )}
+              </div>
 
               {/* Cards List */}
               <div className="space-y-3.5">
