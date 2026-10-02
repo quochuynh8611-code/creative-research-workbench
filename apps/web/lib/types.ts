@@ -266,3 +266,37 @@ export interface TrizLookupResponse {
   principles: TrizPrinciple[]
   principles_count: number
 }
+
+// ──────────────────────────────────────────────
+// Phase 6.2 AI Problem Structuring Types
+// ──────────────────────────────────────────────
+
+export interface AIProblemAnalysisRequest {
+  raw_statement: string
+  domain?: string
+}
+
+export interface AIProblemAnalysisData {
+  normalized_statement: string
+  domain: string | null
+  contradiction_type: string
+  improving_parameter: string | null
+  worsening_parameter: string | null
+  suggested_keywords: string[]
+  reasoning: string | null
+}
+
+export interface AIProblemAnalysisMeta {
+  provenance: 'ai_hypothesis' | 'rule_based_fallback'
+  provider: string
+  model: string
+  prompt_version: string
+  latency_ms: number
+  fallback_reason: string | null
+}
+
+export interface AIProblemAnalysisResponse {
+  data: AIProblemAnalysisData
+  _meta: AIProblemAnalysisMeta
+}
+

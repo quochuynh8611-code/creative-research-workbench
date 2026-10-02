@@ -1,11 +1,11 @@
 'use client'
 
 import { useState } from 'react'
-import { Plus, X, ChevronRight, Loader2, AlertCircle } from 'lucide-react'
+import { Plus, X, ChevronRight, Loader2, AlertCircle, Sparkles, Zap } from 'lucide-react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { cn } from '@/lib/utils'
-import { createProblemFrame } from '@/lib/api-client'
-import type { ProblemFrame } from '@/lib/types'
+import { createProblemFrame, analyzeProblemWithAI } from '@/lib/api-client'
+import type { ProblemFrame, AIProblemAnalysisResponse } from '@/lib/types'
 
 interface ProblemFrameDraft {
   goal: string
@@ -103,6 +103,8 @@ export function IntakeForm({
   })
 
   const [submitError, setSubmitError] = useState<string | null>(null)
+  const [aiError, setAiError] = useState<string | null>(null)
+  const [aiSuggestion, setAiSuggestion] = useState<AIProblemAnalysisResponse | null>(null)
 
   const addItem = (field: keyof Omit<ProblemFrameDraft, 'goal'>) => (val: string) =>
     setForm((f) => ({ ...f, [field]: [...f[field], val] }))
@@ -130,6 +132,25 @@ export function IntakeForm({
     },
   })
 
+  const aiMutation = useMutation({
+    mutationFn: (rawStatement: string) =>
+      analyzeProblemWithAI(sessionId, {
+        raw_statement: rawStatement,
+        ...(domain ? { domain } : {}),
+      }),
+    onSuccess: (data) => {
+      setAiError(null)
+      setAiSuggestion(data)
+    },
+    onError: (err: any) => {
+      const errorMsg =
+        err?.response?.data?.detail ||
+        err?.message ||
+        'Không thể phân tích bằng AI. Vui lòng kiểm tra lại kết nối.'
+      setAiError(errorMsg)
+    },
+  })
+
   const composeStatement = (): string => {
     const parts: string[] = [form.goal.trim()]
     if (form.constraints.length > 0) {
@@ -147,6 +168,24 @@ export function IntakeForm({
     return parts.join('. ')
   }
 
+  const handleAnalyzeAI = () => {
+    setAiError(null)
+    const statement = composeStatement()
+    if (!statement || statement.length < 10) return
+    aiMutation.mutate(statement)
+  }
+
+  const handleApplySuggestion = () => {
+    if (aiSuggestion?.data.normalized_statement) {
+      setForm((f) => ({ ...f, goal: aiSuggestion.data.normalized_statement }))
+    }
+    setAiSuggestion(null)
+  }
+
+  const handleDiscardSuggestion = () => {
+    setAiSuggestion(null)
+  }
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     setSubmitError(null)
@@ -155,7 +194,8 @@ export function IntakeForm({
     mutation.mutate(statement)
   }
 
-  const isValid = form.goal.trim().length > 10
+  const isValid = form.goal.trim().length >= 10
+  const isAiEligible = form.goal.trim().length >= 10
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6 max-w-2xl">
@@ -173,11 +213,43 @@ export function IntakeForm({
         </div>
       )}
 
+      {aiError && (
+        <div className="flex items-center gap-2 p-3 text-sm text-destructive bg-destructive/10 border border-destructive/20 rounded-md">
+          <AlertCircle className="w-4 h-4 shrink-0" />
+          <span>{aiError}</span>
+        </div>
+      )}
+
       {/* Goal / Raw Statement */}
-      <div>
-        <label className="block text-sm font-medium mb-1.5">
-          Mục tiêu / Mô tả bài toán <span className="text-destructive">*</span>
-        </label>
+      <div className="space-y-2">
+        <div className="flex items-center justify-between">
+          <label className="block text-sm font-medium">
+            Mục tiêu / Mô tả bài toán <span className="text-destructive">*</span>
+          </label>
+          <button
+            type="button"
+            onClick={handleAnalyzeAI}
+            disabled={!isAiEligible || aiMutation.isPending}
+            className={cn(
+              'inline-flex items-center gap-1.5 px-3 py-1 text-xs font-medium rounded-md border transition-colors',
+              isAiEligible && !aiMutation.isPending
+                ? 'bg-secondary hover:bg-accent text-secondary-foreground border-border cursor-pointer shadow-xs'
+                : 'bg-muted text-muted-foreground border-transparent cursor-not-allowed'
+            )}
+          >
+            {aiMutation.isPending ? (
+              <>
+                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                <span>Đang phân tích...</span>
+              </>
+            ) : (
+              <>
+                <Sparkles className="w-3.5 h-3.5 text-amber-500" />
+                <span>Gợi ý với AI</span>
+              </>
+            )}
+          </button>
+        </div>
         <textarea
           value={form.goal}
           onChange={(e) => setForm((f) => ({ ...f, goal: e.target.value }))}
@@ -185,7 +257,114 @@ export function IntakeForm({
           rows={4}
           className="w-full px-3 py-2 text-sm border border-input rounded-md bg-background focus:outline-none focus:ring-2 focus:ring-ring resize-none"
         />
-        <p className="text-xs text-muted-foreground mt-1">{form.goal.length} ký tự (tối thiểu 10 ký tự)</p>
+        <p className="text-xs text-muted-foreground">{form.goal.length} ký tự (tối thiểu 10 ký tự)</p>
+
+        {/* Ephemeral Suggestion Card */}
+        {aiSuggestion && (
+          <div className="p-4 rounded-lg border border-accent bg-accent/30 space-y-3 animate-in fade-in-50 duration-200">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <span
+                  className={cn(
+                    'inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-0.5 rounded-full border',
+                    aiSuggestion._meta.provenance === 'ai_hypothesis'
+                      ? 'bg-primary/10 text-primary border-primary/20'
+                      : 'bg-amber-500/10 text-amber-600 border-amber-500/20'
+                  )}
+                >
+                  {aiSuggestion._meta.provenance === 'ai_hypothesis' ? (
+                    <>
+                      <Sparkles className="w-3 h-3" />
+                      Gợi ý AI
+                    </>
+                  ) : (
+                    <>
+                      <Zap className="w-3 h-3" />
+                      Rule-based (Fallback)
+                    </>
+                  )}
+                </span>
+                {aiSuggestion.data.contradiction_type && (
+                  <span className="text-xs text-muted-foreground">
+                    Mâu thuẫn: <strong>{aiSuggestion.data.contradiction_type}</strong>
+                  </span>
+                )}
+              </div>
+            </div>
+
+            {/* Normalized Statement */}
+            <div>
+              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                Câu bài toán chuẩn hóa
+              </p>
+              <p className="text-sm font-medium mt-0.5">{aiSuggestion.data.normalized_statement}</p>
+            </div>
+
+            {/* Parameters */}
+            {(aiSuggestion.data.improving_parameter || aiSuggestion.data.worsening_parameter) && (
+              <div className="grid grid-cols-2 gap-2 text-xs">
+                {aiSuggestion.data.improving_parameter && (
+                  <div className="p-2 bg-background/50 rounded border border-border/50">
+                    <span className="text-muted-foreground">Cần cải thiện: </span>
+                    <span className="font-semibold text-emerald-600 dark:text-emerald-400">
+                      {aiSuggestion.data.improving_parameter}
+                    </span>
+                  </div>
+                )}
+                {aiSuggestion.data.worsening_parameter && (
+                  <div className="p-2 bg-background/50 rounded border border-border/50">
+                    <span className="text-muted-foreground">Bị suy giảm: </span>
+                    <span className="font-semibold text-rose-600 dark:text-rose-400">
+                      {aiSuggestion.data.worsening_parameter}
+                    </span>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Reasoning */}
+            {aiSuggestion.data.reasoning && (
+              <p className="text-xs text-muted-foreground italic bg-background/40 p-2 rounded">
+                {aiSuggestion.data.reasoning}
+              </p>
+            )}
+
+            {/* Suggested Keywords (Read-only) */}
+            {aiSuggestion.data.suggested_keywords && aiSuggestion.data.suggested_keywords.length > 0 && (
+              <div className="space-y-1">
+                <p className="text-xs text-muted-foreground">Từ khóa gợi ý:</p>
+                <div className="flex flex-wrap gap-1.5">
+                  {aiSuggestion.data.suggested_keywords.map((kw, idx) => (
+                    <span
+                      key={idx}
+                      className="text-xs bg-background text-foreground px-2 py-0.5 rounded border border-border/60"
+                    >
+                      {kw}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Action buttons */}
+            <div className="flex items-center gap-2 pt-1">
+              <button
+                type="button"
+                onClick={handleApplySuggestion}
+                className="px-3 py-1.5 bg-primary text-primary-foreground text-xs font-medium rounded-md hover:opacity-90 transition-opacity cursor-pointer"
+              >
+                Áp dụng gợi ý
+              </button>
+              <button
+                type="button"
+                onClick={handleDiscardSuggestion}
+                className="px-3 py-1.5 bg-secondary text-secondary-foreground text-xs font-medium rounded-md hover:bg-muted transition-colors cursor-pointer"
+              >
+                Bỏ qua
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
       <TagInput
@@ -222,10 +401,10 @@ export function IntakeForm({
 
       <button
         type="submit"
-        disabled={!isValid || mutation.isPending}
+        disabled={!isValid || mutation.isPending || aiMutation.isPending}
         className={cn(
           'inline-flex items-center gap-2 px-5 py-2.5 rounded-md text-sm font-medium transition-all shadow-sm',
-          isValid && !mutation.isPending
+          isValid && !mutation.isPending && !aiMutation.isPending
             ? 'bg-primary text-primary-foreground hover:opacity-90 cursor-pointer'
             : 'bg-muted text-muted-foreground cursor-not-allowed'
         )}

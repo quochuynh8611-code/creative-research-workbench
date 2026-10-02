@@ -592,5 +592,88 @@ describe('Frontend API Client Contract Tests (Phase 5.2)', () => {
     expect(spy).toHaveBeenCalledWith(`/api/v1/sessions/${sessionId}/solutions/${solutionId}`)
     expect(result.status).toBe('deleted')
   })
+
+  // 19. Analyze Problem With AI — Happy Path (ai_hypothesis)
+  it('19. analyzeProblemWithAI gửi POST /api/v1/sessions/{id}/ai/analyze-problem và parse data + _meta', async () => {
+    const sessionId = 'd9b2d20b-0001-0000-0000-000000000001'
+    const input = {
+      raw_statement: 'Cần tăng tốc độ xử lý dữ liệu nhưng không làm tăng nhiệt độ CPU',
+      domain: 'computing',
+    }
+
+    const mockApiResponse = {
+      data: {
+        data: {
+          normalized_statement: 'Tối ưu hóa tốc độ xử lý dữ liệu trong giới hạn phát nhiệt của CPU',
+          domain: 'computing',
+          contradiction_type: 'technical',
+          improving_parameter: 'speed',
+          worsening_parameter: 'temperature',
+          suggested_keywords: ['thermal throttling', 'parallel computing', 'heat dissipation'],
+          reasoning: 'Mâu thuẫn giữa tốc độ tính toán (speed) và nhiệt lượng sinh ra (temperature)',
+        },
+        _meta: {
+          provenance: 'ai_hypothesis',
+          provider: 'openai',
+          model: 'gpt-4o-mini',
+          prompt_version: '2026-10-01.v1',
+          latency_ms: 245.5,
+          fallback_reason: null,
+        },
+      },
+    }
+
+    const spy = jest.spyOn(apiClient, 'post').mockResolvedValueOnce(mockApiResponse)
+
+    const result = await apiClientModule.analyzeProblemWithAI(sessionId, input)
+
+    expect(spy).toHaveBeenCalledWith(`/api/v1/sessions/${sessionId}/ai/analyze-problem`, input)
+    expect(result.data.normalized_statement).toBe(
+      'Tối ưu hóa tốc độ xử lý dữ liệu trong giới hạn phát nhiệt của CPU'
+    )
+    expect(result.data.contradiction_type).toBe('technical')
+    expect(result.data.suggested_keywords).toHaveLength(3)
+    expect(result._meta.provenance).toBe('ai_hypothesis')
+    expect(result._meta.latency_ms).toBe(245.5)
+  })
+
+  // 20. Analyze Problem With AI — Fallback Path (rule_based_fallback)
+  it('20. analyzeProblemWithAI parse đúng response fallback rule_based_fallback', async () => {
+    const sessionId = 'd9b2d20b-0001-0000-0000-000000000001'
+    const input = {
+      raw_statement: 'Bánh răng cần cứng để chịu lực nhưng mềm để giảm rung',
+    }
+
+    const mockApiResponse = {
+      data: {
+        data: {
+          normalized_statement: 'Độ cứng bề mặt vs Độ giảm chấn',
+          domain: null,
+          contradiction_type: 'technical',
+          improving_parameter: 'strength',
+          worsening_parameter: 'vibration',
+          suggested_keywords: [],
+          reasoning: 'Trích xuất từ ma trận từ khóa quy tắc',
+        },
+        _meta: {
+          provenance: 'rule_based_fallback',
+          provider: 'rule_based',
+          model: 'triz_rules_v1',
+          prompt_version: 'none',
+          latency_ms: 12.0,
+          fallback_reason: 'llm_api_key_missing',
+        },
+      },
+    }
+
+    const spy = jest.spyOn(apiClient, 'post').mockResolvedValueOnce(mockApiResponse)
+
+    const result = await apiClientModule.analyzeProblemWithAI(sessionId, input)
+
+    expect(spy).toHaveBeenCalledWith(`/api/v1/sessions/${sessionId}/ai/analyze-problem`, input)
+    expect(result._meta.provenance).toBe('rule_based_fallback')
+    expect(result._meta.fallback_reason).toBe('llm_api_key_missing')
+  })
 })
+
 

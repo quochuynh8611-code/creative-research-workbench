@@ -1,5 +1,7 @@
 import axios from 'axios'
 import type {
+  AIProblemAnalysisRequest,
+  AIProblemAnalysisResponse,
   CandidateSolution,
   CandidateSolutionsResponse,
   CreateCandidateSolutionInput,
@@ -252,3 +254,18 @@ export async function deleteCandidateSolution(
   )
   return response.data
 }
+
+/**
+ * 20. Phân tích bài toán bằng AI/LLM (Phase 6.2 — Ephemeral Suggestion Layer).
+ */
+export async function analyzeProblemWithAI(
+  sessionId: string,
+  input: AIProblemAnalysisRequest
+): Promise<AIProblemAnalysisResponse> {
+  const response = await apiClient.post<AIProblemAnalysisResponse>(
+    `/api/v1/sessions/${sessionId}/ai/analyze-problem`,
+    input
+  )
+  return response.data
+}
+
