@@ -8,7 +8,11 @@ import type {
   CreateSessionInput,
   CreateResearchNoteInput,
   DeleteCandidateSolutionResponse,
+  DeleteDocumentResponse,
   DeleteResearchNoteResponse,
+  DocumentDetail,
+  DocumentListResponse,
+  DocumentUploadResponse,
   NextStepResponse,
   ProblemFrame,
   ProblemFrameCreateInput,
@@ -269,3 +273,58 @@ export async function analyzeProblemWithAI(
   return response.data
 }
 
+/**
+ * 21. Liệt kê danh sách tài liệu trong Knowledge Base (Phase 8).
+ */
+export async function listDocuments(params?: {
+  q?: string
+  topic?: string
+  status?: string
+  golden?: boolean
+  limit?: number
+  offset?: number
+}): Promise<DocumentListResponse> {
+  const response = await apiClient.get<DocumentListResponse>('/api/v1/documents', {
+    params,
+  })
+  return response.data
+}
+
+/**
+ * 22. Lấy thông tin chi tiết một tài liệu kèm danh sách chunks (Phase 8).
+ */
+export async function getDocument(documentId: string): Promise<DocumentDetail> {
+  const response = await apiClient.get<{ data?: DocumentDetail } & DocumentDetail>(
+    `/api/v1/documents/${documentId}`
+  )
+  return response.data.data ?? response.data
+}
+
+/**
+ * 23. Tải lên và nạp tài liệu Markdown/TXT vào Knowledge Base (Phase 8).
+ */
+export async function uploadDocument(file: File): Promise<DocumentUploadResponse> {
+  const formData = new FormData()
+  formData.append('file', file)
+
+  const response = await apiClient.post<{ data?: DocumentUploadResponse } & DocumentUploadResponse>(
+    '/api/v1/documents/upload',
+    formData,
+    {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    }
+  )
+  return response.data.data ?? response.data
+}
+
+/**
+ * 24. Xóa một tài liệu khỏi Knowledge Base (Phase 8).
+ */
+export async function deleteDocument(documentId: string): Promise<DeleteDocumentResponse> {
+  const response = await apiClient.delete<DeleteDocumentResponse>(
+    `/api/v1/documents/${documentId}`
+  )
+  return response.data
+}

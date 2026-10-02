@@ -264,7 +264,7 @@ class IngestionService:
 
     def ingest(self, filepath: str) -> IngestResult:
         """
-        Ingest 1 file Markdown vào Knowledge Base.
+        Ingest 1 file Markdown vào Knowledge Base từ đường dẫn file.
 
         Returns:
             IngestResult.status == 'success'        → tạo mới thành công
@@ -279,23 +279,52 @@ class IngestionService:
             return IngestResult.error(f"File not found: {filepath}")
 
         try:
-            return self._ingest_file(path)
+            raw_bytes = path.read_bytes()
+            return self._process_bytes(raw_bytes, filename=path.name, filepath=str(path))
         except Exception as exc:  # noqa: BLE001
-            logger.exception("Lỗi khi ingest %s", filepath)
+            logger.exception("Lỗi khi ingest file %s", filepath)
+            return IngestResult.error(str(exc))
+
+    def ingest_bytes(
+        self,
+        raw_bytes: bytes,
+        filename: str,
+        filepath: str | None = None,
+    ) -> IngestResult:
+        """
+        Ingest tài liệu Markdown từ raw bytes (hỗ trợ HTTP upload).
+
+        Returns:
+            IngestResult.status == 'success'        → tạo mới thành công
+            IngestResult.status == 'already_exists' → content_hash đã tồn tại, skip
+            IngestResult.status == 'error'          → lỗi (chi tiết trong error_message)
+        """
+        try:
+            return self._process_bytes(
+                raw_bytes,
+                filename=filename,
+                filepath=filepath or filename,
+            )
+        except Exception as exc:  # noqa: BLE001
+            logger.exception("Lỗi khi ingest bytes %s", filename)
             return IngestResult.error(str(exc))
 
     # ──────────────────────────────────────────
     # Private helpers
     # ──────────────────────────────────────────
 
-    def _ingest_file(self, path: pathlib.Path) -> IngestResult:
-        raw_bytes = path.read_bytes()
+    def _process_bytes(
+        self,
+        raw_bytes: bytes,
+        filename: str,
+        filepath: str,
+    ) -> IngestResult:
         content_hash = hashlib.sha256(raw_bytes).hexdigest()
 
         # ── Dedup check ───────────────────────
         existing_id = self._find_by_hash(content_hash)
         if existing_id is not None:
-            logger.info("Duplicate skip: %s (hash=%s)", path.name, content_hash[:8])
+            logger.info("Duplicate skip: %s (hash=%s)", filename, content_hash[:8])
             return IngestResult.already_exists(existing_id)
 
         # ── Parse ─────────────────────────────
@@ -306,7 +335,8 @@ class IngestionService:
         doc_id = uuid.uuid4()
         document = self._build_document(
             doc_id=doc_id,
-            path=path,
+            filename=filename,
+            filepath=filepath,
             metadata=metadata,
             content_hash=content_hash,
         )
@@ -344,7 +374,7 @@ class IngestionService:
 
         logger.info(
             "Ingested: %s → doc_id=%s, chunks=%d",
-            path.name,
+            filename,
             doc_id,
             len(chunk_objects),
         )
@@ -365,7 +395,8 @@ class IngestionService:
     @staticmethod
     def _build_document(
         doc_id: uuid.UUID,
-        path: pathlib.Path,
+        filename: str,
+        filepath: str,
         metadata: dict[str, Any],
         content_hash: str,
     ) -> Document:
@@ -394,11 +425,12 @@ class IngestionService:
         raw_phase = metadata.get("phase")
         phase = str(raw_phase) if raw_phase is not None else None
 
+        stem = pathlib.Path(filename).stem
         return Document(
             id=doc_id,
-            filename=path.name,
-            filepath=str(path),
-            title=str(metadata.get("title", path.stem)),
+            filename=filename,
+            filepath=filepath,
+            title=str(metadata.get("title", stem)),
             topic=metadata.get("topic"),
             source_type=metadata.get("source_type"),
             language=metadata.get("language", "vi"),

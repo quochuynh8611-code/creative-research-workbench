@@ -300,3 +300,81 @@ export interface AIProblemAnalysisResponse {
   _meta: AIProblemAnalysisMeta
 }
 
+// ──────────────────────────────────────────────
+// Phase 8 Knowledge Base Management Types
+// ──────────────────────────────────────────────
+
+export interface DocumentChunkItem {
+  id: string
+  chunk_index: number
+  token_count: number
+  content: string
+}
+
+export interface DocumentItem {
+  id: string
+  filename: string
+  filepath: string
+  title: string
+  topic: string | null
+  source_type: string | null
+  language: string | null
+  tags: string[] | null
+  phase: string | null
+  status: 'canonical' | 'draft' | 'deprecated'
+  golden: boolean
+  content_hash: string
+  chunks_count: number
+  created_at: string
+  updated_at: string
+}
+
+export interface DocumentDetail extends DocumentItem {
+  chunks: DocumentChunkItem[]
+}
+
+export interface DocumentListResponse {
+  data: DocumentItem[]
+  meta: {
+    total: number
+    limit: number
+    offset: number
+  }
+}
+
+export interface DocumentDetailResponse {
+  data: DocumentDetail
+}
+
+export interface DocumentUploadResponse {
+  status: 'success' | 'already_exists'
+  document_id: string
+  filename: string
+  title?: string
+  chunks_created?: number
+  embeddings_created?: number
+  message?: string
+  data?: {
+    status: 'success' | 'already_exists'
+    document_id: string
+    filename: string
+    title?: string
+    chunks_created?: number
+    embeddings_created?: number
+    message?: string
+  }
+}
+
+export interface DeleteDocumentResponse {
+  status: string
+  id: string
+}
+
+export interface DocumentFilterParams {
+  q?: string
+  topic?: string
+  status?: string
+  golden?: boolean
+  limit?: number
+  offset?: number
+}

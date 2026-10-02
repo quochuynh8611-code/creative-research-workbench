@@ -674,6 +674,130 @@ describe('Frontend API Client Contract Tests (Phase 5.2)', () => {
     expect(result._meta.provenance).toBe('rule_based_fallback')
     expect(result._meta.fallback_reason).toBe('llm_api_key_missing')
   })
+
+  // 21. List Documents
+  it('21. listDocuments unwrap đúng response { data, meta }', async () => {
+    const mockApiResponse = {
+      data: {
+        data: [
+          {
+            id: 'doc-001',
+            filename: 'ADR-001-architecture.md',
+            filepath: 'docs/ADR-001-architecture.md',
+            title: 'ADR-001 — Kiến trúc hệ thống',
+            topic: 'architecture',
+            source_type: 'decision-record',
+            language: 'vi',
+            tags: ['adr', 'triz'],
+            phase: '1',
+            status: 'canonical',
+            golden: true,
+            content_hash: 'hash_01',
+            chunks_count: 4,
+            created_at: '2026-10-01T10:00:00Z',
+            updated_at: '2026-10-01T10:00:00Z',
+          },
+        ],
+        meta: { total: 1, limit: 50, offset: 0 },
+      },
+    }
+
+    const spy = jest.spyOn(apiClient, 'get').mockResolvedValueOnce(mockApiResponse)
+
+    const result = await apiClientModule.listDocuments({ topic: 'architecture' })
+
+    expect(spy).toHaveBeenCalledWith('/api/v1/documents', {
+      params: { topic: 'architecture' },
+    })
+    expect(result.data).toHaveLength(1)
+    expect(result.data[0].golden).toBe(true)
+    expect(result.meta.total).toBe(1)
+  })
+
+  // 22. Get Document Detail
+  it('22. getDocument unwrap chi tiết document kèm chunks', async () => {
+    const docId = 'doc-001'
+    const mockApiResponse = {
+      data: {
+        data: {
+          id: docId,
+          filename: 'doc-sample.md',
+          filepath: 'docs/doc-sample.md',
+          title: 'Tài liệu chi tiết',
+          topic: 'testing',
+          source_type: 'spec',
+          language: 'vi',
+          tags: ['test'],
+          phase: '1',
+          status: 'canonical',
+          golden: false,
+          content_hash: 'hash_02',
+          chunks_count: 2,
+          created_at: '2026-10-01T10:00:00Z',
+          updated_at: '2026-10-01T10:00:00Z',
+          chunks: [
+            { id: 'c1', chunk_index: 0, token_count: 50, content: 'Đoạn 1' },
+            { id: 'c2', chunk_index: 1, token_count: 60, content: 'Đoạn 2' },
+          ],
+        },
+      },
+    }
+
+    const spy = jest.spyOn(apiClient, 'get').mockResolvedValueOnce(mockApiResponse)
+
+    const result = await apiClientModule.getDocument(docId)
+
+    expect(spy).toHaveBeenCalledWith(`/api/v1/documents/${docId}`)
+    expect(result.id).toBe(docId)
+    expect(result.chunks).toHaveLength(2)
+  })
+
+  // 23. Upload Document
+  it('23. uploadDocument gửi FormData POST tới /api/v1/documents/upload', async () => {
+    const fakeFile = new File(['# Title\nContent'], 'test-file.md', { type: 'text/markdown' })
+    const mockApiResponse = {
+      data: {
+        data: {
+          status: 'success',
+          document_id: 'doc-new-01',
+          filename: 'test-file.md',
+          title: 'Title',
+          chunks_created: 1,
+          embeddings_created: 1,
+        },
+      },
+    }
+
+    const spy = jest.spyOn(apiClient, 'post').mockResolvedValueOnce(mockApiResponse)
+
+    const result = await apiClientModule.uploadDocument(fakeFile)
+
+    expect(spy).toHaveBeenCalledWith(
+      '/api/v1/documents/upload',
+      expect.any(FormData),
+      expect.objectContaining({
+        headers: { 'Content-Type': 'multipart/form-data' },
+      })
+    )
+    expect(result.status).toBe('success')
+    expect(result.document_id).toBe('doc-new-01')
+  })
+
+  // 24. Delete Document
+  it('24. deleteDocument gọi DELETE /api/v1/documents/{id}', async () => {
+    const docId = 'doc-to-delete'
+    const mockApiResponse = {
+      data: {
+        status: 'deleted',
+        id: docId,
+      },
+    }
+
+    const spy = jest.spyOn(apiClient, 'delete').mockResolvedValueOnce(mockApiResponse)
+
+    const result = await apiClientModule.deleteDocument(docId)
+
+    expect(spy).toHaveBeenCalledWith(`/api/v1/documents/${docId}`)
+    expect(result.status).toBe('deleted')
+  })
 })
-
-
