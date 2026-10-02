@@ -268,6 +268,28 @@ export interface TrizLookupResponse {
 }
 
 // ──────────────────────────────────────────────
+// Phase 10.1 Full TRIZ 39 Parameters Auto-mapping Types
+// ──────────────────────────────────────────────
+
+export interface TrizParameterMatch {
+  id: number
+  code: string
+  name_vi: string
+  name_en: string
+  score: number
+  matched_keywords: string[]
+  description: string
+}
+
+export interface TrizAutoMapResponse {
+  data: TrizParameterMatch[]
+  meta: {
+    total_candidates: number
+    query_text: string
+  }
+}
+
+// ──────────────────────────────────────────────
 // Phase 6.2 AI Problem Structuring Types
 // ──────────────────────────────────────────────
 

@@ -28,8 +28,10 @@ import type {
   SessionListResponse,
   SessionTemplate,
   SessionTemplatesResponse,
+  TrizAutoMapResponse,
   TrizLookupQuery,
   TrizLookupResponse,
+  TrizParameterMatch,
   TrizParametersResponse,
   TrizPrinciplesResponse,
   UpdateCandidateSolutionInput,
@@ -393,4 +395,19 @@ export async function createSessionFromTemplate(
     input
   )
   return response.data.data ?? response.data
+}
+
+/**
+ * 30. Tự động ánh xạ và xếp hạng 39 thông số TRIZ từ mô tả bài toán tự do (Phase 10.1).
+ */
+export async function mapTrizParameters(
+  text: string,
+  top_k: number = 5
+): Promise<TrizParameterMatch[]> {
+  const response = await apiClient.post<TrizAutoMapResponse | { data: TrizParameterMatch[] }>(
+    '/api/v1/triz/auto-map',
+    { text, top_k }
+  )
+  const result = response.data
+  return Array.isArray(result) ? result : result.data
 }

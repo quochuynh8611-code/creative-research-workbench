@@ -468,3 +468,56 @@ class ProblemStructuringService:
         """Thêm ProblemFrame vào session và flush để gán ID và liên kết."""
         session.add(frame)
         session.flush()
+
+    def auto_map_parameters(self, text: str, top_k: int = 5) -> list[dict[str, Any]]:
+        """Method wrapper cho auto_map_parameters."""
+        return auto_map_parameters(text=text, top_k=top_k)
+
+
+def auto_map_parameters(text: str, top_k: int = 5) -> list[dict[str, Any]]:
+    """
+    Tự động trích xuất và xếp hạng các thông số TRIZ 39 từ chuỗi văn bản tự do (Phase 10.1).
+    Hỗ trợ đối soát từ khóa song ngữ Việt - Anh và tính điểm tương đồng.
+    """
+    if not text or not text.strip():
+        raise ValueError("text must not be empty or whitespace only")
+
+    clean_text = text.lower().strip()
+    raw_params = _TRIZ_DATA.get("parameters", {})
+
+    candidates: list[dict[str, Any]] = []
+
+    for code, keywords in _PARAMETER_KEYWORDS.items():
+        matched_kws: list[str] = []
+        for kw in keywords:
+            kw_clean = kw.lower().strip()
+            if kw_clean and kw_clean in clean_text:
+                matched_kws.append(kw)
+
+        if matched_kws:
+            param_id = _PARAM_TO_ID_MAP.get(code)
+            if not param_id:
+                param_id = _PARAM_CODE_TO_ID.get(code, 0)
+
+            p_data = raw_params.get(str(param_id), {})
+            name_vi = p_data.get("name_vi", code)
+            name_en = p_data.get("name_en", code)
+            description = p_data.get("description", "")
+
+            # Tính score: số lượng match và độ dài từ khóa match
+            score = round(min(1.0, 0.6 + 0.15 * len(matched_kws) + 0.02 * max(len(k) for k in matched_kws)), 2)
+
+            candidates.append({
+                "id": param_id,
+                "code": code,
+                "name_vi": name_vi,
+                "name_en": name_en,
+                "score": score,
+                "matched_keywords": matched_kws,
+                "description": description,
+            })
+
+    # Xếp theo score giảm dần
+    candidates.sort(key=lambda x: (-x["score"], x["id"]))
+
+    return candidates[:top_k]

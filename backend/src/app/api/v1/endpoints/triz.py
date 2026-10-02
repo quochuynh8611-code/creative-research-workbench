@@ -9,14 +9,21 @@ Cung cấp:
 from __future__ import annotations
 
 from typing import Any
-from fastapi import APIRouter, Query
+from fastapi import APIRouter, HTTPException, Query, status
+from pydantic import BaseModel, Field, field_validator
 
 from app.services.problem_structuring_service import (
     _CONTRADICTION_MATRIX_39X39,
     _TRIZ_DATA,
+    auto_map_parameters,
 )
 
 router = APIRouter()
+
+
+class AutoMapRequest(BaseModel):
+    text: str = Field(default="")
+    top_k: int = Field(default=5, ge=1, le=39)
 
 
 # ──────────────────────────────────────────────
@@ -125,4 +132,27 @@ async def lookup_triz_matrix(
         "is_diagonal": is_diagonal,
         "principles": matched_principles,
         "principles_count": len(matched_principles),
+    }
+
+
+@router.post("/auto-map", status_code=status.HTTP_200_OK)
+async def auto_map_triz_parameters(body: AutoMapRequest) -> dict[str, Any]:
+    """
+    Tự động trích xuất và xếp hạng các thông số TRIZ 39 từ mô tả bài toán tự do (Phase 10.1).
+    Hỗ trợ đối soát từ khóa song ngữ Việt - Anh và trả về danh sách candidates kèm điểm tương đồng.
+    """
+    try:
+        matches = auto_map_parameters(text=body.text, top_k=body.top_k)
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e),
+        )
+
+    return {
+        "data": matches,
+        "meta": {
+            "total_candidates": len(matches),
+            "query_text": body.text,
+        },
     }

@@ -937,4 +937,34 @@ describe('Frontend API Client Contract Tests (Phase 5.2)', () => {
     })
     expect(result.id).toBe('new-tpl-ses')
   })
+
+  // 30. Auto-map TRIZ Parameters (Phase 10.1)
+  it('30. mapTrizParameters gọi POST /api/v1/triz/auto-map với text và top_k', async () => {
+    const mockMatches = {
+      data: [
+        {
+          id: 14,
+          code: 'strength',
+          name_vi: 'Độ bền',
+          name_en: 'Strength',
+          score: 0.95,
+          matched_keywords: ['độ bền'],
+          description: 'Độ bền kết cấu',
+        },
+      ],
+      meta: { total_candidates: 1, query_text: 'Tăng độ bền' },
+    }
+
+    const spy = jest.spyOn(apiClient, 'post').mockResolvedValueOnce({ data: mockMatches })
+
+    const result = await apiClientModule.mapTrizParameters('Tăng độ bền', 3)
+
+    expect(spy).toHaveBeenCalledWith('/api/v1/triz/auto-map', {
+      text: 'Tăng độ bền',
+      top_k: 3,
+    })
+    expect(result).toHaveLength(1)
+    expect(result[0].code).toBe('strength')
+    expect(result[0].score).toBe(0.95)
+  })
 })
