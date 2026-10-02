@@ -284,6 +284,7 @@ export function SemanticSearchExplorer() {
 
   const results: SearchResultItem[] = data?.results || []
   const hasSearched = Boolean(submittedQuery.trim())
+  const hasActiveFilters = Boolean(selectedTopic || selectedSourceType || goldenOnly || selectedPhase || topK !== 10)
 
   return (
     <div className="space-y-6 max-w-6xl mx-auto px-4 py-8">
@@ -552,14 +553,41 @@ export function SemanticSearchExplorer() {
 
           {/* Empty Results State */}
           {!isLoading && !isError && hasSearched && results.length === 0 && (
-            <div className="p-10 rounded-2xl border border-dashed border-border bg-muted/10 text-center space-y-2">
+            <div className="p-10 rounded-2xl border border-dashed border-border bg-muted/10 text-center space-y-3">
               <Layers className="w-8 h-8 text-muted-foreground/60 mx-auto" />
-              <h3 className="text-sm font-bold text-foreground">
-                Không tìm thấy đoạn tri thức nào phù hợp
-              </h3>
-              <p className="text-xs text-muted-foreground max-w-md mx-auto">
-                Hãy thử nới lỏng các bộ lọc (chủ đề, loại nguồn) hoặc nhập từ khóa ngắn gọn hơn.
-              </p>
+              <div className="space-y-1">
+                <h3 className="text-sm font-bold text-foreground">
+                  Không tìm thấy đoạn tri thức nào phù hợp
+                </h3>
+                <p className="text-xs text-muted-foreground max-w-md mx-auto">
+                  Hãy thử nới lỏng các bộ lọc (chủ đề, loại nguồn) hoặc nhập từ khóa ngắn gọn hơn.
+                </p>
+              </div>
+
+              {(hasActiveFilters || sessionId) && (
+                <div className="flex flex-wrap items-center justify-center gap-2.5 pt-2">
+                  {hasActiveFilters && (
+                    <button
+                      type="button"
+                      onClick={handleResetFilters}
+                      className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-background border border-border text-foreground hover:bg-muted text-xs font-semibold shadow-sm transition-all cursor-pointer"
+                    >
+                      <RotateCcw className="w-3.5 h-3.5 text-primary" />
+                      <span>Nới lỏng bộ lọc</span>
+                    </button>
+                  )}
+
+                  {sessionId && (
+                    <Link
+                      href={`/sessions/${sessionId}?tab=${fromTab || 'retrieval'}`}
+                      className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-primary/10 text-primary hover:bg-primary/20 border border-primary/20 text-xs font-semibold transition-all shadow-sm"
+                    >
+                      <ArrowLeft className="w-3.5 h-3.5" />
+                      <span>Quay lại phiên nghiên cứu</span>
+                    </Link>
+                  )}
+                </div>
+              )}
             </div>
           )}
 

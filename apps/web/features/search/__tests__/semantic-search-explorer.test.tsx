@@ -692,4 +692,81 @@ describe('SemanticSearchExplorer Component Tests (Phase 10.3 Increment 1 - 6)', 
       expect(screen.queryByRole('button', { name: /Thu gọn đoạn trích/i })).not.toBeInTheDocument()
     })
   })
+
+  describe('Phase 10.3 Increment 8: Contextual Empty-State Guidance & Actionable Recovery Actions', () => {
+    it('Scenario 20: Khi 0 kết quả và có filter active, hiển thị CTA Nới lỏng bộ lọc và reset đúng trạng thái', async () => {
+      mockSearchParams = new URLSearchParams('q=ma+sát&topic=triz_principle&golden=true')
+
+      mockedSearchKnowledge.mockResolvedValueOnce({
+        results: [],
+        latency_ms: 6.0,
+      })
+
+      renderWithClient(<SemanticSearchExplorer />)
+
+      // Chờ thông báo empty state xuất hiện
+      expect(await screen.findByText(/Không tìm thấy đoạn tri thức nào phù hợp/i)).toBeInTheDocument()
+
+      // Nút Nới lỏng bộ lọc xuất hiện
+      const relaxBtn = screen.getByRole('button', { name: /Nới lỏng bộ lọc/i })
+      expect(relaxBtn).toBeInTheDocument()
+
+      // Click Nới lỏng bộ lọc
+      fireEvent.click(relaxBtn)
+
+      // Kiểm tra URL được cập nhật về query gốc không còn filter
+      expect(mockReplace).toHaveBeenCalledWith('/search?q=ma+s%C3%A1t')
+    })
+
+    it('Scenario 21: Khi 0 kết quả trong contextual mode, hiển thị CTA Quay lại phiên nghiên cứu với from_tab', async () => {
+      mockSearchParams = new URLSearchParams('q=nhiệt+động&session_id=sess-abc&from_tab=ideation')
+
+      mockedSearchKnowledge.mockResolvedValueOnce({
+        results: [],
+        latency_ms: 4.0,
+      })
+
+      renderWithClient(<SemanticSearchExplorer />)
+
+      expect(await screen.findByText(/Không tìm thấy đoạn tri thức nào phù hợp/i)).toBeInTheDocument()
+
+      // CTA Quay lại phiên nghiên cứu trong empty state
+      const emptyBackLink = screen.getByRole('link', { name: /Quay lại phiên nghiên cứu/i })
+      expect(emptyBackLink).toBeInTheDocument()
+      expect(emptyBackLink).toHaveAttribute('href', '/sessions/sess-abc?tab=ideation')
+    })
+
+    it('Scenario 22: Khi 0 kết quả với cả active filter và session_id không có from_tab, link mặc định về tab retrieval', async () => {
+      mockSearchParams = new URLSearchParams('q=khó+tìm&session_id=sess-xyz&source_type=golden_kb')
+
+      mockedSearchKnowledge.mockResolvedValueOnce({
+        results: [],
+        latency_ms: 5.0,
+      })
+
+      renderWithClient(<SemanticSearchExplorer />)
+
+      expect(await screen.findByText(/Không tìm thấy đoạn tri thức nào phù hợp/i)).toBeInTheDocument()
+
+      // Cả 2 CTA đều xuất hiện
+      expect(screen.getByRole('button', { name: /Nới lỏng bộ lọc/i })).toBeInTheDocument()
+      const emptyBackLink = screen.getByRole('link', { name: /Quay lại phiên nghiên cứu/i })
+      expect(emptyBackLink).toHaveAttribute('href', '/sessions/sess-xyz?tab=retrieval')
+    })
+
+    it('Scenario 23: Khi 0 kết quả ở Standalone mode không có active filter, không hiển thị CTA nới filter hay CTA session', async () => {
+      mockSearchParams = new URLSearchParams('q=không+có+gì')
+
+      mockedSearchKnowledge.mockResolvedValueOnce({
+        results: [],
+        latency_ms: 5.0,
+      })
+
+      renderWithClient(<SemanticSearchExplorer />)
+
+      expect(await screen.findByText(/Không tìm thấy đoạn tri thức nào phù hợp/i)).toBeInTheDocument()
+      expect(screen.queryByRole('button', { name: /Nới lỏng bộ lọc/i })).not.toBeInTheDocument()
+      expect(screen.queryByRole('link', { name: /Quay lại phiên nghiên cứu/i })).not.toBeInTheDocument()
+    })
+  })
 })
