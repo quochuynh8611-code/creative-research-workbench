@@ -24,6 +24,7 @@ import {
   Copy,
   ChevronDown,
   ChevronUp,
+  X,
 } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import { searchKnowledge, createResearchNote, listResearchNotes, getSession } from '@/lib/api-client'
@@ -252,6 +253,38 @@ export function SemanticSearchExplorer() {
       from_tab: fromTab || undefined,
     })
     router.replace(targetUrl)
+  }
+
+  const handleRemoveFilter = (filterKey: 'topic' | 'source_type' | 'golden' | 'phase') => {
+    let nextTopic = selectedTopic
+    let nextSourceType = selectedSourceType
+    let nextGolden = goldenOnly
+    let nextPhase = selectedPhase
+
+    if (filterKey === 'topic') {
+      setSelectedTopic('')
+      nextTopic = ''
+    } else if (filterKey === 'source_type') {
+      setSelectedSourceType('')
+      nextSourceType = ''
+    } else if (filterKey === 'golden') {
+      setGoldenOnly(false)
+      nextGolden = false
+    } else if (filterKey === 'phase') {
+      setSelectedPhase('')
+      nextPhase = ''
+    }
+
+    syncUrl({
+      query: submittedQuery,
+      topic: nextTopic,
+      source_type: nextSourceType,
+      golden: nextGolden,
+      phase: nextPhase,
+      top_k: topK,
+      session_id: sessionId,
+      from_tab: fromTab,
+    })
   }
 
   const handleAttachToSession = async (item: SearchResultItem) => {
@@ -595,15 +628,107 @@ export function SemanticSearchExplorer() {
           {!isLoading && !isError && hasSearched && results.length > 0 && (
             <div className="space-y-4">
               {/* Summary Bar */}
-              <div className="flex items-center justify-between text-xs text-muted-foreground px-1">
-                <span>
-                  <strong>{results.length}</strong> kết quả tìm thấy
-                </span>
-                {data?.latency_ms !== undefined && (
-                  <span className="flex items-center gap-1 text-[11px]">
-                    <Clock className="w-3 h-3" />
-                    <span>{data.latency_ms} ms</span>
-                  </span>
+              <div className="p-3.5 rounded-2xl bg-card border border-border space-y-2.5 shadow-sm">
+                <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span>
+                      <strong>{results.length}</strong> kết quả tìm thấy
+                    </span>
+                    {/* Scope Badge */}
+                    <span
+                      className={cn(
+                        'inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-semibold border',
+                        sessionId
+                          ? 'bg-primary/10 text-primary border-primary/20'
+                          : 'bg-muted text-muted-foreground border-border'
+                      )}
+                    >
+                      {sessionId ? (
+                        <>
+                          <Bookmark className="w-3 h-3" />
+                          <span>Phiên: {sessionData?.title || sessionId}</span>
+                        </>
+                      ) : (
+                        <>
+                          <Layers className="w-3 h-3" />
+                          <span>Toàn bộ kho tri thức</span>
+                        </>
+                      )}
+                    </span>
+                  </div>
+
+                  {data?.latency_ms !== undefined && (
+                    <span className="flex items-center gap-1 text-[11px] font-mono">
+                      <Clock className="w-3 h-3" />
+                      <span>{data.latency_ms} ms</span>
+                    </span>
+                  )}
+                </div>
+
+                {/* Active Filter Chips */}
+                {(selectedTopic || selectedSourceType || goldenOnly || selectedPhase) && (
+                  <div className="flex flex-wrap items-center gap-1.5 pt-1.5 border-t border-border/50">
+                    <span className="text-[11px] font-medium text-muted-foreground mr-1">
+                      Bộ lọc đang bật:
+                    </span>
+                    {selectedTopic && (
+                      <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-muted text-[11px] font-medium text-foreground border border-border">
+                        <span>
+                          Chủ đề: {TOPIC_OPTIONS.find((o) => o.value === selectedTopic)?.label || selectedTopic}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveFilter('topic')}
+                          className="hover:text-destructive text-muted-foreground p-0.5 rounded transition-colors cursor-pointer"
+                          aria-label="Xóa bộ lọc chủ đề"
+                        >
+                          <X className="w-3 h-3" />
+                        </button>
+                      </span>
+                    )}
+                    {selectedSourceType && (
+                      <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-muted text-[11px] font-medium text-foreground border border-border">
+                        <span>
+                          Nguồn: {SOURCE_TYPE_OPTIONS.find((o) => o.value === selectedSourceType)?.label || selectedSourceType}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveFilter('source_type')}
+                          className="hover:text-destructive text-muted-foreground p-0.5 rounded transition-colors cursor-pointer"
+                          aria-label="Xóa bộ lọc loại nguồn"
+                        >
+                          <X className="w-3 h-3" />
+                        </button>
+                      </span>
+                    )}
+                    {goldenOnly && (
+                      <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-amber-500/10 text-amber-600 dark:text-amber-400 text-[11px] font-medium border border-amber-500/20">
+                        <Star className="w-3 h-3 fill-amber-500" />
+                        <span>Chỉ Golden Documents</span>
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveFilter('golden')}
+                          className="hover:text-destructive text-amber-600 dark:text-amber-400 p-0.5 rounded transition-colors cursor-pointer"
+                          aria-label="Xóa bộ lọc Golden Documents"
+                        >
+                          <X className="w-3 h-3" />
+                        </button>
+                      </span>
+                    )}
+                    {selectedPhase && (
+                      <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-muted text-[11px] font-medium text-foreground border border-border">
+                        <span>Phase {selectedPhase}</span>
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveFilter('phase')}
+                          className="hover:text-destructive text-muted-foreground p-0.5 rounded transition-colors cursor-pointer"
+                          aria-label="Xóa bộ lọc Phase"
+                        >
+                          <X className="w-3 h-3" />
+                        </button>
+                      </span>
+                    )}
+                  </div>
                 )}
               </div>
 

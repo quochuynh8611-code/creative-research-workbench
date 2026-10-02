@@ -769,4 +769,148 @@ describe('SemanticSearchExplorer Component Tests (Phase 10.3 Increment 1 - 6)', 
       expect(screen.queryByRole('link', { name: /Quay lại phiên nghiên cứu/i })).not.toBeInTheDocument()
     })
   })
+
+  describe('Phase 10.3 Increment 9: Active Search Scope Clarity & Removable Filter Chips Bar', () => {
+    it('Scenario 24: Render đúng Scope Badge và Active Filter Chips khi có bộ lọc', async () => {
+      mockSearchParams = new URLSearchParams('q=độ+bền&topic=contradiction&golden=true&phase=2&session_id=sess-test')
+
+      mockedSearchKnowledge.mockResolvedValueOnce({
+        results: [
+          {
+            chunk_id: 'chk-durability',
+            source_ref: 'docs/triz_p10.md',
+            excerpt: 'Độ bền cơ học.',
+            score: 0.91,
+            metadata: { topic: 'contradiction' },
+          },
+        ],
+        latency_ms: 8.0,
+      })
+
+      mockedGetSession.mockResolvedValueOnce({
+        id: 'sess-test',
+        title: 'Tối ưu độ bền vật liệu composite',
+        domain: 'materials',
+        status: 'active',
+        tags: [],
+      } as any)
+
+      renderWithClient(<SemanticSearchExplorer />)
+
+      // Chờ kết quả hiển thị
+      expect(await screen.findByText('Độ bền cơ học.')).toBeInTheDocument()
+
+      // Scope Badge
+      expect(screen.getByText(/Phiên: Tối ưu độ bền vật liệu composite/i)).toBeInTheDocument()
+
+      // Filter Chips
+      expect(screen.getByText(/Chủ đề: Mâu thuẫn/i)).toBeInTheDocument()
+      expect(screen.getByText(/Chỉ Golden Documents/i)).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: /Xóa bộ lọc Phase/i })).toBeInTheDocument()
+    })
+
+    it('Scenario 25: Gỡ bỏ một chip riêng lẻ cập nhật đúng state và URL params', async () => {
+      mockSearchParams = new URLSearchParams('q=độ+bền&topic=contradiction&golden=true&phase=2&session_id=sess-test')
+
+      mockedSearchKnowledge.mockResolvedValueOnce({
+        results: [
+          {
+            chunk_id: 'chk-durability',
+            source_ref: 'docs/triz_p10.md',
+            excerpt: 'Độ bền cơ học.',
+            score: 0.91,
+            metadata: { topic: 'contradiction' },
+          },
+        ],
+        latency_ms: 8.0,
+      })
+
+      renderWithClient(<SemanticSearchExplorer />)
+
+      await screen.findByText('Độ bền cơ học.')
+
+      // Nút xóa Golden Documents chip
+      const removeGoldenBtn = screen.getByRole('button', { name: /Xóa bộ lọc Golden Documents/i })
+      expect(removeGoldenBtn).toBeInTheDocument()
+
+      // Click xóa
+      fireEvent.click(removeGoldenBtn)
+
+      // URL được sync loại bỏ golden=true
+      expect(mockReplace).toHaveBeenCalledWith(
+        expect.stringContaining('q=%C4%91%E1%BB%99+b%E1%BB%81n')
+      )
+      expect(mockReplace).toHaveBeenCalledWith(
+        expect.stringContaining('topic=contradiction')
+      )
+      expect(mockReplace).toHaveBeenCalledWith(
+        expect.stringContaining('phase=2')
+      )
+      expect(mockReplace).not.toHaveBeenCalledWith(
+        expect.stringContaining('golden=true')
+      )
+    })
+
+    it('Scenario 26: Render đúng Standalone Scope Badge khi không có session_id', async () => {
+      mockSearchParams = new URLSearchParams('q=triz')
+
+      mockedSearchKnowledge.mockResolvedValueOnce({
+        results: [
+          {
+            chunk_id: 'chk-triz',
+            source_ref: 'docs/triz.md',
+            excerpt: 'Tổng quan TRIZ.',
+            score: 0.88,
+            metadata: {},
+          },
+        ],
+        latency_ms: 5.0,
+      })
+
+      renderWithClient(<SemanticSearchExplorer />)
+
+      await screen.findByText('Tổng quan TRIZ.')
+
+      // Standalone Scope Badge
+      expect(screen.getByText(/Toàn bộ kho tri thức/i)).toBeInTheDocument()
+      expect(screen.queryByText(/Bộ lọc đang bật:/i)).not.toBeInTheDocument()
+    })
+
+    it('Scenario 27: Gỡ bỏ chip Source Type giữ nguyên các bộ lọc khác', async () => {
+      mockSearchParams = new URLSearchParams('q=nhiệt&source_type=golden_kb&phase=1')
+
+      mockedSearchKnowledge.mockResolvedValueOnce({
+        results: [
+          {
+            chunk_id: 'chk-heat',
+            source_ref: 'docs/heat.md',
+            excerpt: 'Truyền nhiệt.',
+            score: 0.89,
+            metadata: {},
+          },
+        ],
+        latency_ms: 4.0,
+      })
+
+      renderWithClient(<SemanticSearchExplorer />)
+
+      await screen.findByText('Truyền nhiệt.')
+
+      // Chip Source Type
+      expect(screen.getByText(/Nguồn: Golden Knowledge Base/i)).toBeInTheDocument()
+      const removeSourceBtn = screen.getByRole('button', { name: /Xóa bộ lọc loại nguồn/i })
+
+      fireEvent.click(removeSourceBtn)
+
+      expect(mockReplace).toHaveBeenCalledWith(
+        expect.stringContaining('q=nhi%E1%BB%87t')
+      )
+      expect(mockReplace).toHaveBeenCalledWith(
+        expect.stringContaining('phase=1')
+      )
+      expect(mockReplace).not.toHaveBeenCalledWith(
+        expect.stringContaining('source_type=')
+      )
+    })
+  })
 })
