@@ -364,13 +364,17 @@ export function SessionDetail({ sessionId }: SessionDetailProps) {
           <div className="space-y-8">
             <TrizMatrixLookup
               onSelectPrinciple={() => setActiveTab('notebook')}
+              onSaveAsNote={handleSaveAsNote}
             />
             <PrincipleSuggestions
               methods={recommendedMethods}
               onSelectPrinciple={() => setActiveTab('notebook')}
               onSaveAsNote={handleSaveAsNote}
             />
-            <CandidateSolutions sessionId={sessionId} />
+            <CandidateSolutions
+              sessionId={sessionId}
+              onSaveAsNote={handleSaveAsNote}
+            />
           </div>
         )}
 

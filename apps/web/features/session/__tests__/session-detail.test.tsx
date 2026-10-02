@@ -19,6 +19,8 @@ import {
   updateCandidateSolution,
   deleteCandidateSolution,
   exportSessionMarkdown,
+  getTrizParameters,
+  lookupTrizMatrix,
 } from '@/lib/api-client'
 import type { ProblemFrame, ResearchSession } from '@/lib/types'
 
@@ -36,6 +38,8 @@ jest.mock('@/lib/api-client', () => ({
   updateCandidateSolution: jest.fn(),
   deleteCandidateSolution: jest.fn(),
   exportSessionMarkdown: jest.fn(),
+  getTrizParameters: jest.fn(),
+  lookupTrizMatrix: jest.fn(),
 }))
 
 const mockedGetSession = getSession as jest.MockedFunction<typeof getSession>
@@ -44,6 +48,8 @@ const mockedSearchKnowledge = searchKnowledge as jest.MockedFunction<typeof sear
 const mockedListResearchNotes = listResearchNotes as jest.MockedFunction<typeof listResearchNotes>
 const mockedListCandidateSolutions = listCandidateSolutions as jest.MockedFunction<typeof listCandidateSolutions>
 const mockedExportSessionMarkdown = exportSessionMarkdown as jest.MockedFunction<typeof exportSessionMarkdown>
+const mockedGetTrizParameters = getTrizParameters as jest.MockedFunction<typeof getTrizParameters>
+const mockedLookupTrizMatrix = lookupTrizMatrix as jest.MockedFunction<typeof lookupTrizMatrix>
 
 function createTestQueryClient() {
   return new QueryClient({
@@ -394,6 +400,108 @@ describe('Phase 5.4 — Problem Intake & Structuring Canvas Tests', () => {
       expect(await screen.findByText('Thêm ghi chú nghiên cứu')).toBeInTheDocument()
       const textarea = screen.getByPlaceholderText(/nhập ghi chú nghiên cứu/i) as HTMLTextAreaElement
       expect(textarea.value).toContain('Kiến trúc Workflow Engine cho phép chuyển tiếp trạng thái')
+    })
+
+    it('chuyển nguyên tắc từ TrizMatrixLookup sang Notebook và prefill nội dung', async () => {
+      mockedGetSession.mockResolvedValue(MOCK_SESSION_WITH_FRAME)
+      mockedGetTrizParameters.mockResolvedValue({
+        data: [
+          { id: 17, code: 'temperature', name_vi: 'Nhiệt độ', name_en: 'Temperature' },
+          { id: 14, code: 'strength', name_vi: 'Độ bền / Độ cứng', name_en: 'Strength' },
+        ],
+        meta: { total: 2 },
+      })
+      mockedLookupTrizMatrix.mockResolvedValue({
+        improving_parameter: { id: 17, code: 'temperature', name_vi: 'Nhiệt độ', name_en: 'Temperature' },
+        worsening_parameter: { id: 14, code: 'strength', name_vi: 'Độ bền / Độ cứng', name_en: 'Strength' },
+        is_diagonal: false,
+        principles: [
+          {
+            id: 35,
+            principle_id: 35,
+            name_vi: 'Nguyên tắc Chuyển đổi thông số',
+            name_en: 'Parameter changes',
+            description: 'Thay đổi trạng thái vật lý, nồng độ hoặc độ dẻo.',
+          },
+        ],
+        principles_count: 1,
+      })
+      mockedListResearchNotes.mockResolvedValue({ data: [], meta: { total: 0 } })
+
+      renderWithClient(<SessionDetail sessionId="ses-456" />)
+
+      await waitFor(() => {
+        expect(screen.getByText('Tối ưu độ bền và trọng lượng cánh tay robot')).toBeInTheDocument()
+      })
+
+      // Mở tab Ý tưởng & Nguyên tắc
+      const ideationTab = screen.getByRole('button', { name: /Ý tưởng & Nguyên tắc/i })
+      fireEvent.click(ideationTab)
+
+      await waitFor(() => {
+        expect(screen.getByText(/Tra cứu Ma trận Mâu thuẫn TRIZ/i)).toBeInTheDocument()
+      })
+
+      await waitFor(() => {
+        expect(screen.getAllByText(/#17. Nhiệt độ/i)[0]).toBeInTheDocument()
+      })
+
+      fireEvent.change(screen.getByLabelText(/Thông số cần cải thiện/i), { target: { value: '17' } })
+      fireEvent.change(screen.getByLabelText(/Thông số bị suy giảm/i), { target: { value: '14' } })
+      fireEvent.click(screen.getByRole('button', { name: /tra cứu ma trận/i }))
+
+      await waitFor(() => {
+        expect(screen.getByText(/Nguyên tắc Chuyển đổi thông số/i)).toBeInTheDocument()
+      })
+
+      const saveBtns = screen.getAllByRole('button', { name: /lưu vào sổ tay|lưu thành ghi chú/i })
+      fireEvent.click(saveBtns[0])
+
+      // Kiểm tra chuyển sang tab Notebook và form được điền sẵn nguyên tắc TRIZ
+      expect(await screen.findByText('Thêm ghi chú nghiên cứu')).toBeInTheDocument()
+      const textarea = screen.getByPlaceholderText(/nhập ghi chú nghiên cứu/i) as HTMLTextAreaElement
+      expect(textarea.value).toContain('Parameter changes')
+    })
+
+    it('chuyển giải pháp từ CandidateSolutions sang Notebook và prefill nội dung', async () => {
+      mockedGetSession.mockResolvedValue(MOCK_SESSION_WITH_FRAME)
+      mockedListCandidateSolutions.mockResolvedValue({
+        data: [
+          {
+            id: 'sol-101',
+            session_id: 'ses-456',
+            title: 'Hợp kim titan siêu nhẹ',
+            mechanism: 'Cấu trúc mạng tổ ong rỗng chịu lực phân tán.',
+            status: 'accepted',
+            novelty_score: 0.9,
+            feasibility_score: 0.85,
+            risk_notes: 'Giá thành cao',
+            created_at: '2026-10-01T08:00:00Z',
+          },
+        ],
+        meta: { total: 1, session_id: 'ses-456' },
+      })
+      mockedListResearchNotes.mockResolvedValue({ data: [], meta: { total: 0 } })
+
+      renderWithClient(<SessionDetail sessionId="ses-456" />)
+
+      await waitFor(() => {
+        expect(screen.getByText('Tối ưu độ bền và trọng lượng cánh tay robot')).toBeInTheDocument()
+      })
+
+      // Mở tab Ý tưởng & Nguyên tắc
+      const ideationTab = screen.getByRole('button', { name: /Ý tưởng & Nguyên tắc/i })
+      fireEvent.click(ideationTab)
+
+      await screen.findByText('Hợp kim titan siêu nhẹ')
+
+      const saveBtns = screen.getAllByRole('button', { name: /lưu vào sổ tay|lưu thành ghi chú/i })
+      fireEvent.click(saveBtns[0])
+
+      // Kiểm tra chuyển sang tab Notebook và form được điền sẵn giải pháp
+      expect(await screen.findByText('Thêm ghi chú nghiên cứu')).toBeInTheDocument()
+      const textarea = screen.getByPlaceholderText(/nhập ghi chú nghiên cứu/i) as HTMLTextAreaElement
+      expect(textarea.value).toContain('Hợp kim titan siêu nhẹ')
     })
   })
 

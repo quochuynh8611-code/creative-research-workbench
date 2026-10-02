@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { Sparkles } from 'lucide-react'
 import {
   listResearchNotes,
   createResearchNote,
@@ -41,6 +42,7 @@ export function ResearchNotebook({
   const queryClient = useQueryClient()
   const [content, setContent] = useState(initialDraft?.content || '')
   const [noteType, setNoteType] = useState<NoteType>(initialDraft?.note_type || 'insight')
+  const [isDraftActive, setIsDraftActive] = useState<boolean>(Boolean(initialDraft))
   const [validationError, setValidationError] = useState<string | null>(null)
   const [actionError, setActionError] = useState<string | null>(null)
 
@@ -50,9 +52,19 @@ export function ResearchNotebook({
       if (initialDraft.note_type) {
         setNoteType(initialDraft.note_type)
       }
+      setIsDraftActive(true)
       setValidationError(null)
     }
   }, [initialDraft])
+
+  const handleDiscardDraft = () => {
+    setContent('')
+    setNoteType('insight')
+    setIsDraftActive(false)
+    setValidationError(null)
+    setActionError(null)
+    onClearDraft?.()
+  }
 
   const {
     data: notesResponse,
@@ -72,6 +84,7 @@ export function ResearchNotebook({
       queryClient.invalidateQueries({ queryKey: ['sessions', sessionId, 'notes'] })
       setContent('')
       setNoteType('insight')
+      setIsDraftActive(false)
       setValidationError(null)
       setActionError(null)
       onClearDraft?.()
@@ -140,6 +153,23 @@ export function ResearchNotebook({
           </svg>
           Thêm ghi chú nghiên cứu
         </h3>
+
+        {/* Draft Active Indicator Banner */}
+        {isDraftActive && (
+          <div className="p-3 mb-4 rounded-xl bg-amber-500/10 border border-amber-500/25 flex items-center justify-between gap-3 text-xs">
+            <div className="flex items-center gap-2 text-amber-800 dark:text-amber-300 font-medium">
+              <Sparkles className="w-4 h-4 text-amber-500 shrink-0" />
+              <span>Đang soạn thảo từ bản nháp gợi ý / trích dẫn</span>
+            </div>
+            <button
+              type="button"
+              onClick={handleDiscardDraft}
+              className="px-2.5 py-1 text-[11px] font-semibold text-amber-800 dark:text-amber-300 hover:bg-amber-500/20 rounded-lg transition-colors border border-amber-500/30 cursor-pointer"
+            >
+              Hủy nháp
+            </button>
+          </div>
+        )}
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>

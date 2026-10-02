@@ -12,18 +12,21 @@ import {
   CheckCircle2,
   Lightbulb,
   Info,
+  Bookmark,
 } from 'lucide-react'
 import { getTrizParameters, lookupTrizMatrix } from '@/lib/api-client'
-import type { TrizPrinciple, TrizLookupResponse } from '@/lib/types'
+import type { TrizPrinciple, TrizLookupResponse, NoteDraft } from '@/lib/types'
 import { cn } from '@/lib/utils'
 
 interface TrizMatrixLookupProps {
   onSelectPrinciple?: (principle: TrizPrinciple) => void
+  onSaveAsNote?: (draft: NoteDraft) => void
   className?: string
 }
 
 export function TrizMatrixLookup({
   onSelectPrinciple,
+  onSaveAsNote,
   className,
 }: TrizMatrixLookupProps) {
   const [improvingId, setImprovingId] = useState<number | ''>('')
@@ -245,8 +248,23 @@ export function TrizMatrixLookup({
                           )}
                         </div>
 
-                        {onSelectPrinciple && (
-                          <div className="pt-2 border-t border-border/50 flex justify-end">
+                        <div className="pt-2 border-t border-border/50 flex flex-wrap items-center justify-end gap-2">
+                          {onSaveAsNote && (
+                            <button
+                              type="button"
+                              onClick={() =>
+                                onSaveAsNote({
+                                  content: `[Ma trận TRIZ - Nguyên tắc #${pid}: ${principle.name_vi} (${principle.name_en})]\n${principle.description}${principle.explanation ? `\n\nGiải thích: ${principle.explanation}` : ''}`,
+                                  note_type: 'hypothesis',
+                                })
+                              }
+                              className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium bg-amber-500/10 hover:bg-amber-500/20 text-amber-700 dark:text-amber-400 border border-amber-500/20 transition-all cursor-pointer"
+                            >
+                              <Bookmark className="w-3.5 h-3.5" />
+                              <span>Lưu vào sổ tay</span>
+                            </button>
+                          )}
+                          {onSelectPrinciple && (
                             <button
                               type="button"
                               onClick={() => onSelectPrinciple(principle)}
@@ -255,8 +273,8 @@ export function TrizMatrixLookup({
                               <Lightbulb className="w-3 h-3" />
                               <span>Đưa vào ý tưởng nghiên cứu</span>
                             </button>
-                          </div>
-                        )}
+                          )}
+                        </div>
                       </div>
                     )
                   })}

@@ -349,4 +349,34 @@ describe('CandidateSolutions Component', () => {
     expect(await screen.findByText('Cánh tản nhiệt vi kênh đa tầng')).toBeInTheDocument()
     expect(apiClient.listCandidateSolutions).toHaveBeenCalledWith('ses-456')
   })
+
+  // 11. onSaveAsNote bridge callback
+  it('11. kích hoạt callback onSaveAsNote khi người dùng bấm Lưu vào sổ tay trên thẻ giải pháp', async () => {
+    const mockResponse: CandidateSolutionsResponse = {
+      data: MOCK_SOLUTIONS,
+      meta: { total: 2, session_id: 'ses-123' },
+    }
+    ;(apiClient.listCandidateSolutions as jest.Mock).mockResolvedValueOnce(mockResponse)
+    const onSaveAsNoteMock = jest.fn()
+
+    const queryClient = createTestQueryClient()
+    render(
+      <QueryClientProvider client={queryClient}>
+        <CandidateSolutions sessionId="ses-123" onSaveAsNote={onSaveAsNoteMock} />
+      </QueryClientProvider>
+    )
+
+    await screen.findByText('Màng nano polymer tự phục hồi')
+
+    const saveBtns = screen.getAllByRole('button', { name: /lưu vào sổ tay|lưu thành ghi chú/i })
+    expect(saveBtns.length).toBeGreaterThan(0)
+    fireEvent.click(saveBtns[0])
+
+    expect(onSaveAsNoteMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        content: expect.stringContaining('Màng nano polymer tự phục hồi'),
+        note_type: 'hypothesis',
+      })
+    )
+  })
 })

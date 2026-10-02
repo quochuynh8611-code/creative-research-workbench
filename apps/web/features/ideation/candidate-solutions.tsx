@@ -16,6 +16,7 @@ import {
   BarChart2,
   ShieldAlert,
   RotateCcw,
+  Bookmark,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import {
@@ -28,6 +29,7 @@ import type {
   SolutionStatus,
   CandidateSolution,
   CreateCandidateSolutionInput,
+  NoteDraft,
 } from '@/lib/types'
 
 interface CandidateSolutionsProps {
@@ -37,6 +39,7 @@ interface CandidateSolutionsProps {
     title?: string
     mechanism?: string
   } | null
+  onSaveAsNote?: (draft: NoteDraft) => void
 }
 
 const STATUS_LABELS: Record<SolutionStatus, string> = {
@@ -55,6 +58,7 @@ export function CandidateSolutions({
   sessionId,
   className = '',
   initialDraft,
+  onSaveAsNote,
 }: CandidateSolutionsProps) {
   const queryClient = useQueryClient()
   const [title, setTitle] = useState(initialDraft?.title || '')
@@ -526,10 +530,10 @@ export function CandidateSolutions({
 
                   {/* Quick Action Status Workflow */}
                   <div className="pt-2 border-t border-border/60 flex flex-wrap items-center justify-between gap-2">
-                    <span className="text-[11px] text-muted-foreground">
-                      Chuyển trạng thái:
-                    </span>
                     <div className="flex items-center gap-2">
+                      <span className="text-[11px] text-muted-foreground">
+                        Chuyển trạng thái:
+                      </span>
                       {sol.status !== 'accepted' && (
                         <button
                           type="button"
@@ -581,6 +585,23 @@ export function CandidateSolutions({
                         </button>
                       )}
                     </div>
+
+                    {onSaveAsNote && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const riskPart = sol.risk_notes ? `\nGhi chú rủi ro: ${sol.risk_notes}` : ''
+                          onSaveAsNote({
+                            content: `[Giải pháp ứng viên: ${sol.title}]\nCơ chế: ${sol.mechanism}\nĐiểm mới: ${noveltyPercent}% | Tính khả thi: ${feasibilityPercent}%${riskPart}`,
+                            note_type: sol.status === 'accepted' ? 'decision' : 'hypothesis',
+                          })
+                        }}
+                        className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold rounded-lg bg-primary/10 hover:bg-primary/20 text-primary border border-primary/20 transition-all cursor-pointer"
+                      >
+                        <Bookmark className="w-3.5 h-3.5" />
+                        <span>Lưu vào sổ tay</span>
+                      </button>
+                    )}
                   </div>
                 </div>
               )

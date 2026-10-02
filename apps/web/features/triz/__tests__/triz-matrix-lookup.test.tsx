@@ -235,4 +235,40 @@ describe('Track 1.3 — TrizMatrixLookup Component Tests', () => {
       expect(screen.getByText(/Tra cứu Ma trận Mâu thuẫn TRIZ/i)).toBeInTheDocument()
     })
   })
+
+  it('6. Kích hoạt callback onSaveAsNote khi người dùng bấm Lưu vào sổ tay trên thẻ nguyên tắc', async () => {
+    ;(apiClient.getTrizParameters as jest.Mock).mockResolvedValueOnce(MOCK_PARAMETERS_RESPONSE)
+    ;(apiClient.lookupTrizMatrix as jest.Mock).mockResolvedValueOnce(MOCK_LOOKUP_OFF_DIAGONAL)
+    const onSaveAsNoteMock = jest.fn()
+    const queryClient = createTestQueryClient()
+
+    render(
+      <QueryClientProvider client={queryClient}>
+        <TrizMatrixLookup onSaveAsNote={onSaveAsNoteMock} />
+      </QueryClientProvider>
+    )
+
+    await waitFor(() => {
+      expect(screen.getAllByText(/#17. Nhiệt độ/i)[0]).toBeInTheDocument()
+    })
+
+    fireEvent.change(screen.getByLabelText(/Thông số cần cải thiện/i), { target: { value: '17' } })
+    fireEvent.change(screen.getByLabelText(/Thông số bị suy giảm/i), { target: { value: '14' } })
+    fireEvent.click(screen.getByRole('button', { name: /tra cứu ma trận/i }))
+
+    await waitFor(() => {
+      expect(screen.getByText(/Nguyên tắc Chuyển đổi thông số/i)).toBeInTheDocument()
+    })
+
+    const saveBtns = screen.getAllByRole('button', { name: /lưu vào sổ tay|lưu ghi chú/i })
+    expect(saveBtns.length).toBeGreaterThan(0)
+    fireEvent.click(saveBtns[0])
+
+    expect(onSaveAsNoteMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        content: expect.stringContaining('#35'),
+        note_type: 'hypothesis',
+      })
+    )
+  })
 })

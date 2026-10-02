@@ -267,4 +267,76 @@ describe('ResearchNotebook Component', () => {
       expect(onClearDraftMock).toHaveBeenCalled()
     })
   })
+
+  // 8. Draft Banner indicator and Discard draft button
+  it('8. hiển thị draft banner khi có initialDraft và gọi onClearDraft + xóa text khi bấm Hủy nháp', async () => {
+    const mockResponse: ResearchNotesResponse = {
+      data: MOCK_NOTES,
+      meta: { total: 2 },
+    }
+    ;(apiClient.listResearchNotes as jest.Mock).mockResolvedValue(mockResponse)
+    const onClearDraftMock = jest.fn()
+    const draft = {
+      content: '[Nguyên tắc sáng tạo #35: Parameter changes]\nThay đổi thông số vật lý',
+      note_type: 'hypothesis' as const,
+    }
+
+    const queryClient = createTestQueryClient()
+    render(
+      <QueryClientProvider client={queryClient}>
+        <ResearchNotebook
+          sessionId="ses-123"
+          initialDraft={draft}
+          onClearDraft={onClearDraftMock}
+        />
+      </QueryClientProvider>
+    )
+
+    await screen.findByText('Phát hiện cơ chế phân tán nhiệt qua cấu trúc tổ ong')
+
+    // Draft banner indicator
+    expect(screen.getByText(/đang soạn thảo từ bản nháp/i)).toBeInTheDocument()
+    const textarea = screen.getByPlaceholderText(/nhập ghi chú/i)
+    expect(textarea).toHaveValue(draft.content)
+
+    // Discard draft button
+    const clearDraftBtn = screen.getByRole('button', { name: /hủy nháp|xóa bản nháp/i })
+    fireEvent.click(clearDraftBtn)
+
+    expect(onClearDraftMock).toHaveBeenCalled()
+    expect(textarea).toHaveValue('')
+    expect(screen.queryByText(/đang soạn thảo từ bản nháp/i)).not.toBeInTheDocument()
+  })
+
+  // 9. Preserve draft content on API failure
+  it('9. giữ nguyên nội dung ghi chú trong textarea khi API tạo ghi chú thất bại để người dùng có thể thử lại', async () => {
+    const mockResponse: ResearchNotesResponse = {
+      data: [],
+      meta: { total: 0 },
+    }
+    ;(apiClient.listResearchNotes as jest.Mock).mockResolvedValue(mockResponse)
+    ;(apiClient.createResearchNote as jest.Mock).mockRejectedValueOnce(new Error('Lỗi máy chủ 500'))
+
+    const queryClient = createTestQueryClient()
+    render(
+      <QueryClientProvider client={queryClient}>
+        <ResearchNotebook sessionId="ses-123" />
+      </QueryClientProvider>
+    )
+
+    await screen.findByText(/chưa có ghi chú nào/i)
+
+    const textarea = screen.getByPlaceholderText(/nhập ghi chú/i)
+    const submitBtn = screen.getByRole('button', { name: /lưu ghi chú/i })
+
+    fireEvent.change(textarea, { target: { value: 'Ghi chú quan trọng cần thử lại' } })
+    fireEvent.click(submitBtn)
+
+    await waitFor(() => {
+      expect(screen.getByText(/Lỗi máy chủ 500/i)).toBeInTheDocument()
+    })
+
+    // Content should be preserved, not wiped
+    expect(textarea).toHaveValue('Ghi chú quan trọng cần thử lại')
+  })
 })
