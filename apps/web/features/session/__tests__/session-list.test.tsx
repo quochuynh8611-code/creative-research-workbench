@@ -4,8 +4,16 @@ import { render, screen, waitFor, fireEvent } from '@testing-library/react'
 import '@testing-library/jest-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { SessionList } from '../session-list'
-import { listSessions, createSession, archiveSession, restoreSession } from '@/lib/api-client'
-import type { ResearchSession, SessionListResponse } from '@/lib/types'
+import {
+  listSessions,
+  createSession,
+  archiveSession,
+  restoreSession,
+  importSession,
+  getSessionTemplates,
+  createSessionFromTemplate,
+} from '@/lib/api-client'
+import type { ResearchSession, SessionListResponse, SessionTemplate } from '@/lib/types'
 
 // Mock api-client to avoid actual network calls
 jest.mock('@/lib/api-client', () => ({
@@ -13,12 +21,18 @@ jest.mock('@/lib/api-client', () => ({
   createSession: jest.fn(),
   archiveSession: jest.fn(),
   restoreSession: jest.fn(),
+  importSession: jest.fn(),
+  getSessionTemplates: jest.fn(),
+  createSessionFromTemplate: jest.fn(),
 }))
 
 const mockedListSessions = listSessions as jest.MockedFunction<typeof listSessions>
 const mockedCreateSession = createSession as jest.MockedFunction<typeof createSession>
 const mockedArchiveSession = archiveSession as jest.MockedFunction<typeof archiveSession>
 const mockedRestoreSession = restoreSession as jest.MockedFunction<typeof restoreSession>
+const mockedImportSession = importSession as jest.MockedFunction<typeof importSession>
+const mockedGetSessionTemplates = getSessionTemplates as jest.MockedFunction<typeof getSessionTemplates>
+const mockedCreateSessionFromTemplate = createSessionFromTemplate as jest.MockedFunction<typeof createSessionFromTemplate>
 
 
 function createTestQueryClient() {
@@ -547,6 +561,89 @@ describe('SessionList Lifecycle & Safe Deletion (Phase 5.9)', () => {
     await waitFor(() => {
       expect(screen.getByText(/không có session nào được lưu trữ/i)).toBeInTheDocument()
       expect(screen.getByText(/các session được lưu trữ an toàn sẽ xuất hiện tại đây/i)).toBeInTheDocument()
+    })
+  })
+
+  it('18. Mở modal Mẫu nghiên cứu và hiển thị danh sách domain templates', async () => {
+    mockedListSessions.mockResolvedValue({
+      data: MOCK_ACTIVE_SESSIONS,
+      meta: { total: 1 },
+    })
+    mockedGetSessionTemplates.mockResolvedValue([
+      {
+        id: 'engineering_composite_arm',
+        title: 'Tối ưu hóa Trọng lượng & Độ bền Cơ học',
+        domain: 'technical',
+        description: 'Mẫu cơ khí TRIZ',
+        tags: ['engineering', 'triz'],
+        workflow_state: 'structuring',
+      },
+    ])
+
+    renderWithClient(<SessionList />)
+
+    await waitFor(() => {
+      expect(screen.getByText('Session Hoạt Động')).toBeInTheDocument()
+    })
+
+    const templatesBtn = screen.getByRole('button', { name: /mẫu nghiên cứu/i })
+    fireEvent.click(templatesBtn)
+
+    await waitFor(() => {
+      expect(screen.getByText('Mẫu Nghiên cứu Định sẵn (Domain Templates)')).toBeInTheDocument()
+      expect(screen.getByText('Tối ưu hóa Trọng lượng & Độ bền Cơ học')).toBeInTheDocument()
+      expect(screen.getByText('Mẫu cơ khí TRIZ')).toBeInTheDocument()
+    })
+  })
+
+  it('19. Bấm Áp dụng mẫu này gọi createSessionFromTemplate và đóng modal', async () => {
+    mockedListSessions.mockResolvedValue({
+      data: MOCK_ACTIVE_SESSIONS,
+      meta: { total: 1 },
+    })
+    mockedGetSessionTemplates.mockResolvedValue([
+      {
+        id: 'engineering_composite_arm',
+        title: 'Tối ưu hóa Trọng lượng & Độ bền Cơ học',
+        domain: 'technical',
+        description: 'Mẫu cơ khí TRIZ',
+        tags: ['engineering'],
+        workflow_state: 'structuring',
+      },
+    ])
+    mockedCreateSessionFromTemplate.mockResolvedValue({
+      id: 'new-tpl-ses-1',
+      title: 'Tối ưu hóa Trọng lượng & Độ bền Cơ học',
+      domain: 'technical',
+      status: 'active',
+      workflow_state: 'structuring',
+      tags: ['engineering'],
+      created_at: '2026-10-02T12:00:00Z',
+      updated_at: '2026-10-02T12:00:00Z',
+    })
+
+    renderWithClient(<SessionList />)
+
+    await waitFor(() => {
+      expect(screen.getByText('Session Hoạt Động')).toBeInTheDocument()
+    })
+
+    // Mở modal
+    fireEvent.click(screen.getByRole('button', { name: /mẫu nghiên cứu/i }))
+
+    await waitFor(() => {
+      expect(screen.getByText('Tối ưu hóa Trọng lượng & Độ bền Cơ học')).toBeInTheDocument()
+    })
+
+    // Bấm nút "Áp dụng mẫu này"
+    const applyBtn = screen.getByRole('button', { name: /áp dụng mẫu này/i })
+    fireEvent.click(applyBtn)
+
+    await waitFor(() => {
+      expect(mockedCreateSessionFromTemplate).toHaveBeenCalledWith({
+        template_id: 'engineering_composite_arm',
+      })
+      expect(screen.queryByText('Mẫu Nghiên cứu Định sẵn (Domain Templates)')).not.toBeInTheDocument()
     })
   })
 })

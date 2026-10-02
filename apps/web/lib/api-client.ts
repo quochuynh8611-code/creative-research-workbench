@@ -6,14 +6,16 @@ import type {
   CandidateSolution,
   CandidateSolutionsResponse,
   CreateCandidateSolutionInput,
-  CreateSessionInput,
   CreateResearchNoteInput,
+  CreateSessionFromTemplateInput,
+  CreateSessionInput,
   DeleteCandidateSolutionResponse,
   DeleteDocumentResponse,
   DeleteResearchNoteResponse,
   DocumentDetail,
   DocumentListResponse,
   DocumentUploadResponse,
+  ImportSessionResponse,
   NextStepResponse,
   ProblemFrame,
   ProblemFrameCreateInput,
@@ -24,6 +26,8 @@ import type {
   SearchResponse,
   SessionExportSnapshot,
   SessionListResponse,
+  SessionTemplate,
+  SessionTemplatesResponse,
   TrizLookupQuery,
   TrizLookupResponse,
   TrizParametersResponse,
@@ -350,6 +354,43 @@ export async function exportSessionJson(sessionId: string): Promise<SessionExpor
 export async function generateAIResearchReport(sessionId: string): Promise<AIResearchReport> {
   const response = await apiClient.post<{ data?: AIResearchReport } & AIResearchReport>(
     `/api/v1/sessions/${sessionId}/ai/generate-report`
+  )
+  return response.data.data ?? response.data
+}
+
+/**
+ * 27. Nhập phiên nghiên cứu từ snapshot JSON export (Phase 9.3).
+ */
+export async function importSession(
+  snapshotData: Record<string, any>
+): Promise<ImportSessionResponse> {
+  const response = await apiClient.post<ImportSessionResponse>(
+    '/api/v1/sessions/import',
+    snapshotData
+  )
+  return response.data
+}
+
+/**
+ * 28. Lấy danh sách mẫu bài toán nghiên cứu định sẵn (Domain Templates - Phase 9.3).
+ */
+export async function getSessionTemplates(): Promise<SessionTemplate[]> {
+  const response = await apiClient.get<SessionTemplatesResponse | { data: SessionTemplate[] }>(
+    '/api/v1/sessions/templates'
+  )
+  const result = response.data
+  return Array.isArray(result) ? result : result.data
+}
+
+/**
+ * 29. Tạo phiên nghiên cứu mới từ Domain Template (Phase 9.3).
+ */
+export async function createSessionFromTemplate(
+  input: CreateSessionFromTemplateInput
+): Promise<ResearchSession> {
+  const response = await apiClient.post<{ data?: ResearchSession } & ResearchSession>(
+    '/api/v1/sessions/from-template',
+    input
   )
   return response.data.data ?? response.data
 }

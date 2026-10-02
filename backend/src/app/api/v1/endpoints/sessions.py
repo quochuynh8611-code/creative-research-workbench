@@ -25,6 +25,8 @@ from app.services.session_export_service import (
     export_session_as_json,
     export_session_as_markdown,
 )
+from app.services.session_import_service import import_session_from_json
+from app.services.domain_templates import get_all_templates, get_template_by_id
 from app.services.workflow_engine import (
     InvalidTransitionError,
     WorkflowEngine,
@@ -353,6 +355,143 @@ async def list_sessions(
     return {
         "data": items,
         "meta": {"total": total_count},
+    }
+
+
+# ──────────────────────────────────────────────
+# Session Import & Domain Templates Endpoints (Phase 9.3)
+# ──────────────────────────────────────────────
+
+class CreateSessionFromTemplateRequest(BaseModel):
+    template_id: str = Field(..., min_length=1)
+    custom_title: Optional[str] = None
+    title: Optional[str] = None
+
+
+@router.post("/import", status_code=status.HTTP_201_CREATED)
+async def import_session(
+    snapshot: dict[str, Any],
+    db: Session | None = Depends(get_db),
+):
+    """
+    Nhập (Import) session từ JSON export snapshot (Phase 9.3).
+    Tạo session mới kèm ProblemFrame, ResearchNotes và CandidateSolutions.
+    """
+    if db is None:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Database connection is unavailable for session import.",
+        )
+
+    try:
+        new_session, elements_summary = import_session_from_json(snapshot, db)
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e),
+        )
+
+    now_iso = datetime.now(timezone.utc).isoformat()
+    created_iso = new_session.created_at.isoformat() if new_session.created_at else now_iso
+    updated_iso = new_session.updated_at.isoformat() if new_session.updated_at else created_iso
+
+    domain_val = "technical"
+    if new_session.problem_frames and len(new_session.problem_frames) > 0:
+        domain_val = new_session.problem_frames[0].domain or "technical"
+
+    session_payload = {
+        "id": str(new_session.id),
+        "title": new_session.title,
+        "description": new_session.description,
+        "domain": domain_val,
+        "status": (
+            new_session.status.value
+            if hasattr(new_session.status, "value")
+            else str(new_session.status)
+        ),
+        "tags": [],
+        "workflow_state": new_session.workflow_state,
+        "created_at": created_iso,
+        "updated_at": updated_iso,
+    }
+
+    return {
+        "data": session_payload,
+        "imported_elements": elements_summary,
+        "message": "Session imported successfully",
+    }
+
+
+@router.get("/templates", status_code=status.HTTP_200_OK)
+async def list_domain_templates():
+    """Lấy danh sách các mẫu nghiên cứu định sẵn theo lĩnh vực (Domain Templates)."""
+    templates = get_all_templates()
+    return {
+        "data": templates,
+        "meta": {"total": len(templates)},
+    }
+
+
+@router.post("/from-template", status_code=status.HTTP_201_CREATED)
+async def create_session_from_template(
+    body: CreateSessionFromTemplateRequest,
+    db: Session | None = Depends(get_db),
+):
+    """Tạo session mới được khởi tạo sẵn từ Domain Template."""
+    template = get_template_by_id(body.template_id)
+    if not template:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Template with id '{body.template_id}' not found.",
+        )
+
+    if db is None:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Database connection is unavailable.",
+        )
+
+    final_title = (body.custom_title or body.title or template["title"]).strip()
+
+    snapshot_from_tpl = {
+        "session": {
+            "title": final_title,
+            "description": template.get("description"),
+            "domain": template.get("domain", "technical"),
+            "workflow_state": template.get("workflow_state", "structuring"),
+            "tags": template.get("tags", []),
+        },
+        "problem_frame": template.get("problem_frame"),
+    }
+
+    new_session, _ = import_session_from_json(snapshot_from_tpl, db)
+
+    now_iso = datetime.now(timezone.utc).isoformat()
+    created_iso = new_session.created_at.isoformat() if new_session.created_at else now_iso
+    updated_iso = new_session.updated_at.isoformat() if new_session.updated_at else created_iso
+
+    domain_val = template.get("domain", "technical")
+    if new_session.problem_frames and len(new_session.problem_frames) > 0:
+        domain_val = new_session.problem_frames[0].domain or domain_val
+
+    session_payload = {
+        "id": str(new_session.id),
+        "title": new_session.title,
+        "description": new_session.description,
+        "domain": domain_val,
+        "status": (
+            new_session.status.value
+            if hasattr(new_session.status, "value")
+            else str(new_session.status)
+        ),
+        "tags": template.get("tags", []),
+        "workflow_state": new_session.workflow_state,
+        "created_at": created_iso,
+        "updated_at": updated_iso,
+    }
+
+    return {
+        "data": session_payload,
     }
 
 

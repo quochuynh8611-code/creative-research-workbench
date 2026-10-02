@@ -419,3 +419,46 @@ export interface AIResearchReport {
 export interface AIResearchReportResponse {
   data: AIResearchReport
 }
+
+// ──────────────────────────────────────────────
+// Phase 9.3 Session Import & Domain Templates Types
+// ──────────────────────────────────────────────
+
+export interface SessionTemplate {
+  id: string
+  title: string
+  domain: string
+  description: string
+  tags: string[]
+  workflow_state: string
+  problem_frame?: {
+    raw_statement: string
+    normalized_statement?: string | null
+    contradiction_type: string
+    improving_parameter?: string | null
+    worsening_parameter?: string | null
+    domain: string
+  }
+}
+
+export interface SessionTemplatesResponse {
+  data: SessionTemplate[]
+}
+
+export type Session = ResearchSession
+
+export interface CreateSessionFromTemplateInput {
+  template_id: string
+  custom_title?: string
+  title?: string
+}
+
+export interface ImportSessionResponse {
+  data: ResearchSession
+  imported_elements: {
+    problem_frame: boolean
+    notes_count: number
+    solutions_count: number
+  }
+  message?: string
+}

@@ -853,4 +853,88 @@ describe('Frontend API Client Contract Tests (Phase 5.2)', () => {
     expect(result.report_title).toBe('Báo cáo Nghiên cứu: Chiến lược TRIZ')
     expect(result.provenance).toBe('ai_synthesis')
   })
+
+  // 27. Import Session from JSON (Phase 9.3)
+  it('27. importSession gọi POST /api/v1/sessions/import và trả về session data', async () => {
+    const mockSnapshot = {
+      session: { title: 'Imported Session' },
+      problem_frame: null,
+      recommended_methods: [],
+      research_notes: [],
+      candidate_solutions: [],
+    }
+    const mockResponse = {
+      data: {
+        id: 'new-ses-123',
+        title: 'Imported Session',
+        domain: 'technical',
+        status: 'active',
+        workflow_state: 'intake',
+        tags: [],
+        created_at: '2026-10-02T12:00:00Z',
+        updated_at: '2026-10-02T12:00:00Z',
+      },
+      imported_elements: { problem_frame: false, notes_count: 0, solutions_count: 0 },
+      message: 'Session imported successfully',
+    }
+
+    const spy = jest.spyOn(apiClient, 'post').mockResolvedValueOnce({ data: mockResponse })
+
+    const result = await apiClientModule.importSession(mockSnapshot as any)
+
+    expect(spy).toHaveBeenCalledWith('/api/v1/sessions/import', mockSnapshot)
+    expect(result.data.id).toBe('new-ses-123')
+    expect(result.message).toBe('Session imported successfully')
+  })
+
+  // 28. Get Domain Templates (Phase 9.3)
+  it('28. getSessionTemplates gọi GET /api/v1/sessions/templates và trả về danh sách template', async () => {
+    const mockTemplates = [
+      {
+        id: 'engineering_composite_arm',
+        title: 'Tối ưu hóa Trọng lượng & Độ bền Cơ học',
+        domain: 'technical',
+        description: 'Mẫu cơ khí',
+        tags: ['engineering'],
+        problem_frame: null,
+      },
+    ]
+
+    const spy = jest.spyOn(apiClient, 'get').mockResolvedValueOnce({ data: { data: mockTemplates } })
+
+    const result = await apiClientModule.getSessionTemplates()
+
+    expect(spy).toHaveBeenCalledWith('/api/v1/sessions/templates')
+    expect(result).toHaveLength(1)
+    expect(result[0].id).toBe('engineering_composite_arm')
+  })
+
+  // 29. Create Session From Template (Phase 9.3)
+  it('29. createSessionFromTemplate gọi POST /api/v1/sessions/from-template', async () => {
+    const mockCreatedSession = {
+      data: {
+        id: 'new-tpl-ses',
+        title: 'Nghiên cứu Cánh tay Robot',
+        domain: 'technical',
+        status: 'active',
+        workflow_state: 'structuring',
+        tags: ['engineering'],
+        created_at: '2026-10-02T12:00:00Z',
+        updated_at: '2026-10-02T12:00:00Z',
+      },
+    }
+
+    const spy = jest.spyOn(apiClient, 'post').mockResolvedValueOnce({ data: mockCreatedSession })
+
+    const result = await apiClientModule.createSessionFromTemplate({
+      template_id: 'engineering_composite_arm',
+      title: 'Nghiên cứu Cánh tay Robot',
+    })
+
+    expect(spy).toHaveBeenCalledWith('/api/v1/sessions/from-template', {
+      template_id: 'engineering_composite_arm',
+      title: 'Nghiên cứu Cánh tay Robot',
+    })
+    expect(result.id).toBe('new-tpl-ses')
+  })
 })

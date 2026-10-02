@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import Link from 'next/link'
 import {
   Plus,
@@ -16,9 +16,21 @@ import {
   Archive,
   RotateCcw,
   ArchiveRestore,
+  Upload,
+  BookTemplate,
+  Layers,
+  Sparkles,
 } from 'lucide-react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { listSessions, createSession, archiveSession, restoreSession } from '@/lib/api-client'
+import {
+  listSessions,
+  createSession,
+  archiveSession,
+  restoreSession,
+  importSession,
+  getSessionTemplates,
+  createSessionFromTemplate,
+} from '@/lib/api-client'
 import { DOMAIN_LABELS, STATUS_LABELS, STAGE_LABELS, formatDate } from '@/lib/utils'
 import { cn } from '@/lib/utils'
 import type { DomainType } from '@/lib/types'
@@ -49,6 +61,9 @@ export function SessionList() {
   const [formTags, setFormTags] = useState('')
   const [validationError, setValidationError] = useState<string | null>(null)
   const [confirmArchiveId, setConfirmArchiveId] = useState<string | null>(null)
+  const [isTemplateModalOpen, setIsTemplateModalOpen] = useState(false)
+  const [importNotification, setImportNotification] = useState<{ type: 'success' | 'error'; message: string } | null>(null)
+  const fileInputRef = useRef<HTMLInputElement | null>(null)
 
   const queryClient = useQueryClient()
 
@@ -90,6 +105,49 @@ export function SessionList() {
     },
   })
 
+  // 5. Templates Query (Phase 9.3)
+  const { data: templates = [], isLoading: isLoadingTemplates } = useQuery({
+    queryKey: ['session-templates'],
+    queryFn: getSessionTemplates,
+    enabled: isTemplateModalOpen,
+  })
+
+  // 6. Import Mutation (Phase 9.3)
+  const importMutation = useMutation({
+    mutationFn: (snapshot: Record<string, any>) => importSession(snapshot),
+    onSuccess: (res) => {
+      queryClient.invalidateQueries({ queryKey: ['sessions'] })
+      setImportNotification({
+        type: 'success',
+        message: `Đã nhập thành công phiên: "${res.data.title}" (${res.imported_elements?.notes_count ?? 0} ghi chú, ${res.imported_elements?.solutions_count ?? 0} giải pháp).`,
+      })
+      setTimeout(() => setImportNotification(null), 6000)
+    },
+    onError: (err: any) => {
+      const msg = err.response?.data?.detail || err.message || 'Lỗi khi nhập phiên.'
+      setImportNotification({ type: 'error', message: msg })
+    },
+  })
+
+  // 7. Create from Template Mutation (Phase 9.3)
+  const templateMutation = useMutation({
+    mutationFn: (input: { template_id: string; custom_title?: string; title?: string }) =>
+      createSessionFromTemplate(input),
+    onSuccess: (res) => {
+      queryClient.invalidateQueries({ queryKey: ['sessions'] })
+      setIsTemplateModalOpen(false)
+      setImportNotification({
+        type: 'success',
+        message: `Đã khởi tạo phiên nghiên cứu từ Mẫu: "${res.title}".`,
+      })
+      setTimeout(() => setImportNotification(null), 6000)
+    },
+    onError: (err: any) => {
+      const msg = err.response?.data?.detail || err.message || 'Lỗi khi áp dụng mẫu.'
+      setImportNotification({ type: 'error', message: msg })
+    },
+  })
+
   const sessions = data?.data ?? []
   const totalCount = data?.meta?.total ?? sessions.length
   const normalizedQuery = search.toLowerCase().trim()
@@ -115,6 +173,30 @@ export function SessionList() {
   const formatWorkflowState = (state?: string) => {
     if (!state) return null
     return STAGE_LABELS[state] || state
+  }
+
+  const handleFileImport = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    const reader = new FileReader()
+    reader.onload = (event) => {
+      try {
+        const content = event.target?.result as string
+        const parsed = JSON.parse(content)
+        importMutation.mutate(parsed)
+      } catch (err) {
+        setImportNotification({
+          type: 'error',
+          message: 'Tệp không phải là JSON hợp lệ hoặc cấu trúc snapshot bị lỗi.',
+        })
+      } finally {
+        if (fileInputRef.current) {
+          fileInputRef.current.value = ''
+        }
+      }
+    }
+    reader.readAsText(file)
   }
 
   const handleOpenForm = () => {
@@ -174,15 +256,73 @@ export function SessionList() {
           </p>
         </div>
         {!isCreating && (
-          <button
-            onClick={handleOpenForm}
-            className="inline-flex items-center gap-2 bg-primary text-primary-foreground px-4 py-2 rounded-md text-sm font-medium hover:opacity-90 transition-opacity"
-          >
-            <Plus className="w-4 h-4" />
-            Tạo session mới
-          </button>
+          <div className="flex items-center gap-2">
+            <input
+              type="file"
+              ref={fileInputRef}
+              onChange={handleFileImport}
+              accept=".json"
+              className="hidden"
+            />
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={importMutation.isPending}
+              className="inline-flex items-center gap-2 border border-input bg-background hover:bg-muted text-foreground px-3.5 py-2 rounded-md text-sm font-medium transition-colors disabled:opacity-50"
+            >
+              {importMutation.isPending ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <Upload className="w-4 h-4" />
+              )}
+              Nhập JSON
+            </button>
+            <button
+              type="button"
+              onClick={() => setIsTemplateModalOpen(true)}
+              className="inline-flex items-center gap-2 border border-input bg-background hover:bg-muted text-foreground px-3.5 py-2 rounded-md text-sm font-medium transition-colors"
+            >
+              <BookTemplate className="w-4 h-4" />
+              Mẫu nghiên cứu
+            </button>
+            <button
+              onClick={handleOpenForm}
+              className="inline-flex items-center gap-2 bg-primary text-primary-foreground px-4 py-2 rounded-md text-sm font-medium hover:opacity-90 transition-opacity"
+            >
+              <Plus className="w-4 h-4" />
+              Tạo session mới
+            </button>
+          </div>
         )}
       </div>
+
+      {/* Import Notification Banner */}
+      {importNotification && (
+        <div
+          className={cn(
+            'p-4 rounded-md text-sm flex items-center justify-between border',
+            importNotification.type === 'success'
+              ? 'bg-emerald-50 border-emerald-200 text-emerald-800 dark:bg-emerald-950/50 dark:border-emerald-800 dark:text-emerald-300'
+              : 'bg-destructive/10 border-destructive/20 text-destructive'
+          )}
+        >
+          <div className="flex items-center gap-2">
+            {importNotification.type === 'success' ? (
+              <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-600 dark:text-emerald-400" />
+            ) : (
+              <AlertCircle className="w-4 h-4 shrink-0" />
+            )}
+            <span>{importNotification.message}</span>
+          </div>
+          <button
+            type="button"
+            onClick={() => setImportNotification(null)}
+            className="p-1 rounded hover:bg-black/5 dark:hover:bg-white/5 transition-colors"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+      )}
 
       {/* Status Filter Tabs (Active vs Archived) */}
       <div className="flex items-center gap-2 border-b border-border pb-1">
@@ -420,6 +560,88 @@ export function SessionList() {
                   </>
                 )}
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Domain Templates Modal (Phase 9.3) */}
+      {isTemplateModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-150">
+          <div className="bg-card border border-border rounded-xl max-w-2xl w-full p-6 shadow-xl space-y-5 max-h-[85vh] overflow-y-auto">
+            <div className="flex items-center justify-between pb-3 border-b border-border">
+              <div className="flex items-center gap-2">
+                <BookTemplate className="w-5 h-5 text-primary" />
+                <h2 className="text-lg font-semibold">Mẫu Nghiên cứu Định sẵn (Domain Templates)</h2>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsTemplateModalOpen(false)}
+                className="text-muted-foreground hover:text-foreground p-1 rounded-md transition-colors"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <p className="text-sm text-muted-foreground">
+              Chọn mẫu bài toán phù hợp với lĩnh vực của bạn để khởi tạo cấu trúc mâu thuẫn và đề xuất phương pháp TRIZ tự động:
+            </p>
+
+            {isLoadingTemplates && (
+              <div className="flex flex-col items-center justify-center py-10 text-muted-foreground space-y-2">
+                <Loader2 className="w-6 h-6 animate-spin text-primary" />
+                <p className="text-xs">Đang tải danh sách mẫu...</p>
+              </div>
+            )}
+
+            {!isLoadingTemplates && templates.length === 0 && (
+              <p className="text-sm text-center py-8 text-muted-foreground">
+                Không tìm thấy mẫu nghiên cứu nào.
+              </p>
+            )}
+
+            <div className="grid gap-3">
+              {templates.map((tpl) => (
+                <div
+                  key={tpl.id}
+                  className="border border-border/80 hover:border-primary/50 bg-background hover:bg-muted/30 p-4 rounded-lg transition-all flex flex-col justify-between gap-3"
+                >
+                  <div className="space-y-1.5">
+                    <div className="flex items-center justify-between gap-2">
+                      <h3 className="font-semibold text-sm">{tpl.title}</h3>
+                      <span className="text-xs px-2 py-0.5 rounded-full bg-secondary font-medium">
+                        {DOMAIN_LABELS[tpl.domain as DomainType] || tpl.domain}
+                      </span>
+                    </div>
+                    <p className="text-xs text-muted-foreground">{tpl.description}</p>
+                    {tpl.tags && tpl.tags.length > 0 && (
+                      <div className="flex flex-wrap gap-1 pt-1">
+                        {tpl.tags.map((tg) => (
+                          <span key={tg} className="text-[11px] text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
+                            #{tg}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="flex items-center justify-end pt-2 border-t border-border/40">
+                    <button
+                      type="button"
+                      disabled={templateMutation.isPending}
+                      onClick={() => templateMutation.mutate({ template_id: tpl.id })}
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium bg-primary text-primary-foreground hover:opacity-90 transition-opacity disabled:opacity-50"
+                    >
+                      {templateMutation.isPending ? (
+                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      ) : (
+                        <Sparkles className="w-3.5 h-3.5" />
+                      )}
+                      Áp dụng mẫu này
+                    </button>
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
         </div>
