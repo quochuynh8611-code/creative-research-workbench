@@ -357,7 +357,18 @@ class RetrievalService:
         if phase_filter is not None:
             stmt = stmt.where(Document.phase == str(phase_filter))
 
+        golden_filter = filters.get("golden")
+        if golden_filter is not None:
+            stmt = stmt.where(Document.golden == bool(golden_filter))
+
+        source_type_filter = filters.get("source_type")
+        if source_type_filter:
+            if isinstance(source_type_filter, str):
+                source_type_filter = [source_type_filter]
+            stmt = stmt.where(Document.source_type.in_(source_type_filter))
+
         return stmt
+
 
     @staticmethod
     def _make_excerpt(content: str, max_chars: int = 500) -> str:
