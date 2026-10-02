@@ -7,6 +7,13 @@ import { EvidencePanel } from '../evidence-panel'
 import * as apiClient from '@/lib/api-client'
 import type { SearchResponse } from '@/lib/types'
 
+const mockPush = jest.fn()
+jest.mock('next/navigation', () => ({
+  useRouter: () => ({
+    push: mockPush,
+  }),
+}))
+
 jest.mock('@/lib/api-client', () => ({
   searchKnowledge: jest.fn(),
 }))
@@ -19,7 +26,7 @@ function createTestQueryClient() {
   })
 }
 
-describe('Phase 5.6 — EvidencePanel Component Tests', () => {
+describe('Phase 5.6 & Phase 10.3 — EvidencePanel Component Tests', () => {
   beforeEach(() => {
     jest.clearAllMocks()
   })
@@ -189,5 +196,87 @@ describe('Phase 5.6 — EvidencePanel Component Tests', () => {
         source_chunk_id: 'chunk-001',
       })
     )
+  })
+
+  describe('Phase 10.3 Increment 4: Search Explorer Bridge', () => {
+    it('7. Render CTA "Mở trong Search Explorer" trên thanh công cụ EvidencePanel', async () => {
+      ;(apiClient.searchKnowledge as jest.Mock).mockResolvedValueOnce({ results: [], latency_ms: 10 })
+      const queryClient = createTestQueryClient()
+
+      render(
+        <QueryClientProvider client={queryClient}>
+          <EvidencePanel
+            sessionId="sess-123"
+            initialQuery="từ khóa thử nghiệm"
+          />
+        </QueryClientProvider>
+      )
+
+      const ctaBtn = screen.getByRole('button', { name: /Mở trong Search Explorer/i })
+      expect(ctaBtn).toBeInTheDocument()
+    })
+
+    it('8. Click CTA "Mở trong Search Explorer" điều hướng sang /search với query hiện tại và sessionId', async () => {
+      ;(apiClient.searchKnowledge as jest.Mock).mockResolvedValueOnce({ results: [], latency_ms: 10 })
+      const queryClient = createTestQueryClient()
+
+      render(
+        <QueryClientProvider client={queryClient}>
+          <EvidencePanel
+            sessionId="sess-456"
+            initialQuery="máy bơm nhiệt mini"
+          />
+        </QueryClientProvider>
+      )
+
+      const ctaBtn = screen.getByRole('button', { name: /Mở trong Search Explorer/i })
+      fireEvent.click(ctaBtn)
+
+      expect(mockPush).toHaveBeenCalledTimes(1)
+      expect(mockPush).toHaveBeenCalledWith('/search?q=m%C3%A1y+b%C6%A1m+nhi%E1%BB%87t+mini&session_id=sess-456')
+    })
+
+    it('9. Click CTA ưu tiên searchInput nếu người dùng thay đổi từ khóa trong ô tìm kiếm', async () => {
+      ;(apiClient.searchKnowledge as jest.Mock).mockResolvedValue({ results: [], latency_ms: 10 })
+      const queryClient = createTestQueryClient()
+
+      render(
+        <QueryClientProvider client={queryClient}>
+          <EvidencePanel
+            sessionId="sess-789"
+            initialQuery="từ khóa cũ"
+          />
+        </QueryClientProvider>
+      )
+
+      const searchInput = screen.getByPlaceholderText(/Tìm kiếm tài liệu & bằng chứng/i)
+      fireEvent.change(searchInput, { target: { value: 'nguyên tắc triz mới' } })
+
+      const ctaBtn = screen.getByRole('button', { name: /Mở trong Search Explorer/i })
+      fireEvent.click(ctaBtn)
+
+      expect(mockPush).toHaveBeenCalledTimes(1)
+      expect(mockPush).toHaveBeenCalledWith('/search?q=nguy%C3%AAn+t%E1%BA%AFc+triz+m%E1%BB%9Bi&session_id=sess-789')
+    })
+
+    it('10. Click CTA fallback an toàn khi không có query nào (chỉ mang theo session_id)', async () => {
+      ;(apiClient.searchKnowledge as jest.Mock).mockResolvedValueOnce({ results: [], latency_ms: 10 })
+      const queryClient = createTestQueryClient()
+
+      render(
+        <QueryClientProvider client={queryClient}>
+          <EvidencePanel
+            sessionId="sess-blank"
+            initialQuery=""
+          />
+        </QueryClientProvider>
+      )
+
+      const ctaBtn = screen.getByRole('button', { name: /Mở trong Search Explorer/i })
+      fireEvent.click(ctaBtn)
+
+      expect(mockPush).toHaveBeenCalledTimes(1)
+      expect(mockPush).toHaveBeenCalledWith('/search?session_id=sess-blank')
+    })
   })
 })

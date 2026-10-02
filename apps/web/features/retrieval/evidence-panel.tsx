@@ -1,10 +1,12 @@
 'use client'
 
 import React, { useState } from 'react'
-import { FolderSearch, Search, Loader2, AlertCircle, ExternalLink, Bookmark, Sparkles } from 'lucide-react'
+import { useRouter } from 'next/navigation'
+import { FolderSearch, Search, Loader2, AlertCircle, ExternalLink, Bookmark, Sparkles, ArrowUpRight } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import { searchKnowledge } from '@/lib/api-client'
 import { cn } from '@/lib/utils'
+import { buildSearchExplorerUrl } from '@/features/search/search-utils'
 import type { SearchResultItem, NoteDraft } from '@/lib/types'
 
 interface EvidencePanelProps {
@@ -22,6 +24,13 @@ export function EvidencePanel({
   onSaveAsNote,
   className,
 }: EvidencePanelProps) {
+  let router: any = null
+  try {
+    router = useRouter()
+  } catch {
+    router = null
+  }
+
   const [searchInput, setSearchInput] = useState(initialQuery)
   const [activeQuery, setActiveQuery] = useState(initialQuery)
 
@@ -44,6 +53,15 @@ export function EvidencePanel({
     }
   }
 
+  const handleOpenInExplorer = () => {
+    const queryToUse = searchInput.trim() || activeQuery.trim()
+    const url = buildSearchExplorerUrl({
+      query: queryToUse || undefined,
+      session_id: sessionId,
+    })
+    router.push(url)
+  }
+
   const results: SearchResultItem[] = data?.results || []
 
   return (
@@ -62,24 +80,35 @@ export function EvidencePanel({
           </p>
         </div>
 
-        <form onSubmit={handleSearch} className="flex items-center gap-2">
-          <div className="relative">
-            <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-            <input
-              type="text"
-              value={searchInput}
-              onChange={(e) => setSearchInput(e.target.value)}
-              placeholder="Tìm kiếm tài liệu & bằng chứng..."
-              className="pl-9 pr-3 py-1.5 text-xs rounded-xl border border-input bg-background/80 focus:outline-none focus:ring-2 focus:ring-primary w-64"
-            />
-          </div>
+        <div className="flex items-center gap-2">
+          <form onSubmit={handleSearch} className="flex items-center gap-2">
+            <div className="relative">
+              <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+              <input
+                type="text"
+                value={searchInput}
+                onChange={(e) => setSearchInput(e.target.value)}
+                placeholder="Tìm kiếm tài liệu & bằng chứng..."
+                className="pl-9 pr-3 py-1.5 text-xs rounded-xl border border-input bg-background/80 focus:outline-none focus:ring-2 focus:ring-primary w-64"
+              />
+            </div>
+            <button
+              type="submit"
+              className="px-3 py-1.5 rounded-xl bg-primary text-primary-foreground text-xs font-semibold hover:opacity-90 transition-opacity cursor-pointer"
+            >
+              Tìm
+            </button>
+          </form>
+
           <button
-            type="submit"
-            className="px-3 py-1.5 rounded-xl bg-primary text-primary-foreground text-xs font-semibold hover:opacity-90 transition-opacity"
+            type="button"
+            onClick={handleOpenInExplorer}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-primary/30 bg-primary/5 hover:bg-primary/10 text-primary text-xs font-semibold transition-all shadow-xs shrink-0 cursor-pointer"
           >
-            Tìm
+            <span>Mở trong Search Explorer</span>
+            <ArrowUpRight className="w-3.5 h-3.5" />
           </button>
-        </form>
+        </div>
       </div>
 
       {/* Loading state */}
