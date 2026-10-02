@@ -28,6 +28,8 @@ import {
   listResearchNotes,
   createResearchNote,
   deleteResearchNote,
+  exportSessionJson,
+  generateAIResearchReport,
   apiClient,
 } from '../api-client'
 
@@ -799,5 +801,56 @@ describe('Frontend API Client Contract Tests (Phase 5.2)', () => {
 
     expect(spy).toHaveBeenCalledWith(`/api/v1/documents/${docId}`)
     expect(result.status).toBe('deleted')
+  })
+
+  // 25. Export Session JSON Snapshot (Phase 9A)
+  it('25. exportSessionJson gọi GET /api/v1/sessions/{id}/export?format=json và unwrap data', async () => {
+    const sessionId = 'ses-999'
+    const mockSnapshot = {
+      session: { id: sessionId, title: 'Test Session' },
+      problem_frame: null,
+      recommended_methods: [],
+      research_notes: [],
+      candidate_solutions: [],
+    }
+
+    const spy = jest.spyOn(apiClient, 'get').mockResolvedValueOnce({ data: mockSnapshot })
+
+    const result = await exportSessionJson(sessionId)
+
+    expect(spy).toHaveBeenCalledWith(`/api/v1/sessions/${sessionId}/export`, {
+      params: { format: 'json' },
+    })
+    expect(result.session.id).toBe(sessionId)
+  })
+
+  // 26. Generate AI Research Report (Phase 9A)
+  it('26. generateAIResearchReport gọi POST /api/v1/sessions/{id}/ai/generate-report', async () => {
+    const sessionId = 'ses-999'
+    const mockReportData = {
+      data: {
+        session_id: sessionId,
+        report_title: 'Báo cáo Nghiên cứu: Chiến lược TRIZ',
+        executive_summary: 'Tóm tắt...',
+        problem_background: 'Bối cảnh...',
+        evidence_synthesis: 'Bằng chứng...',
+        solution_assessment: 'Đánh giá...',
+        action_plan: ['Bước 1', 'Bước 2'],
+        markdown_content: '# BÁO CÁO NGHIÊN CỨU\n\n...',
+        provenance: 'ai_synthesis' as const,
+        provider: 'openai',
+        model: 'gpt-4o-mini',
+        prompt_version: '2026-10-02.v1',
+        latency_ms: 1200.0,
+      },
+    }
+
+    const spy = jest.spyOn(apiClient, 'post').mockResolvedValueOnce({ data: mockReportData })
+
+    const result = await generateAIResearchReport(sessionId)
+
+    expect(spy).toHaveBeenCalledWith(`/api/v1/sessions/${sessionId}/ai/generate-report`)
+    expect(result.report_title).toBe('Báo cáo Nghiên cứu: Chiến lược TRIZ')
+    expect(result.provenance).toBe('ai_synthesis')
   })
 })

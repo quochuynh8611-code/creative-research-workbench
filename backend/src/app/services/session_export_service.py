@@ -4,10 +4,11 @@ session_export_service.py — Dịch vụ xuất dữ liệu Session thành báo
 from __future__ import annotations
 
 import uuid
-from typing import Optional
+from typing import Any, Optional
 from sqlalchemy.orm import Session
 
 from app.domain.models import (
+    CandidateSolution,
     ProblemFrame,
     ResearchNote,
     ResearchSession,
@@ -25,6 +26,7 @@ def export_session_as_markdown(session: ResearchSession, db: Session) -> str:
       - Mục 1: Bài toán & Phân tích mâu thuẫn TRIZ
       - Mục 2: Nguyên tắc sáng tạo đề xuất
       - Mục 3: Sổ tay ghi chép nghiên cứu (Research Notes)
+      - Mục 4: Giải pháp đề xuất (Candidate Solutions)
     """
     status_str = (
         session.status.value
@@ -195,4 +197,156 @@ def export_session_as_markdown(session: ResearchSession, db: Session) -> str:
             "",
         ])
 
+    # 5. Section 4: Candidate Solutions (Phase 9A)
+    lines.extend([
+        "# 4. GIẢI PHÁP ĐỀ XUẤT (CANDIDATE SOLUTIONS)",
+        "",
+    ])
+
+    solutions = (
+        db.query(CandidateSolution)
+        .filter_by(session_id=session.id)
+        .order_by(CandidateSolution.created_at.asc(), CandidateSolution.id.asc())
+        .all()
+    )
+
+    if solutions:
+        lines.append(f"Tổng số giải pháp: **{len(solutions)}**\n")
+        for idx, sol in enumerate(solutions, 1):
+            status_upper = (sol.status or "candidate").upper()
+            status_badge = f"[{status_upper}]"
+            lines.extend([
+                f"### {idx}. {status_badge} {sol.title}",
+                "",
+                f"- **Cơ chế hoạt động:** {sol.mechanism.strip()}",
+                f"- **Điểm tính mới (Novelty):** {sol.novelty_score if sol.novelty_score is not None else 0.0} | **Tính khả thi (Feasibility):** {sol.feasibility_score if sol.feasibility_score is not None else 0.0}",
+            ])
+            if sol.risk_notes and sol.risk_notes.strip():
+                lines.extend([
+                    f"- **Rủi ro & Thách thức:** {sol.risk_notes.strip()}",
+                ])
+            lines.extend([
+                f"- **Trạng thái:** `{sol.status}`",
+                f"*(Mã giải pháp: `{sol.id}`)*",
+                "",
+                "---",
+                "",
+            ])
+    else:
+        lines.extend([
+            "_Chưa có giải pháp sáng tạo nào được đề xuất trong phiên này._",
+            "",
+        ])
+
     return "\n".join(lines).strip() + "\n"
+
+
+def export_session_as_json(session: ResearchSession, db: Session) -> dict[str, Any]:
+    """
+    Xuất toàn bộ dữ liệu phiên nghiên cứu dưới dạng JSON snapshot (Phase 9A).
+
+    Bao gồm các root keys:
+      - session: persisted ResearchSession metadata
+      - problem_frame: persisted ProblemFrame mới nhất (kèm thông số mâu thuẫn)
+      - recommended_methods: derived/recomputed tại thời điểm export từ MethodRecommender
+      - research_notes: danh sách tất cả ResearchNote thuộc session
+      - candidate_solutions: danh sách tất cả CandidateSolution thuộc session
+    """
+    status_str = (
+        session.status.value
+        if hasattr(session.status, "value")
+        else str(session.status)
+    )
+    created_iso = session.created_at.isoformat() if session.created_at else None
+    updated_iso = session.updated_at.isoformat() if session.updated_at else created_iso
+
+    session_payload = {
+        "id": str(session.id),
+        "title": session.title,
+        "description": session.description,
+        "status": status_str,
+        "workflow_state": session.workflow_state,
+        "created_at": created_iso,
+        "updated_at": updated_iso,
+    }
+
+    # 1. Problem Frame
+    frame: Optional[ProblemFrame] = (
+        db.query(ProblemFrame)
+        .filter_by(session_id=session.id)
+        .order_by(ProblemFrame.created_at.desc())
+        .first()
+    )
+    frame_payload = None
+    if frame:
+        contra_type_str = (
+            frame.contradiction_type.value
+            if hasattr(frame.contradiction_type, "value")
+            else str(frame.contradiction_type)
+        )
+        frame_payload = {
+            "id": str(frame.id),
+            "session_id": str(frame.session_id),
+            "raw_statement": frame.raw_statement,
+            "normalized_statement": frame.normalized_statement,
+            "contradiction_type": contra_type_str,
+            "improving_parameter": frame.improving_parameter,
+            "worsening_parameter": frame.worsening_parameter,
+            "domain": frame.domain,
+            "created_at": frame.created_at.isoformat() if frame.created_at else None,
+        }
+
+    # 2. Recommended Methods (Derived/Recomputed at export time)
+    recommender = MethodRecommender(bind=db)
+    recommendations = recommender.recommend_methods(session.id) or []
+
+    # 3. Research Notes
+    notes = (
+        db.query(ResearchNote)
+        .filter_by(session_id=session.id)
+        .order_by(ResearchNote.created_at.asc(), ResearchNote.id.asc())
+        .all()
+    )
+    notes_payload = [
+        {
+            "id": str(n.id),
+            "session_id": str(n.session_id),
+            "content": n.content,
+            "note_type": n.note_type,
+            "source_chunk_id": str(n.source_chunk_id) if n.source_chunk_id else None,
+            "created_at": n.created_at.isoformat() if n.created_at else None,
+            "updated_at": n.updated_at.isoformat() if n.updated_at else None,
+        }
+        for n in notes
+    ]
+
+    # 4. Candidate Solutions
+    solutions = (
+        db.query(CandidateSolution)
+        .filter_by(session_id=session.id)
+        .order_by(CandidateSolution.created_at.asc(), CandidateSolution.id.asc())
+        .all()
+    )
+    solutions_payload = [
+        {
+            "id": str(s.id),
+            "session_id": str(s.session_id),
+            "title": s.title,
+            "mechanism": s.mechanism,
+            "status": s.status,
+            "novelty_score": s.novelty_score,
+            "feasibility_score": s.feasibility_score,
+            "risk_notes": s.risk_notes,
+            "created_at": s.created_at.isoformat() if s.created_at else None,
+            "updated_at": s.updated_at.isoformat() if s.updated_at else None,
+        }
+        for s in solutions
+    ]
+
+    return {
+        "session": session_payload,
+        "problem_frame": frame_payload,
+        "recommended_methods": recommendations,
+        "research_notes": notes_payload,
+        "candidate_solutions": solutions_payload,
+    }

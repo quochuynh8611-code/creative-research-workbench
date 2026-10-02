@@ -2,6 +2,7 @@ import axios from 'axios'
 import type {
   AIProblemAnalysisRequest,
   AIProblemAnalysisResponse,
+  AIResearchReport,
   CandidateSolution,
   CandidateSolutionsResponse,
   CreateCandidateSolutionInput,
@@ -21,6 +22,7 @@ import type {
   ResearchSession,
   SearchRequest,
   SearchResponse,
+  SessionExportSnapshot,
   SessionListResponse,
   TrizLookupQuery,
   TrizLookupResponse,
@@ -327,4 +329,27 @@ export async function deleteDocument(documentId: string): Promise<DeleteDocument
     `/api/v1/documents/${documentId}`
   )
   return response.data
+}
+
+/**
+ * 25. Xuất snapshot toàn bộ phiên nghiên cứu dưới dạng JSON (Phase 9A).
+ */
+export async function exportSessionJson(sessionId: string): Promise<SessionExportSnapshot> {
+  const response = await apiClient.get<SessionExportSnapshot>(
+    `/api/v1/sessions/${sessionId}/export`,
+    {
+      params: { format: 'json' },
+    }
+  )
+  return response.data
+}
+
+/**
+ * 26. Sinh Báo cáo Nghiên cứu Tổng hợp AI (Phase 9A — Synthesis & Report Generator).
+ */
+export async function generateAIResearchReport(sessionId: string): Promise<AIResearchReport> {
+  const response = await apiClient.post<{ data?: AIResearchReport } & AIResearchReport>(
+    `/api/v1/sessions/${sessionId}/ai/generate-report`
+  )
+  return response.data.data ?? response.data
 }

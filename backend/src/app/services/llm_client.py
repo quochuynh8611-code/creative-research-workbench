@@ -111,6 +111,10 @@ class LLMClient(ABC):
         """Phân tích bài toán thành cấu trúc chuẩn hóa."""
         ...
 
+    def generate_report(self, session_data: dict[str, Any]) -> dict[str, Any]:
+        """Sinh báo cáo nghiên cứu tổng hợp từ dữ liệu session."""
+        raise NotImplementedError("generate_report is not implemented on base LLMClient.")
+
 
 # ──────────────────────────────────────────────
 # Mock Client
@@ -163,6 +167,23 @@ class MockLLMClient(LLMClient):
             suggested_keywords=[w for w in ["tốc độ", "nhiệt độ", "độ bền", "kết cấu", "động cơ"] if w in lowered] or ["nghiên cứu"],
             reasoning="Phân tích giả lập từ MockLLMClient.",
         )
+
+    def generate_report(self, session_data: dict[str, Any]) -> dict[str, Any]:
+        session_info = session_data.get("session", {})
+        title = session_info.get("title") or "Báo cáo Nghiên cứu"
+        return {
+            "report_title": f"Báo cáo Nghiên cứu: {title}",
+            "executive_summary": f"Tóm tắt: Phân tích tổng hợp đề tài '{title}' bằng phương pháp luận TRIZ.",
+            "problem_background": "Phân tích bối cảnh và các tham số mâu thuẫn kỹ thuật chính.",
+            "evidence_synthesis": "Tổng hợp tri thức và trích dẫn bằng chứng thực nghiệm liên quan.",
+            "solution_assessment": "Đánh giá tính mới và tính khả thi của các phương án giải pháp đề xuất.",
+            "action_plan": [
+                "1. Thử nghiệm vật liệu và cơ chế hoạt động",
+                "2. Hoàn thiện mô hình CAD và phân tích ứng suất",
+                "3. Chế tạo mẫu thử nghiệm chức năng (MVP)",
+            ],
+            "markdown_content": f"# BÁO CÁO TỔNG HỢP NGHIÊN CỨU: {title}\n\nNội dung chi tiết...",
+        }
 
 
 # ──────────────────────────────────────────────

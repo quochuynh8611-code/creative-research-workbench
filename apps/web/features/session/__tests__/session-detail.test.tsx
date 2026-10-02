@@ -38,6 +38,8 @@ jest.mock('@/lib/api-client', () => ({
   updateCandidateSolution: jest.fn(),
   deleteCandidateSolution: jest.fn(),
   exportSessionMarkdown: jest.fn(),
+  exportSessionJson: jest.fn(),
+  generateAIResearchReport: jest.fn(),
   getTrizParameters: jest.fn(),
   lookupTrizMatrix: jest.fn(),
 }))
@@ -629,6 +631,81 @@ describe('Phase 5.4 — Problem Intake & Structuring Canvas Tests', () => {
 
       // Active tab vẫn là Tài liệu & Bằng chứng
       expect(screen.getByText(/Bằng chứng & Tài liệu trích dẫn/i)).toBeInTheDocument()
+    })
+  })
+
+  describe('10. Synthesis Tab & AI Research Report Generator UI Flow (Phase 9A)', () => {
+    it('render tab Tổng hợp & Báo cáo (Synthesis) trên thanh điều hướng tab', async () => {
+      mockedGetSession.mockResolvedValue(MOCK_SESSION_WITH_FRAME)
+      renderWithClient(<SessionDetail sessionId="ses-456" />)
+
+      await waitFor(() => {
+        expect(screen.getByText('Tối ưu độ bền và trọng lượng cánh tay robot')).toBeInTheDocument()
+      })
+
+      // Nút tab Synthesis phải xuất hiện
+      expect(screen.getAllByRole('button', { name: /Tổng hợp & Báo cáo|Synthesis/i })[0]).toBeInTheDocument()
+    })
+
+    it('cho phép mở tab Synthesis và hiển thị nút Tạo Báo cáo AI', async () => {
+      mockedGetSession.mockResolvedValue(MOCK_SESSION_WITH_FRAME)
+      renderWithClient(<SessionDetail sessionId="ses-456" />)
+
+      await waitFor(() => {
+        expect(screen.getByText('Tối ưu độ bền và trọng lượng cánh tay robot')).toBeInTheDocument()
+      })
+
+      const synthesisBtns = screen.getAllByRole('button', { name: /Tổng hợp & Báo cáo|Synthesis/i })
+      fireEvent.click(synthesisBtns[0])
+
+      // Nút CTA tạo báo cáo AI
+      expect(await screen.findByRole('button', { name: /Tạo Báo cáo AI|Sinh Báo cáo/i })).toBeInTheDocument()
+    })
+
+    it('khi click Tạo Báo cáo AI: hiển thị loading state, sau đó render report preview và controls sao chép/tải về', async () => {
+      mockedGetSession.mockResolvedValue(MOCK_SESSION_WITH_FRAME)
+      const mockReportData = {
+        session_id: 'ses-456',
+        report_title: 'Báo cáo Nghiên cứu: Cánh tay Robot',
+        executive_summary: 'Tóm tắt giải pháp tối ưu độ bền và trọng lượng.',
+        problem_background: 'Phân tích mâu thuẫn kỹ thuật...',
+        evidence_synthesis: 'Tổng hợp tri thức và bằng chứng...',
+        solution_assessment: 'Đánh giá các giải pháp composite...',
+        action_plan: ['Thử nghiệm sợi carbon', 'Thiết kế CAD'],
+        markdown_content: '# BÁO CÁO CHIẾN LƯỢC\n\nNội dung chi tiết...',
+        provenance: 'ai_synthesis' as const,
+        provider: 'openai',
+        model: 'gpt-4o-mini',
+      }
+
+      const mockedGenerate = jest.requireMock('@/lib/api-client').generateAIResearchReport as jest.Mock
+      mockedGenerate.mockResolvedValueOnce(mockReportData)
+
+      renderWithClient(<SessionDetail sessionId="ses-456" />)
+
+      await waitFor(() => {
+        expect(screen.getByText('Tối ưu độ bền và trọng lượng cánh tay robot')).toBeInTheDocument()
+      })
+
+      // Chuyển sang tab Synthesis
+      const synthesisBtns = screen.getAllByRole('button', { name: /Tổng hợp & Báo cáo|Synthesis/i })
+      fireEvent.click(synthesisBtns[0])
+
+      const generateBtn = await screen.findByRole('button', { name: /Tạo Báo cáo AI|Sinh Báo cáo/i })
+      fireEvent.click(generateBtn)
+
+      // Kiểm tra gọi đúng API client
+      await waitFor(() => {
+        expect(mockedGenerate).toHaveBeenCalledWith('ses-456')
+      })
+
+      // Kiểm tra preview hiển thị nội dung báo cáo
+      expect(await screen.findByText('Báo cáo Nghiên cứu: Cánh tay Robot')).toBeInTheDocument()
+      expect(screen.getByText(/Tóm tắt giải pháp tối ưu độ bền/i)).toBeInTheDocument()
+
+      // Kiểm tra các controls thao tác báo cáo
+      expect(screen.getByRole('button', { name: /Sao chép|Copy/i })).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: /Tải file \.md|Tải Báo cáo/i })).toBeInTheDocument()
     })
   })
 })

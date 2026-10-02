@@ -378,3 +378,44 @@ export interface DocumentFilterParams {
   limit?: number
   offset?: number
 }
+
+// ──────────────────────────────────────────────
+// Phase 9A Export & AI Research Report Generator Types
+// ──────────────────────────────────────────────
+
+export interface SessionExportSnapshot {
+  session: {
+    id: string
+    title: string
+    description?: string | null
+    status: string
+    workflow_state: string
+    created_at?: string | null
+    updated_at?: string | null
+  }
+  problem_frame: ProblemFrame | null
+  recommended_methods: RecommendedMethod[]
+  research_notes: ResearchNote[]
+  candidate_solutions: CandidateSolution[]
+}
+
+export interface AIResearchReport {
+  session_id: string
+  report_title: string
+  executive_summary: string
+  problem_background: string
+  evidence_synthesis: string
+  solution_assessment: string
+  action_plan: string[]
+  markdown_content: string
+  provenance: 'ai_synthesis' | 'rule_based_fallback'
+  provider?: string
+  model?: string
+  prompt_version?: string
+  latency_ms?: number
+  fallback_reason?: string | null
+}
+
+export interface AIResearchReportResponse {
+  data: AIResearchReport
+}

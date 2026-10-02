@@ -18,9 +18,13 @@ from app.domain.models import (
     SessionStatus,
 )
 from app.services.ai_analysis_service import AIAnalysisService
+from app.services.ai_report_service import AIReportService
 from app.services.method_recommender import MethodRecommender
 from app.services.problem_structuring_service import ProblemStructuringService
-from app.services.session_export_service import export_session_as_markdown
+from app.services.session_export_service import (
+    export_session_as_json,
+    export_session_as_markdown,
+)
 from app.services.workflow_engine import (
     InvalidTransitionError,
     WorkflowEngine,
@@ -75,6 +79,12 @@ def get_method_recommender() -> MethodRecommender:
 def get_ai_analysis_service() -> AIAnalysisService:
     """Dependency cung cấp AIAnalysisService theo cấu hình LLM mặc định."""
     return AIAnalysisService(rule_service=ProblemStructuringService())
+
+
+def get_ai_report_service() -> AIReportService:
+    """Dependency cung cấp AIReportService theo cấu hình LLM mặc định."""
+    return AIReportService()
+
 
 
 
@@ -1045,7 +1055,7 @@ async def delete_candidate_solution(
 
 
 # ──────────────────────────────────────────────
-# Session Export Endpoint (Phase 9.1)
+# Session Export & AI Research Report Endpoints (Phase 9A)
 # ──────────────────────────────────────────────
 
 @router.get("/{session_id}/export")
@@ -1055,16 +1065,20 @@ async def export_session(
     db: Session | None = Depends(get_db),
 ):
     """
-    Xuất báo cáo toàn bộ phiên nghiên cứu ra định dạng Markdown (GFM).
-    - Hỗ trợ format: md, markdown (mặc định: md)
-    - Trả về Content-Type: text/markdown; charset=utf-8
-    - Header Content-Disposition đính kèm file session_{id}.md
+    Xuất báo cáo toàn bộ phiên nghiên cứu ra định dạng Markdown (GFM) hoặc JSON snapshot.
+    - Hỗ trợ format: md, markdown, json (mặc định: md)
+    - Trả về Content-Type:
+        - md/markdown: text/markdown; charset=utf-8
+        - json: application/json; charset=utf-8
+    - Header Content-Disposition đính kèm file session_{id}.md đối với Markdown
     """
+    import json
+
     clean_format = (format or "").strip().lower()
-    if clean_format not in {"md", "markdown"}:
+    if clean_format not in {"md", "markdown", "json"}:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Unsupported export format '{format}'. Supported formats: md, markdown",
+            detail=f"Unsupported export format '{format}'. Supported formats: md, markdown, json",
         )
 
     if db is None:
@@ -1080,6 +1094,13 @@ async def export_session(
             detail=f"ResearchSession with id '{session_id}' not found.",
         )
 
+    if clean_format == "json":
+        snapshot = export_session_as_json(session_record, db)
+        return Response(
+            content=json.dumps(snapshot, ensure_ascii=False),
+            media_type="application/json; charset=utf-8",
+        )
+
     markdown_text = export_session_as_markdown(session_record, db)
     filename = f"session_{session_id}.md"
 
@@ -1090,3 +1111,43 @@ async def export_session(
             "Content-Disposition": f'attachment; filename="{filename}"',
         },
     )
+
+
+@router.post("/{session_id}/ai/generate-report", status_code=status.HTTP_200_OK)
+async def generate_ai_research_report(
+    session_id: uuid.UUID,
+    db: Session | None = Depends(get_db),
+    ai_report_service: AIReportService = Depends(get_ai_report_service),
+):
+    """
+    Sinh Báo cáo Nghiên cứu Tổng hợp AI (Phase 9A — Synthesis & Report Generator).
+
+    AI Trust Contract Guarantee:
+      - Pure suggestion / synthesis preview: KHÔNG ghi đè hay tạo record mới trong DB (zero mutation).
+      - KHÔNG thay đổi workflow_state hay chuyển đổi FSM state.
+      - Trả về cấu trúc báo cáo chuẩn kèm provenance ("ai_synthesis" hoặc "rule_based_fallback").
+    """
+    if db is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"ResearchSession with id '{session_id}' not found.",
+        )
+
+    session_record = db.query(ResearchSession).filter_by(id=session_id).first()
+    if not session_record:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"ResearchSession with id '{session_id}' not found.",
+        )
+
+    try:
+        report = ai_report_service.generate_report(session_id=session_id, db=db)
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(e),
+        )
+
+    return {
+        "data": report.model_dump(),
+    }
