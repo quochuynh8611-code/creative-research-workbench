@@ -1066,4 +1066,103 @@ describe('SemanticSearchExplorer Component Tests (Phase 10.3 Increment 1 - 6)', 
       expect(rehydratedExcerpt).not.toHaveClass('line-clamp-3')
     })
   })
+
+  describe('Phase 10.3 Increment 11: Lightweight Relevance Tiers & Keyword Match Indicators', () => {
+    it('Scenario 32: Render badge Độ khớp cao (94%) và Khớp từ khóa khi score >= 0.90 và match keyword', async () => {
+      mockSearchParams = new URLSearchParams('q=ma+sát')
+
+      mockedSearchKnowledge.mockResolvedValueOnce({
+        results: [
+          {
+            chunk_id: 'chk-friction-1',
+            source_ref: 'docs/friction.md',
+            excerpt: 'Giải pháp giảm ma sát bề mặt trong ổ bi.',
+            score: 0.94,
+            metadata: {},
+          },
+        ],
+        latency_ms: 5.0,
+      })
+
+      renderWithClient(<SemanticSearchExplorer />)
+
+      await screen.findByText(/Giải pháp giảm ma sát bề mặt/i)
+
+      // Badges
+      expect(screen.getByText('Độ khớp cao (94%)')).toBeInTheDocument()
+      expect(screen.getByText('Khớp từ khóa')).toBeInTheDocument()
+    })
+
+    it('Scenario 33: Render badge Độ khớp tốt (82%) khi score trong khoảng 0.75 đến 0.90', async () => {
+      mockSearchParams = new URLSearchParams('q=nhiệt+độ')
+
+      mockedSearchKnowledge.mockResolvedValueOnce({
+        results: [
+          {
+            chunk_id: 'chk-temp-1',
+            source_ref: 'docs/temp.md',
+            excerpt: 'Hệ thống kiểm soát nhiệt độ pin xe điện.',
+            score: 0.82,
+            metadata: {},
+          },
+        ],
+        latency_ms: 6.0,
+      })
+
+      renderWithClient(<SemanticSearchExplorer />)
+
+      await screen.findByText(/Hệ thống kiểm soát nhiệt độ pin/i)
+
+      expect(screen.getByText('Độ khớp tốt (82%)')).toBeInTheDocument()
+      expect(screen.getByText('Khớp từ khóa')).toBeInTheDocument()
+    })
+
+    it('Scenario 34: Render badge Tham khảo (71%) khi score < 0.75 và không có keyword match', async () => {
+      mockSearchParams = new URLSearchParams('q=bền+bỉ')
+
+      mockedSearchKnowledge.mockResolvedValueOnce({
+        results: [
+          {
+            chunk_id: 'chk-ref-1',
+            source_ref: 'docs/other.md',
+            excerpt: 'Tối ưu cơ cấu cơ học giảm chấn động.',
+            score: 0.71,
+            metadata: {},
+          },
+        ],
+        latency_ms: 4.0,
+      })
+
+      renderWithClient(<SemanticSearchExplorer />)
+
+      await screen.findByText(/Tối ưu cơ cấu cơ học/i)
+
+      expect(screen.getByText('Tham khảo (71%)')).toBeInTheDocument()
+      expect(screen.queryByText('Khớp từ khóa')).not.toBeInTheDocument()
+    })
+
+    it('Scenario 35: Bỏ qua token ngắn dưới 3 ký tự khi kiểm tra Khớp từ khóa', async () => {
+      mockSearchParams = new URLSearchParams('q=độ')
+
+      mockedSearchKnowledge.mockResolvedValueOnce({
+        results: [
+          {
+            chunk_id: 'chk-short-token',
+            source_ref: 'docs/strength.md',
+            excerpt: 'Tăng cường độ cứng của thanh giằng.',
+            score: 0.85,
+            metadata: {},
+          },
+        ],
+        latency_ms: 5.0,
+      })
+
+      renderWithClient(<SemanticSearchExplorer />)
+
+      await screen.findByText(/Tăng cường độ cứng/i)
+
+      expect(screen.getByText('Độ khớp tốt (85%)')).toBeInTheDocument()
+      expect(screen.queryByText('Khớp từ khóa')).not.toBeInTheDocument()
+    })
+  })
 })

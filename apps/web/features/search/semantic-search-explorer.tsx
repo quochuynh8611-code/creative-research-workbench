@@ -63,6 +63,59 @@ const SOURCE_TYPE_OPTIONS = [
   { value: 'manual', label: 'Manual & Guidelines' },
 ]
 
+export interface RelevanceTierInfo {
+  tier: 'high' | 'good' | 'reference'
+  label: string
+  scorePercent: number
+  badgeClass: string
+}
+
+export function getRelevanceTierInfo(score: number): RelevanceTierInfo {
+  const scorePercent = Math.round(score * 100)
+  if (score >= 0.9) {
+    return {
+      tier: 'high',
+      label: `Độ khớp cao (${scorePercent}%)`,
+      scorePercent,
+      badgeClass: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20',
+    }
+  }
+  if (score >= 0.75) {
+    return {
+      tier: 'good',
+      label: `Độ khớp tốt (${scorePercent}%)`,
+      scorePercent,
+      badgeClass: 'bg-primary/10 text-primary border-primary/20',
+    }
+  }
+  return {
+    tier: 'reference',
+    label: `Tham khảo (${scorePercent}%)`,
+    scorePercent,
+    badgeClass: 'bg-muted text-muted-foreground border-border',
+  }
+}
+
+export function checkDirectKeywordMatch(
+  query: string,
+  excerpt: string,
+  sourceRef?: string
+): boolean {
+  if (!query || !query.trim()) return false
+  const targetText = `${excerpt || ''} ${sourceRef || ''}`.toLowerCase()
+
+  // Normalize and extract valid tokens (length >= 3)
+  const tokens = query
+    .toLowerCase()
+    .split(/[\s,.;:!?\-+()\[\]"'/]+/)
+    .map((t) => t.trim())
+    .filter((t) => t.length >= 3)
+
+  if (tokens.length === 0) return false
+
+  return tokens.some((token) => targetText.includes(token))
+}
+
 export function SemanticSearchExplorer() {
   const searchParams = useSearchParams()
   const router = useRouter()
@@ -801,8 +854,13 @@ export function SemanticSearchExplorer() {
               {/* Cards List */}
               <div className="space-y-3.5">
                 {displayedResults.map((item) => {
-                  const scorePercent = Math.round(item.score * 100)
                   const meta = item.metadata || {}
+                  const tierInfo = getRelevanceTierInfo(item.score)
+                  const isKeywordMatch = checkDirectKeywordMatch(
+                    submittedQuery,
+                    item.excerpt,
+                    item.source_ref
+                  )
 
                   return (
                     <article
@@ -816,6 +874,24 @@ export function SemanticSearchExplorer() {
                             <FileText className="w-3.5 h-3.5 text-primary" />
                             <span>{item.source_ref}</span>
                           </span>
+
+                          {/* Relevance Tier Badge */}
+                          <span
+                            className={cn(
+                              'px-2 py-0.5 rounded-full text-[10px] font-bold border',
+                              tierInfo.badgeClass
+                            )}
+                          >
+                            {tierInfo.label}
+                          </span>
+
+                          {/* Keyword Match Badge */}
+                          {isKeywordMatch && (
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-violet-500/10 text-violet-600 dark:text-violet-400 border border-violet-500/20">
+                              <Sparkles className="w-2.5 h-2.5" />
+                              <span>Khớp từ khóa</span>
+                            </span>
+                          )}
 
                           {meta.golden && (
                             <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20">
