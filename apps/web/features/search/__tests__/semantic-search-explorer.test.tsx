@@ -4,8 +4,8 @@ import { render, screen, waitFor, fireEvent } from '@testing-library/react'
 import '@testing-library/jest-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { SemanticSearchExplorer } from '../semantic-search-explorer'
-import { searchKnowledge } from '@/lib/api-client'
-import type { SearchResponse } from '@/lib/types'
+import { searchKnowledge, createResearchNote } from '@/lib/api-client'
+import type { SearchResponse, ResearchNote } from '@/lib/types'
 
 let mockSearchParams = new URLSearchParams()
 const mockReplace = jest.fn()
@@ -22,9 +22,11 @@ jest.mock('next/navigation', () => ({
 // Mock api-client
 jest.mock('@/lib/api-client', () => ({
   searchKnowledge: jest.fn(),
+  createResearchNote: jest.fn(),
 }))
 
 const mockedSearchKnowledge = searchKnowledge as jest.MockedFunction<typeof searchKnowledge>
+const mockedCreateResearchNote = createResearchNote as jest.MockedFunction<typeof createResearchNote>
 
 function createTestQueryClient() {
   return new QueryClient({
@@ -280,5 +282,108 @@ describe('SemanticSearchExplorer Component Tests (Phase 10.3 Increment 1)', () =
     fireEvent.click(resetBtn)
 
     expect(mockReplace).toHaveBeenCalledWith('/search?q=triz')
+  })
+
+  it('Scenario 9: Contextual Mode khi có session_id hiển thị liên kết quay lại session và nút Đính kèm', async () => {
+    mockSearchParams = new URLSearchParams('q=triz&session_id=d9b2d20b-0001-0000-0000-000000000001')
+
+    mockedSearchKnowledge.mockResolvedValueOnce({
+      results: [
+        {
+          chunk_id: 'chk-triz-40',
+          source_ref: 'docs/triz_matrix.md',
+          excerpt: 'Nguyên tắc phân đoạn giúp giải quyết mâu thuẫn.',
+          score: 0.96,
+          metadata: {
+            golden: true,
+          },
+        },
+      ],
+      latency_ms: 10.0,
+    })
+
+    renderWithClient(<SemanticSearchExplorer />)
+
+    expect(await screen.findByText('Nguyên tắc phân đoạn giúp giải quyết mâu thuẫn.')).toBeInTheDocument()
+
+    // Affordance quay lại session
+    const backLink = screen.getByRole('link', { name: /Quay lại Session/i })
+    expect(backLink).toHaveAttribute('href', '/sessions/d9b2d20b-0001-0000-0000-000000000001')
+
+    // Nút Đính kèm vào Session trên card
+    expect(screen.getByRole('button', { name: /Đính kèm vào Session/i })).toBeInTheDocument()
+  })
+
+  it('Scenario 10: Nhấp "Đính kèm vào Session" gọi createResearchNote và chuyển sang trạng thái Đã đính kèm', async () => {
+    mockSearchParams = new URLSearchParams('q=triz&session_id=d9b2d20b-0001-0000-0000-000000000001')
+
+    mockedSearchKnowledge.mockResolvedValueOnce({
+      results: [
+        {
+          chunk_id: 'chk-triz-40',
+          source_ref: 'docs/triz_matrix.md',
+          excerpt: 'Nguyên tắc phân đoạn giúp giải quyết mâu thuẫn.',
+          score: 0.96,
+          metadata: {
+            golden: true,
+          },
+        },
+      ],
+      latency_ms: 10.0,
+    })
+
+    const mockCreatedNote: ResearchNote = {
+      id: 'note-001',
+      session_id: 'd9b2d20b-0001-0000-0000-000000000001',
+      content: '[docs/triz_matrix.md] (Độ liên quan: 96%)\nNguyên tắc phân đoạn giúp giải quyết mâu thuẫn.',
+      note_type: 'insight',
+      source_chunk_id: 'chk-triz-40',
+      created_at: '2026-10-02T10:00:00Z',
+    }
+
+    mockedCreateResearchNote.mockResolvedValueOnce(mockCreatedNote)
+
+    renderWithClient(<SemanticSearchExplorer />)
+
+    const attachBtn = await screen.findByRole('button', { name: /Đính kèm vào Session/i })
+    fireEvent.click(attachBtn)
+
+    await waitFor(() => {
+      expect(mockedCreateResearchNote).toHaveBeenCalledWith(
+        'd9b2d20b-0001-0000-0000-000000000001',
+        expect.objectContaining({
+          note_type: 'insight',
+          source_chunk_id: 'chk-triz-40',
+          content: expect.stringContaining('docs/triz_matrix.md'),
+        })
+      )
+    })
+
+    // Trạng thái nút chuyển sang Đã đính kèm
+    expect(await screen.findByText(/Đã đính kèm/i)).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /Đính kèm vào Session/i })).not.toBeInTheDocument()
+  })
+
+  it('Scenario 11: Standalone Mode (không có session_id) không hiển thị action đính kèm hay link quay lại', async () => {
+    mockSearchParams = new URLSearchParams('q=triz')
+
+    mockedSearchKnowledge.mockResolvedValueOnce({
+      results: [
+        {
+          chunk_id: 'chk-triz-40',
+          source_ref: 'docs/triz_matrix.md',
+          excerpt: 'Nguyên tắc phân đoạn.',
+          score: 0.9,
+          metadata: {},
+        },
+      ],
+      latency_ms: 10.0,
+    })
+
+    renderWithClient(<SemanticSearchExplorer />)
+
+    expect(await screen.findByText('Nguyên tắc phân đoạn.')).toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: /Quay lại Session/i })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /Đính kèm vào Session/i })).not.toBeInTheDocument()
   })
 })

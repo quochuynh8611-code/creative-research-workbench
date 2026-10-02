@@ -7,6 +7,7 @@ export interface SearchExplorerState {
   golden?: boolean
   phase?: string
   top_k?: number
+  session_id?: string
 }
 
 /**
@@ -35,6 +36,10 @@ export function buildSearchExplorerUrl(state: Partial<SearchExplorerState>): str
 
   if (state.phase?.trim()) {
     params.set('phase', state.phase.trim())
+  }
+
+  if (state.session_id?.trim()) {
+    params.set('session_id', state.session_id.trim())
   }
 
   if (state.top_k && state.top_k > 0 && state.top_k !== 10) {
@@ -69,6 +74,7 @@ export function parseSearchExplorerParams(
   const rawGolden = getParam('golden')
   const rawPhase = getParam('phase') || ''
   const rawTopK = getParam('top_k')
+  const rawSessionId = getParam('session_id') || getParam('sessionId') || ''
 
   const golden = rawGolden === 'true' || rawGolden === '1'
   let topK = 10
@@ -86,6 +92,7 @@ export function parseSearchExplorerParams(
     golden,
     phase: rawPhase.trim(),
     top_k: topK,
+    session_id: rawSessionId.trim() || undefined,
   }
 }
 

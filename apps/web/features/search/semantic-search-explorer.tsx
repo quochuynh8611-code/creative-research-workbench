@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
+import Link from 'next/link'
 import {
   Search,
   Sparkles,
@@ -16,9 +17,13 @@ import {
   CheckCircle,
   SlidersHorizontal,
   Layers,
+  ArrowLeft,
+  Plus,
+  Check,
+  Bookmark,
 } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
-import { searchKnowledge } from '@/lib/api-client'
+import { searchKnowledge, createResearchNote } from '@/lib/api-client'
 import { cn } from '@/lib/utils'
 import type { SearchResultItem } from '@/lib/types'
 import {
@@ -68,6 +73,11 @@ export function SemanticSearchExplorer() {
   const [goldenOnly, setGoldenOnly] = useState(initialState.golden || false)
   const [selectedPhase, setSelectedPhase] = useState(initialState.phase || '')
   const [topK, setTopK] = useState(initialState.top_k || 10)
+  const [sessionId, setSessionId] = useState(initialState.session_id || '')
+
+  // Track attached chunks for this session
+  const [attachedChunkIds, setAttachedChunkIds] = useState<Set<string>>(new Set())
+  const [attachingChunkId, setAttachingChunkId] = useState<string | null>(null)
 
   // Re-sync if URL params change externally
   useEffect(() => {
@@ -90,6 +100,9 @@ export function SemanticSearchExplorer() {
     }
     if (nextState.top_k !== topK) {
       setTopK(nextState.top_k || 10)
+    }
+    if (nextState.session_id !== sessionId) {
+      setSessionId(nextState.session_id || '')
     }
   }, [searchParams])
 
@@ -131,8 +144,12 @@ export function SemanticSearchExplorer() {
     golden?: boolean
     phase?: string
     top_k?: number
+    session_id?: string
   }) => {
-    const url = buildSearchExplorerUrl(newState)
+    const url = buildSearchExplorerUrl({
+      ...newState,
+      session_id: sessionId || newState.session_id,
+    })
     router.replace(url)
   }
 
@@ -147,6 +164,7 @@ export function SemanticSearchExplorer() {
         golden: goldenOnly,
         phase: selectedPhase,
         top_k: topK,
+        session_id: sessionId,
       })
     }
   }
@@ -161,6 +179,7 @@ export function SemanticSearchExplorer() {
       golden: goldenOnly,
       phase: selectedPhase,
       top_k: topK,
+      session_id: sessionId,
     })
   }
 
@@ -170,11 +189,31 @@ export function SemanticSearchExplorer() {
     setGoldenOnly(false)
     setSelectedPhase('')
     setTopK(10)
-    // Synchronize URL to clear stale parameters but preserve query
+    // Synchronize URL to clear stale parameters but preserve query and session_id
     const targetUrl = buildSearchExplorerUrl({
       query: submittedQuery,
+      session_id: sessionId || undefined,
     })
     router.replace(targetUrl)
+  }
+
+  const handleAttachToSession = async (item: SearchResultItem) => {
+    if (!sessionId || !item.chunk_id) return
+    try {
+      setAttachingChunkId(item.chunk_id)
+      const scorePercent = Math.round(item.score * 100)
+      const content = `[${item.source_ref}] (Độ liên quan: ${scorePercent}%)\n${item.excerpt}`
+      await createResearchNote(sessionId, {
+        content,
+        note_type: 'insight',
+        source_chunk_id: item.chunk_id,
+      })
+      setAttachedChunkIds((prev) => new Set([...prev, item.chunk_id]))
+    } catch (err) {
+      console.error('Lỗi khi đính kèm vào session:', err)
+    } finally {
+      setAttachingChunkId(null)
+    }
   }
 
   const results: SearchResultItem[] = data?.results || []
@@ -183,18 +222,39 @@ export function SemanticSearchExplorer() {
   return (
     <div className="space-y-6 max-w-6xl mx-auto px-4 py-8">
       {/* Header */}
-      <div className="space-y-2 border-b border-border pb-6">
-        <div className="flex items-center gap-2.5">
-          <span className="p-2 rounded-xl bg-primary/10 text-primary">
-            <Search className="w-5 h-5" />
-          </span>
-          <h1 className="text-2xl font-bold tracking-tight text-foreground">
-            Semantic Knowledge Base Explorer
-          </h1>
+      <div className="space-y-4 border-b border-border pb-6">
+        {sessionId && (
+          <div className="flex flex-wrap items-center justify-between gap-3 p-3.5 rounded-2xl bg-primary/5 border border-primary/20 text-xs">
+            <div className="flex items-center gap-2 text-primary font-medium">
+              <Bookmark className="w-4 h-4 shrink-0" />
+              <span>
+                Đang tìm kiếm tài liệu cho Session:{' '}
+                <strong className="font-mono text-foreground font-semibold">{sessionId}</strong>
+              </span>
+            </div>
+            <Link
+              href={`/sessions/${sessionId}`}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-background border border-border text-foreground hover:bg-muted transition-colors font-medium shadow-sm"
+            >
+              <ArrowLeft className="w-3.5 h-3.5" />
+              <span>Quay lại Session</span>
+            </Link>
+          </div>
+        )}
+
+        <div className="space-y-2">
+          <div className="flex items-center gap-2.5">
+            <span className="p-2 rounded-xl bg-primary/10 text-primary">
+              <Search className="w-5 h-5" />
+            </span>
+            <h1 className="text-2xl font-bold tracking-tight text-foreground">
+              Semantic Knowledge Base Explorer
+            </h1>
+          </div>
+          <p className="text-sm text-muted-foreground max-w-3xl">
+            Công cụ tìm kiếm ngữ nghĩa toàn diện trên kho tri thức chuẩn hóa (10 Golden Documents & Case Studies). Kết hợp Full-text Search và pgvector Cosine Distance qua thuật toán RRF.
+          </p>
         </div>
-        <p className="text-sm text-muted-foreground max-w-3xl">
-          Công cụ tìm kiếm ngữ nghĩa toàn diện trên kho tri thức chuẩn hóa (10 Golden Documents & Case Studies). Kết hợp Full-text Search và pgvector Cosine Distance qua thuật toán RRF.
-        </p>
       </div>
 
       {/* Main Grid: Sidebar Filters + Search & Results */}
@@ -491,6 +551,32 @@ export function SemanticSearchExplorer() {
                       <p className="text-xs text-foreground/90 leading-relaxed bg-muted/20 p-3 rounded-xl border border-border/40 font-mono text-[11.5px]">
                         {item.excerpt}
                       </p>
+
+                      {/* Contextual Mode Action: Attach to Session */}
+                      {sessionId && (
+                        <div className="pt-1 flex items-center justify-end">
+                          {attachedChunkIds.has(item.chunk_id) ? (
+                            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-xs font-semibold border border-emerald-500/20 shadow-xs">
+                              <Check className="w-3.5 h-3.5" />
+                              <span>Đã đính kèm</span>
+                            </span>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => handleAttachToSession(item)}
+                              disabled={attachingChunkId === item.chunk_id}
+                              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-primary/30 bg-primary/10 hover:bg-primary/20 text-primary text-xs font-semibold transition-all cursor-pointer disabled:opacity-50 shadow-xs"
+                            >
+                              {attachingChunkId === item.chunk_id ? (
+                                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                              ) : (
+                                <Plus className="w-3.5 h-3.5" />
+                              )}
+                              <span>Đính kèm vào Session</span>
+                            </button>
+                          )}
+                        </div>
+                      )}
                     </article>
                   )
                 })}

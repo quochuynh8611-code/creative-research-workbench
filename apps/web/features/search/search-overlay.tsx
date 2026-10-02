@@ -24,6 +24,7 @@ interface SearchOverlayProps {
   isOpen?: boolean
   onClose?: () => void
   onSelectResult?: (item: SearchResultItem) => void
+  sessionId?: string
 }
 
 const QUICK_SUGGESTIONS = [
@@ -39,6 +40,7 @@ export function SearchOverlay({
   isOpen: controlledIsOpen,
   onClose,
   onSelectResult,
+  sessionId,
 }: SearchOverlayProps) {
   const router = useRouter()
   const [internalIsOpen, setInternalIsOpen] = useState(defaultOpen)
@@ -116,7 +118,10 @@ export function SearchOverlay({
   const handleOpenInExplorer = () => {
     const queryToUse = searchTerm.trim() || debouncedQuery
     if (queryToUse) {
-      const url = buildSearchExplorerUrl({ query: queryToUse })
+      const url = buildSearchExplorerUrl({
+        query: queryToUse,
+        session_id: sessionId,
+      })
       router.push(url)
       handleClose()
     }

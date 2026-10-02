@@ -275,4 +275,34 @@ describe('Phase 5.7 — SearchOverlay Component Tests', () => {
     expect(mockPush).toHaveBeenCalledWith('/search?q=nguy%C3%AAn+t%E1%BA%AFc+triz')
     expect(screen.queryByPlaceholderText(/Tìm kiếm trong kho tri thức/i)).not.toBeInTheDocument()
   })
+
+  it('10. Click CTA "Mở trong Search Explorer" bảo toàn session_id khi có prop sessionId', async () => {
+    ;(apiClient.searchKnowledge as jest.Mock).mockResolvedValue(mockSearchResponse)
+    const queryClient = createTestQueryClient()
+
+    render(
+      <QueryClientProvider client={queryClient}>
+        <SearchOverlay defaultOpen={true} sessionId="d9b2d20b-0001-0000-0000-000000000001" />
+      </QueryClientProvider>
+    )
+
+    const input = screen.getByPlaceholderText(/Tìm kiếm trong kho tri thức/i)
+    fireEvent.change(input, { target: { value: 'động cơ' } })
+
+    act(() => {
+      jest.advanceTimersByTime(350)
+    })
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: /Mở trong Search Explorer/i })).toBeInTheDocument()
+    })
+
+    const ctaBtn = screen.getByRole('button', { name: /Mở trong Search Explorer/i })
+    fireEvent.click(ctaBtn)
+
+    expect(mockPush).toHaveBeenCalledWith(
+      '/search?q=%C4%91%E1%BB%99ng+c%C6%A1&session_id=d9b2d20b-0001-0000-0000-000000000001'
+    )
+    expect(screen.queryByPlaceholderText(/Tìm kiếm trong kho tri thức/i)).not.toBeInTheDocument()
+  })
 })

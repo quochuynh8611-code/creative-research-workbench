@@ -116,5 +116,49 @@ describe('Search Utils Tests (Phase 10.3 Increment 2)', () => {
         top_k: 10,
       })
     })
+
+    it('9. buildSearchPayload không bao gồm session_id trong payload gửi backend', () => {
+      const state: SearchExplorerState = {
+        query: 'triz',
+        session_id: 'd9b2d20b-0001-0000-0000-000000000001',
+        topic: 'contradiction',
+      }
+
+      const payload = buildSearchPayload(state)
+
+      expect(payload).toEqual({
+        query: 'triz',
+        top_k: 10,
+        filters: {
+          topic: 'contradiction',
+        },
+      })
+      expect((payload as any).session_id).toBeUndefined()
+    })
+  })
+
+  describe('Session ID Integration (Phase 10.3 Increment 3)', () => {
+    it('10. buildSearchExplorerUrl serialize session_id chính xác', () => {
+      const url = buildSearchExplorerUrl({
+        query: 'động cơ điện',
+        session_id: 'd9b2d20b-0001-0000-0000-000000000001',
+      })
+      expect(url).toBe(
+        '/search?q=%C4%91%E1%BB%99ng+c%C6%A1+%C4%91i%E1%BB%87n&session_id=d9b2d20b-0001-0000-0000-000000000001'
+      )
+    })
+
+    it('11. parseSearchExplorerParams parse session_id từ URLSearchParams và Record params', () => {
+      const parsed1 = parseSearchExplorerParams(
+        new URLSearchParams('q=triz&session_id=d9b2d20b-0001-0000-0000-000000000001')
+      )
+      expect(parsed1.session_id).toBe('d9b2d20b-0001-0000-0000-000000000001')
+
+      const parsed2 = parseSearchExplorerParams({
+        q: 'triz',
+        sessionId: 'd9b2d20b-0001-0000-0000-000000000002',
+      })
+      expect(parsed2.session_id).toBe('d9b2d20b-0001-0000-0000-000000000002')
+    })
   })
 })
