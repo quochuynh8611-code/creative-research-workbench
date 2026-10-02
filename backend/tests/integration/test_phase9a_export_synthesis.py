@@ -200,6 +200,26 @@ async def test_export_session_not_found_and_invalid_format(db_session: Session):
         assert "Unsupported" in res_400.json()["detail"]
 
 
+@pytest.mark.asyncio
+async def test_export_session_pdf_format_guidance(db_session: Session):
+    """
+    Scenario 1.5 (Phase 9B): Export API với format=pdf trả về hướng dẫn client-side print
+    GIVEN: Session hợp lệ
+    WHEN: Gọi GET /api/v1/sessions/{id}/export?format=pdf
+    THEN: Trả về HTTP 400 Bad Request kèm thông báo PDF export is supported via client-side printing.
+    """
+    session = ResearchSession(title="Valid Session For PDF", status=SessionStatus.active)
+    db_session.add(session)
+    db_session.commit()
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        res_pdf = await client.get(f"/api/v1/sessions/{session.id}/export?format=pdf")
+        assert res_pdf.status_code == 400
+        detail = res_pdf.json()["detail"]
+        assert "Unsupported export format 'pdf'" in detail
+        assert "PDF export is supported via client-side printing" in detail
+
+
 # ──────────────────────────────────────────────
 # 2. AI Research Report Generator Tests
 # ──────────────────────────────────────────────

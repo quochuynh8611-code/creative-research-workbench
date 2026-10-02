@@ -1075,6 +1075,11 @@ async def export_session(
     import json
 
     clean_format = (format or "").strip().lower()
+    if clean_format == "pdf":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Unsupported export format 'pdf'. PDF export is supported via client-side printing or browser rendering. Supported formats: md, markdown, json",
+        )
     if clean_format not in {"md", "markdown", "json"}:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,

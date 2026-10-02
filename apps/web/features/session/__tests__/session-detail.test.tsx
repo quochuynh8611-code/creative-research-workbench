@@ -19,6 +19,7 @@ import {
   updateCandidateSolution,
   deleteCandidateSolution,
   exportSessionMarkdown,
+  exportSessionJson,
   getTrizParameters,
   lookupTrizMatrix,
 } from '@/lib/api-client'
@@ -50,6 +51,7 @@ const mockedSearchKnowledge = searchKnowledge as jest.MockedFunction<typeof sear
 const mockedListResearchNotes = listResearchNotes as jest.MockedFunction<typeof listResearchNotes>
 const mockedListCandidateSolutions = listCandidateSolutions as jest.MockedFunction<typeof listCandidateSolutions>
 const mockedExportSessionMarkdown = exportSessionMarkdown as jest.MockedFunction<typeof exportSessionMarkdown>
+const mockedExportSessionJson = exportSessionJson as jest.MockedFunction<typeof exportSessionJson>
 const mockedGetTrizParameters = getTrizParameters as jest.MockedFunction<typeof getTrizParameters>
 const mockedLookupTrizMatrix = lookupTrizMatrix as jest.MockedFunction<typeof lookupTrizMatrix>
 
@@ -515,7 +517,7 @@ describe('Phase 5.4 — Problem Intake & Structuring Canvas Tests', () => {
     })
   })
 
-  describe('9. Session Markdown & PDF Export Actions', () => {
+  describe('9. Unified Export Dropdown & Format Picker Flow (Phase 9B)', () => {
     let anchorClickSpy: jest.SpyInstance
 
     beforeEach(() => {
@@ -529,7 +531,7 @@ describe('Phase 5.4 — Problem Intake & Structuring Canvas Tests', () => {
       anchorClickSpy.mockRestore()
     })
 
-    it('render đầy đủ nút Xuất Markdown và In / Lưu PDF khi session load thành công', async () => {
+    it('render nút Xuất dữ liệu (dropdown trigger) tại header thao tác', async () => {
       mockedGetSession.mockResolvedValue(MOCK_SESSION_WITH_FRAME)
       renderWithClient(<SessionDetail sessionId="ses-456" />)
 
@@ -537,11 +539,10 @@ describe('Phase 5.4 — Problem Intake & Structuring Canvas Tests', () => {
         expect(screen.getByText('Tối ưu độ bền và trọng lượng cánh tay robot')).toBeInTheDocument()
       })
 
-      expect(screen.getByRole('button', { name: /Xuất Markdown/i })).toBeInTheDocument()
-      expect(screen.getByRole('button', { name: /In \/ Lưu PDF/i })).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: /Xuất dữ liệu|Export/i })).toBeInTheDocument()
     })
 
-    it('click nút In / Lưu PDF gọi window.print()', async () => {
+    it('click nút Xuất dữ liệu mở dropdown menu với đủ 3 format: Markdown, JSON, PDF', async () => {
       mockedGetSession.mockResolvedValue(MOCK_SESSION_WITH_FRAME)
       renderWithClient(<SessionDetail sessionId="ses-456" />)
 
@@ -549,13 +550,33 @@ describe('Phase 5.4 — Problem Intake & Structuring Canvas Tests', () => {
         expect(screen.getByText('Tối ưu độ bền và trọng lượng cánh tay robot')).toBeInTheDocument()
       })
 
-      const printBtn = screen.getByRole('button', { name: /In \/ Lưu PDF/i })
-      fireEvent.click(printBtn)
+      const exportTrigger = screen.getByRole('button', { name: /Xuất dữ liệu|Export/i })
+      fireEvent.click(exportTrigger)
+
+      // Kiểm tra 3 options xuất hiện
+      expect(await screen.findByRole('menuitem', { name: /Xuất Markdown|Markdown/i })).toBeInTheDocument()
+      expect(screen.getByRole('menuitem', { name: /Xuất JSON|JSON Snapshot/i })).toBeInTheDocument()
+      expect(screen.getByRole('menuitem', { name: /In \/ Lưu PDF|PDF/i })).toBeInTheDocument()
+    })
+
+    it('chọn In / Lưu PDF gọi window.print()', async () => {
+      mockedGetSession.mockResolvedValue(MOCK_SESSION_WITH_FRAME)
+      renderWithClient(<SessionDetail sessionId="ses-456" />)
+
+      await waitFor(() => {
+        expect(screen.getByText('Tối ưu độ bền và trọng lượng cánh tay robot')).toBeInTheDocument()
+      })
+
+      const exportTrigger = screen.getByRole('button', { name: /Xuất dữ liệu|Export/i })
+      fireEvent.click(exportTrigger)
+
+      const printItem = await screen.findByRole('menuitem', { name: /In \/ Lưu PDF|PDF/i })
+      fireEvent.click(printItem)
 
       expect(window.print).toHaveBeenCalledTimes(1)
     })
 
-    it('click nút export gọi đúng api client và trigger download', async () => {
+    it('chọn Xuất Markdown (.md) gọi exportSessionMarkdown và trigger download', async () => {
       mockedGetSession.mockResolvedValue(MOCK_SESSION_WITH_FRAME)
       const mockBlob = new Blob(['# Markdown content'], { type: 'text/markdown' })
       mockedExportSessionMarkdown.mockResolvedValueOnce(mockBlob)
@@ -566,8 +587,11 @@ describe('Phase 5.4 — Problem Intake & Structuring Canvas Tests', () => {
         expect(screen.getByText('Tối ưu độ bền và trọng lượng cánh tay robot')).toBeInTheDocument()
       })
 
-      const exportBtn = screen.getByRole('button', { name: /Xuất Markdown/i })
-      fireEvent.click(exportBtn)
+      const exportTrigger = screen.getByRole('button', { name: /Xuất dữ liệu|Export/i })
+      fireEvent.click(exportTrigger)
+
+      const mdItem = await screen.findByRole('menuitem', { name: /Xuất Markdown|Markdown/i })
+      fireEvent.click(mdItem)
 
       await waitFor(() => {
         expect(mockedExportSessionMarkdown).toHaveBeenCalledWith('ses-456')
@@ -576,7 +600,37 @@ describe('Phase 5.4 — Problem Intake & Structuring Canvas Tests', () => {
       expect(anchorClickSpy).toHaveBeenCalledTimes(1)
     })
 
-    it('hiển thị trạng thái disabled/loading và ngăn chặn double-click trong lúc export', async () => {
+    it('chọn Xuất JSON (.json) gọi exportSessionJson và trigger download file json', async () => {
+      mockedGetSession.mockResolvedValue(MOCK_SESSION_WITH_FRAME)
+      const mockSnapshot = {
+        session: { id: 'ses-456', title: 'Tối ưu cánh tay robot' },
+        problem_frame: null,
+        recommended_methods: [],
+        research_notes: [],
+        candidate_solutions: [],
+      }
+      mockedExportSessionJson.mockResolvedValueOnce(mockSnapshot as any)
+
+      renderWithClient(<SessionDetail sessionId="ses-456" />)
+
+      await waitFor(() => {
+        expect(screen.getByText('Tối ưu độ bền và trọng lượng cánh tay robot')).toBeInTheDocument()
+      })
+
+      const exportTrigger = screen.getByRole('button', { name: /Xuất dữ liệu|Export/i })
+      fireEvent.click(exportTrigger)
+
+      const jsonItem = await screen.findByRole('menuitem', { name: /Xuất JSON|JSON Snapshot/i })
+      fireEvent.click(jsonItem)
+
+      await waitFor(() => {
+        expect(mockedExportSessionJson).toHaveBeenCalledWith('ses-456')
+      })
+      expect(window.URL.createObjectURL).toHaveBeenCalled()
+      expect(anchorClickSpy).toHaveBeenCalledTimes(1)
+    })
+
+    it('hiển thị trạng thái loading/disabled khi export đang diễn ra', async () => {
       mockedGetSession.mockResolvedValue(MOCK_SESSION_WITH_FRAME)
       let resolveExport: (blob: Blob) => void = () => {}
       const exportPromise = new Promise<Blob>((resolve) => {
@@ -590,12 +644,11 @@ describe('Phase 5.4 — Problem Intake & Structuring Canvas Tests', () => {
         expect(screen.getByText('Tối ưu độ bền và trọng lượng cánh tay robot')).toBeInTheDocument()
       })
 
-      const exportBtn = screen.getByRole('button', { name: /Xuất Markdown/i })
-      fireEvent.click(exportBtn)
+      const exportTrigger = screen.getByRole('button', { name: /Xuất dữ liệu|Export/i })
+      fireEvent.click(exportTrigger)
 
-      // Double-click attempt
-      fireEvent.click(exportBtn)
-      expect(mockedExportSessionMarkdown).toHaveBeenCalledTimes(1)
+      const mdItem = await screen.findByRole('menuitem', { name: /Xuất Markdown|Markdown/i })
+      fireEvent.click(mdItem)
 
       // Trong lúc pending
       expect(screen.getByRole('button', { name: /Đang xuất/i })).toBeDisabled()
@@ -603,7 +656,7 @@ describe('Phase 5.4 — Problem Intake & Structuring Canvas Tests', () => {
       // Hoàn thành export
       resolveExport(new Blob(['# Content']))
       await waitFor(() => {
-        expect(screen.getByRole('button', { name: /Xuất Markdown/i })).not.toBeDisabled()
+        expect(screen.getByRole('button', { name: /Xuất dữ liệu|Export/i })).not.toBeDisabled()
       })
     })
 
@@ -622,8 +675,11 @@ describe('Phase 5.4 — Problem Intake & Structuring Canvas Tests', () => {
       fireEvent.click(retrievalTab)
       expect(screen.getByText(/Bằng chứng & Tài liệu trích dẫn/i)).toBeInTheDocument()
 
-      const exportBtn = screen.getByRole('button', { name: /Xuất Markdown/i })
-      fireEvent.click(exportBtn)
+      const exportTrigger = screen.getByRole('button', { name: /Xuất dữ liệu|Export/i })
+      fireEvent.click(exportTrigger)
+
+      const mdItem = await screen.findByRole('menuitem', { name: /Xuất Markdown|Markdown/i })
+      fireEvent.click(mdItem)
 
       await waitFor(() => {
         expect(screen.getByText(/Lỗi kết nối máy chủ khi xuất Markdown/i)).toBeInTheDocument()
