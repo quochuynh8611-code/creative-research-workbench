@@ -111,6 +111,14 @@ describe('Phase 5.4 — Problem Intake & Structuring Canvas Tests', () => {
     mockedSearchKnowledge.mockResolvedValue({ results: [], latency_ms: 10 })
     mockedListResearchNotes.mockResolvedValue({ data: [], meta: { total: 0 } })
     mockedListCandidateSolutions.mockResolvedValue({ data: [], meta: { total: 0, session_id: 'ses-456' } })
+    mockedGetTrizParameters.mockResolvedValue({ data: [], meta: { total: 0 } })
+    mockedLookupTrizMatrix.mockResolvedValue({
+      improving_parameter: { id: 1, code: 'weight_moving', name_vi: 'Trọng lượng', name_en: 'Weight' },
+      worsening_parameter: { id: 2, code: 'length_moving', name_vi: 'Chiều dài', name_en: 'Length' },
+      is_diagonal: false,
+      principles: [],
+      principles_count: 0,
+    })
   })
 
   describe('1. SessionDetail Component', () => {
@@ -506,10 +514,17 @@ describe('Phase 5.4 — Problem Intake & Structuring Canvas Tests', () => {
   })
 
   describe('9. Session Markdown & PDF Export Actions', () => {
+    let anchorClickSpy: jest.SpyInstance
+
     beforeEach(() => {
       window.URL.createObjectURL = jest.fn(() => 'blob:http://localhost/mock-blob')
       window.URL.revokeObjectURL = jest.fn()
       window.print = jest.fn()
+      anchorClickSpy = jest.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {})
+    })
+
+    afterEach(() => {
+      anchorClickSpy.mockRestore()
     })
 
     it('render đầy đủ nút Xuất Markdown và In / Lưu PDF khi session load thành công', async () => {
@@ -556,6 +571,7 @@ describe('Phase 5.4 — Problem Intake & Structuring Canvas Tests', () => {
         expect(mockedExportSessionMarkdown).toHaveBeenCalledWith('ses-456')
       })
       expect(window.URL.createObjectURL).toHaveBeenCalledWith(mockBlob)
+      expect(anchorClickSpy).toHaveBeenCalledTimes(1)
     })
 
     it('hiển thị trạng thái disabled/loading và ngăn chặn double-click trong lúc export', async () => {
