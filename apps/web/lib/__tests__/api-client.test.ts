@@ -967,4 +967,49 @@ describe('Frontend API Client Contract Tests (Phase 5.2)', () => {
     expect(result[0].code).toBe('strength')
     expect(result[0].score).toBe(0.95)
   })
+
+  // 31. Cross-Session Discovery (Phase 10.2)
+  it('31. findRelatedSessions gọi GET /api/v1/search/cross-session với session_id, top_k, min_score', async () => {
+    const mockCrossSessionResponse = {
+      source_session_id: 'ses-123',
+      has_problem_frame: true,
+      reason: null,
+      matched_sessions: [
+        {
+          session_id: 'ses-456',
+          title: 'Tối ưu hóa tản nhiệt pin',
+          domain: 'engineering',
+          status: 'active',
+          similarity_score: 0.85,
+          match_reasons: ['Trùng thông số cải thiện: Speed'],
+          shared_parameters: {
+            improving_parameter: 'Speed',
+            worsening_parameter: 'Temperature',
+            contradiction_type: 'technical',
+            shared_principles: [1, 35],
+          },
+          created_at: '2026-10-01T10:00:00Z',
+        },
+      ],
+      total_candidates_analyzed: 10,
+      latency_ms: 12.5,
+    }
+
+    const spy = jest.spyOn(apiClient, 'get').mockResolvedValueOnce({ data: mockCrossSessionResponse })
+
+    const result = await apiClientModule.findRelatedSessions('ses-123', 5, 0.2)
+
+    expect(spy).toHaveBeenCalledWith('/api/v1/search/cross-session', {
+      params: {
+        session_id: 'ses-123',
+        top_k: 5,
+        min_score: 0.2,
+      },
+    })
+    expect(result.source_session_id).toBe('ses-123')
+    expect(result.has_problem_frame).toBe(true)
+    expect(result.matched_sessions).toHaveLength(1)
+    expect(result.matched_sessions[0].session_id).toBe('ses-456')
+    expect(result.matched_sessions[0].similarity_score).toBe(0.85)
+  })
 })

@@ -101,6 +101,35 @@ export interface SearchResponse {
   latency_ms: number
 }
 
+// Cross-Session Discovery Types (Phase 10.2)
+export interface CrossSessionSharedParams {
+  improving_parameter?: string
+  worsening_parameter?: string
+  contradiction_type?: string
+  shared_principles?: number[]
+}
+
+export interface MatchedSessionItem {
+  session_id: string
+  title: string
+  domain?: string | null
+  status: string
+  similarity_score: number
+  match_reasons: string[]
+  shared_parameters: CrossSessionSharedParams
+  created_at?: string | null
+}
+
+export interface CrossSessionSearchResponse {
+  source_session_id: string
+  has_problem_frame: boolean
+  reason?: string | null
+  matched_sessions: MatchedSessionItem[]
+  total_candidates_analyzed: number
+  latency_ms: number
+}
+
+
 // UI Draft & Legacy types (kept for backward compatibility with existing components)
 export interface ProblemIntakeDraft {
   goal: string

@@ -22,6 +22,7 @@ import {
   exportSessionJson,
   getTrizParameters,
   lookupTrizMatrix,
+  findRelatedSessions,
 } from '@/lib/api-client'
 import type { ProblemFrame, ResearchSession } from '@/lib/types'
 
@@ -43,7 +44,9 @@ jest.mock('@/lib/api-client', () => ({
   generateAIResearchReport: jest.fn(),
   getTrizParameters: jest.fn(),
   lookupTrizMatrix: jest.fn(),
+  findRelatedSessions: jest.fn(),
 }))
+
 
 const mockedGetSession = getSession as jest.MockedFunction<typeof getSession>
 const mockedCreateProblemFrame = createProblemFrame as jest.MockedFunction<typeof createProblemFrame>
@@ -54,6 +57,8 @@ const mockedExportSessionMarkdown = exportSessionMarkdown as jest.MockedFunction
 const mockedExportSessionJson = exportSessionJson as jest.MockedFunction<typeof exportSessionJson>
 const mockedGetTrizParameters = getTrizParameters as jest.MockedFunction<typeof getTrizParameters>
 const mockedLookupTrizMatrix = lookupTrizMatrix as jest.MockedFunction<typeof lookupTrizMatrix>
+const mockedFindRelatedSessions = findRelatedSessions as jest.MockedFunction<typeof findRelatedSessions>
+
 
 function createTestQueryClient() {
   return new QueryClient({
@@ -123,7 +128,16 @@ describe('Phase 5.4 — Problem Intake & Structuring Canvas Tests', () => {
       principles: [],
       principles_count: 0,
     })
+    mockedFindRelatedSessions.mockResolvedValue({
+      source_session_id: 'ses-456',
+      has_problem_frame: false,
+      reason: 'no_problem_frame',
+      matched_sessions: [],
+      total_candidates_analyzed: 0,
+      latency_ms: 0,
+    })
   })
+
 
   describe('1. SessionDetail Component', () => {
     it('hiển thị trạng thái loading khi đang fetch session', () => {
@@ -762,6 +776,50 @@ describe('Phase 5.4 — Problem Intake & Structuring Canvas Tests', () => {
       // Kiểm tra các controls thao tác báo cáo
       expect(screen.getByRole('button', { name: /Sao chép|Copy/i })).toBeInTheDocument()
       expect(screen.getByRole('button', { name: /Tải file \.md|Tải Báo cáo/i })).toBeInTheDocument()
+    })
+  })
+
+  describe('Phase 10.2: Cross-Session Discovery Integration', () => {
+    it('khi chuyển sang tab Tài liệu & Bằng chứng: render RelatedSessionsPanel cùng EvidencePanel', async () => {
+      mockedGetSession.mockResolvedValue(MOCK_SESSION_WITH_FRAME)
+      const mockedFindRelated = jest.requireMock('@/lib/api-client').findRelatedSessions as jest.Mock
+      mockedFindRelated.mockResolvedValueOnce({
+        source_session_id: 'ses-456',
+        has_problem_frame: true,
+        reason: null,
+        matched_sessions: [
+          {
+            session_id: 'ses-match-999',
+            title: 'Nghiên cứu cấu trúc khung hợp kim siêu cứng',
+            domain: 'technical',
+            status: 'active',
+            similarity_score: 0.9,
+            match_reasons: ['Trùng thông số cải thiện: Độ bền / Độ cứng'],
+            shared_parameters: {
+              improving_parameter: 'Độ bền / Độ cứng',
+            },
+            created_at: '2026-03-16T10:00:00Z',
+          },
+        ],
+        total_candidates_analyzed: 5,
+        latency_ms: 12.0,
+      })
+
+      renderWithClient(<SessionDetail sessionId="ses-456" />)
+
+      await waitFor(() => {
+        expect(screen.getByText('Tối ưu độ bền và trọng lượng cánh tay robot')).toBeInTheDocument()
+      })
+
+      // Click tab retrieval
+      const retrievalTab = screen.getByRole('button', { name: /Tài liệu & Bằng chứng/i })
+      fireEvent.click(retrievalTab)
+
+      // Kiểm tra cả EvidencePanel lẫn RelatedSessionsPanel cùng hiện diện
+      expect(await screen.findByText('Bằng chứng & Tài liệu trích dẫn (Evidence Panel)')).toBeInTheDocument()
+      expect(await screen.findByText('Phiên nghiên cứu liên quan (Cross-Session Knowledge Discovery)')).toBeInTheDocument()
+      expect(await screen.findByText('Nghiên cứu cấu trúc khung hợp kim siêu cứng')).toBeInTheDocument()
+      expect(screen.getByText(/90%/)).toBeInTheDocument()
     })
   })
 })

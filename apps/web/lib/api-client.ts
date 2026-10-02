@@ -9,7 +9,9 @@ import type {
   CreateResearchNoteInput,
   CreateSessionFromTemplateInput,
   CreateSessionInput,
+  CrossSessionSearchResponse,
   DeleteCandidateSolutionResponse,
+
   DeleteDocumentResponse,
   DeleteResearchNoteResponse,
   DocumentDetail,
@@ -410,4 +412,26 @@ export async function mapTrizParameters(
   )
   const result = response.data
   return Array.isArray(result) ? result : result.data
+}
+
+/**
+ * 31. Khám phá các phiên nghiên cứu tương đồng cấu trúc bài toán TRIZ (Phase 10.2).
+ */
+export async function findRelatedSessions(
+  sessionId: string,
+  top_k: number = 5,
+  min_score: number = 0.1
+): Promise<CrossSessionSearchResponse> {
+  const response = await apiClient.get<CrossSessionSearchResponse | { data: CrossSessionSearchResponse }>(
+    '/api/v1/search/cross-session',
+    {
+      params: {
+        session_id: sessionId,
+        top_k,
+        min_score,
+      },
+    }
+  )
+  const result = response.data
+  return (result as any)?.data ?? result
 }

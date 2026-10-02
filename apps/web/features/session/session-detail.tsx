@@ -30,6 +30,8 @@ import { CandidateSolutions } from '@/features/ideation/candidate-solutions'
 import { EvidencePanel } from '@/features/retrieval/evidence-panel'
 import { TrizMatrixLookup } from '@/features/triz/triz-matrix-lookup'
 import { ResearchNotebook } from '@/features/notebook/research-notebook'
+import { RelatedSessionsPanel } from '@/features/session/related-sessions-panel'
+
 import type {
   AIResearchReport,
   ProblemFrame,
@@ -503,17 +505,24 @@ export function SessionDetail({ sessionId }: SessionDetailProps) {
         )}
 
         {activeTab === 'retrieval' && (
-          <EvidencePanel
-            sessionId={sessionId}
-            initialQuery={
-              effectiveProblemFrame?.normalized_statement ||
-              effectiveProblemFrame?.raw_statement ||
-              session.title
-            }
-            domain={typeof session.domain === 'string' ? session.domain : undefined}
-            onSaveAsNote={handleSaveAsNote}
-          />
+          <div className="space-y-8">
+            <EvidencePanel
+              sessionId={sessionId}
+              initialQuery={
+                effectiveProblemFrame?.normalized_statement ||
+                effectiveProblemFrame?.raw_statement ||
+                session.title
+              }
+              domain={typeof session.domain === 'string' ? session.domain : undefined}
+              onSaveAsNote={handleSaveAsNote}
+            />
+            <RelatedSessionsPanel
+              sessionId={sessionId}
+              isActiveTab={activeTab === 'retrieval'}
+            />
+          </div>
         )}
+
 
         {activeTab === 'ideation' && (
           <div className="space-y-8">
