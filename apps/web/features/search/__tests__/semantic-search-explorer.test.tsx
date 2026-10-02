@@ -626,4 +626,70 @@ describe('SemanticSearchExplorer Component Tests (Phase 10.3 Increment 1 - 6)', 
       expect(mockedGetSession).not.toHaveBeenCalled()
     })
   })
+
+  describe('Phase 10.3 Increment 7: Result Snippet Expansion & Metadata Inspector Toolkit', () => {
+    const longExcerpt =
+      'TRIZ Inventive Principle 35 (Parameter Changes): Modifying the physical state of an object (e.g. to a gas, liquid, or solid). Changing the concentration or consistency. Changing the degree of flexibility. Changing the temperature or volume. This principle is widely utilized across aerospace, automotive, and thermal engineering systems.'
+
+    it('Scenario 18: Đoạn trích dài hiển thị nút Xem đầy đủ và cho phép Toggle mở rộng / thu gọn', async () => {
+      mockSearchParams = new URLSearchParams('q=nguyên+tắc+35')
+
+      mockedSearchKnowledge.mockResolvedValueOnce({
+        results: [
+          {
+            chunk_id: 'chk-long-35',
+            source_ref: 'docs/ADR-035.md',
+            excerpt: longExcerpt,
+            score: 0.94,
+            metadata: { topic: 'contradiction' },
+          },
+        ],
+        latency_ms: 10.0,
+      })
+
+      renderWithClient(<SemanticSearchExplorer />)
+
+      // Chờ excerpt render
+      const excerptEl = await screen.findByText(longExcerpt)
+      expect(excerptEl).toHaveClass('line-clamp-3')
+
+      // Nút mở rộng xuất hiện
+      const expandBtn = screen.getByRole('button', { name: /Xem đầy đủ đoạn trích/i })
+      expect(expandBtn).toBeInTheDocument()
+
+      // Click Xem đầy đủ
+      fireEvent.click(expandBtn)
+      expect(excerptEl).not.toHaveClass('line-clamp-3')
+      expect(screen.getByRole('button', { name: /Thu gọn đoạn trích/i })).toBeInTheDocument()
+
+      // Click Thu gọn
+      const collapseBtn = screen.getByRole('button', { name: /Thu gọn đoạn trích/i })
+      fireEvent.click(collapseBtn)
+      expect(excerptEl).toHaveClass('line-clamp-3')
+      expect(screen.getByRole('button', { name: /Xem đầy đủ đoạn trích/i })).toBeInTheDocument()
+    })
+
+    it('Scenario 19: Đoạn trích ngắn không hiển thị nút mở rộng thừa', async () => {
+      mockSearchParams = new URLSearchParams('q=ngắn')
+
+      mockedSearchKnowledge.mockResolvedValueOnce({
+        results: [
+          {
+            chunk_id: 'chk-short',
+            source_ref: 'docs/short.md',
+            excerpt: 'Đoạn trích ngắn gọn.',
+            score: 0.85,
+            metadata: {},
+          },
+        ],
+        latency_ms: 5.0,
+      })
+
+      renderWithClient(<SemanticSearchExplorer />)
+
+      await screen.findByText('Đoạn trích ngắn gọn.')
+      expect(screen.queryByRole('button', { name: /Xem đầy đủ đoạn trích/i })).not.toBeInTheDocument()
+      expect(screen.queryByRole('button', { name: /Thu gọn đoạn trích/i })).not.toBeInTheDocument()
+    })
+  })
 })

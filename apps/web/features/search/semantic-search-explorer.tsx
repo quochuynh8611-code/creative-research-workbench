@@ -22,6 +22,8 @@ import {
   Check,
   Bookmark,
   Copy,
+  ChevronDown,
+  ChevronUp,
 } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import { searchKnowledge, createResearchNote, listResearchNotes, getSession } from '@/lib/api-client'
@@ -77,10 +79,23 @@ export function SemanticSearchExplorer() {
   const [sessionId, setSessionId] = useState(initialState.session_id || '')
   const [fromTab, setFromTab] = useState(initialState.from_tab || '')
 
-  // Track attached chunks for this session
+  // Track attached and expanded chunks
   const [attachedChunkIds, setAttachedChunkIds] = useState<Set<string>>(new Set())
+  const [expandedChunkIds, setExpandedChunkIds] = useState<Set<string>>(new Set())
   const [attachingChunkId, setAttachingChunkId] = useState<string | null>(null)
   const [copiedChunkId, setCopiedChunkId] = useState<string | null>(null)
+
+  const toggleExpandChunk = (chunkId: string) => {
+    setExpandedChunkIds((prev) => {
+      const next = new Set(prev)
+      if (next.has(chunkId)) {
+        next.delete(chunkId)
+      } else {
+        next.add(chunkId)
+      }
+      return next
+    })
+  }
 
   // Re-sync if URL params change externally
   useEffect(() => {
@@ -610,9 +625,36 @@ export function SemanticSearchExplorer() {
                       </div>
 
                       {/* Excerpt Snippet */}
-                      <p className="text-xs text-foreground/90 leading-relaxed bg-muted/20 p-3 rounded-xl border border-border/40 font-mono text-[11.5px]">
-                        {item.excerpt}
-                      </p>
+                      <div className="space-y-1.5">
+                        <p
+                          className={cn(
+                            'text-xs text-foreground/90 leading-relaxed bg-muted/20 p-3.5 rounded-xl border border-border/40 font-mono text-[11.5px] transition-all',
+                            !expandedChunkIds.has(item.chunk_id) && 'line-clamp-3'
+                          )}
+                        >
+                          {item.excerpt}
+                        </p>
+
+                        {item.excerpt.length > 160 && (
+                          <button
+                            type="button"
+                            onClick={() => toggleExpandChunk(item.chunk_id)}
+                            className="inline-flex items-center gap-1 text-[11px] font-medium text-primary hover:underline cursor-pointer"
+                          >
+                            {expandedChunkIds.has(item.chunk_id) ? (
+                              <>
+                                <ChevronUp className="w-3 h-3" />
+                                <span>Thu gọn đoạn trích</span>
+                              </>
+                            ) : (
+                              <>
+                                <ChevronDown className="w-3 h-3" />
+                                <span>Xem đầy đủ đoạn trích</span>
+                              </>
+                            )}
+                          </button>
+                        )}
+                      </div>
 
                       {/* Card Actions Bar */}
                       <div className="pt-1 flex items-center justify-between gap-2 border-t border-border/40">
