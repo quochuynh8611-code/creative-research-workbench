@@ -57,119 +57,133 @@ def import_session_from_json(
     raw_workflow_state = session_data.get("workflow_state") or "intake"
     tags = session_data.get("tags") if isinstance(session_data.get("tags"), list) else None
 
-    # 1. Create new session with unique UUID
-    new_session = ResearchSession(
-        id=uuid.uuid4(),
-        title=title.strip(),
-        description=description,
-        status=SessionStatus.active,
-        workflow_state=raw_workflow_state,
-    )
-    db.add(new_session)
-    db.flush()
-
-    has_frame = False
-    notes_count = 0
-    solutions_count = 0
-
-    # 2. Import Problem Frame if present
+    # Pre-mutation fail-closed validation
     frame_data = snapshot.get("problem_frame")
-    if isinstance(frame_data, dict) and frame_data.get("raw_statement"):
-        raw_statement = frame_data.get("raw_statement", "").strip()
-        normalized_statement = frame_data.get("normalized_statement")
-        if normalized_statement and isinstance(normalized_statement, str):
-            normalized_statement = normalized_statement.strip()
+    if frame_data is not None and not isinstance(frame_data, dict):
+        raise ValueError("Invalid snapshot: problem_frame must be an object.")
 
-        contra_type_raw = str(frame_data.get("contradiction_type") or "technical").lower()
-        if contra_type_raw == "physical":
-            contra_type = ContradictionType.physical
-        else:
-            contra_type = ContradictionType.technical
-
-        improving_param = frame_data.get("improving_parameter")
-        worsening_param = frame_data.get("worsening_parameter")
-        frame_domain = frame_data.get("domain") or raw_domain
-
-        problem_frame = ProblemFrame(
-            session_id=new_session.id,
-            raw_statement=raw_statement,
-            normalized_statement=normalized_statement,
-            contradiction_type=contra_type,
-            improving_parameter=improving_param,
-            worsening_parameter=worsening_param,
-            domain=frame_domain,
-        )
-        db.add(problem_frame)
-        has_frame = True
-
-    # 3. Import Research Notes if present
     notes_data = snapshot.get("research_notes")
-    if isinstance(notes_data, list):
-        for n in notes_data:
-            if isinstance(n, dict) and n.get("content") and str(n.get("content")).strip():
-                content = str(n.get("content")).strip()
-                note_type = str(n.get("note_type") or "insight").strip().lower()
-                if note_type not in {"insight", "hypothesis", "decision", "question", "action"}:
-                    note_type = "insight"
+    if notes_data is not None and not isinstance(notes_data, list):
+        raise ValueError("Invalid snapshot: research_notes must be a list.")
 
-                source_chunk_id = None
-                raw_chunk_id = n.get("source_chunk_id")
-                if raw_chunk_id:
-                    try:
-                        source_chunk_id = uuid.UUID(str(raw_chunk_id))
-                    except (ValueError, TypeError):
-                        source_chunk_id = None
-
-                note_record = ResearchNote(
-                    session_id=new_session.id,
-                    content=content,
-                    note_type=note_type,
-                    source_chunk_id=source_chunk_id,
-                )
-                db.add(note_record)
-                notes_count += 1
-
-    # 4. Import Candidate Solutions if present
     solutions_data = snapshot.get("candidate_solutions")
-    if isinstance(solutions_data, list):
-        for s in solutions_data:
-            if isinstance(s, dict) and s.get("title") and str(s.get("title")).strip():
-                sol_title = str(s.get("title")).strip()
-                mechanism = str(s.get("mechanism") or "").strip()
-                sol_status = str(s.get("status") or "candidate").strip().lower()
-                if sol_status not in {"candidate", "accepted", "rejected"}:
-                    sol_status = "candidate"
+    if solutions_data is not None and not isinstance(solutions_data, list):
+        raise ValueError("Invalid snapshot: candidate_solutions must be a list.")
 
-                novelty_score = None
-                if s.get("novelty_score") is not None:
-                    try:
-                        novelty_score = float(s["novelty_score"])
-                    except (ValueError, TypeError):
-                        novelty_score = None
+    try:
+        # 1. Create new session with unique UUID
+        new_session = ResearchSession(
+            id=uuid.uuid4(),
+            title=title.strip(),
+            description=description,
+            status=SessionStatus.active,
+            workflow_state=raw_workflow_state,
+        )
+        db.add(new_session)
+        db.flush()
 
-                feasibility_score = None
-                if s.get("feasibility_score") is not None:
-                    try:
-                        feasibility_score = float(s["feasibility_score"])
-                    except (ValueError, TypeError):
-                        feasibility_score = None
+        has_frame = False
+        notes_count = 0
+        solutions_count = 0
 
-                risk_notes = str(s.get("risk_notes") or "").strip() if s.get("risk_notes") else None
+        # 2. Import Problem Frame if present
+        if isinstance(frame_data, dict) and frame_data.get("raw_statement"):
+            raw_statement = frame_data.get("raw_statement", "").strip()
+            normalized_statement = frame_data.get("normalized_statement")
+            if normalized_statement and isinstance(normalized_statement, str):
+                normalized_statement = normalized_statement.strip()
 
-                solution_record = CandidateSolution(
-                    session_id=new_session.id,
-                    title=sol_title,
-                    mechanism=mechanism,
-                    status=sol_status,
-                    novelty_score=novelty_score,
-                    feasibility_score=feasibility_score,
-                    risk_notes=risk_notes,
-                )
-                db.add(solution_record)
-                solutions_count += 1
+            contra_type_raw = str(frame_data.get("contradiction_type") or "technical").lower()
+            if contra_type_raw == "physical":
+                contra_type = ContradictionType.physical
+            else:
+                contra_type = ContradictionType.technical
 
-    db.commit()
-    db.refresh(new_session)
+            improving_param = frame_data.get("improving_parameter")
+            worsening_param = frame_data.get("worsening_parameter")
+            frame_domain = frame_data.get("domain") or raw_domain
+
+            problem_frame = ProblemFrame(
+                session_id=new_session.id,
+                raw_statement=raw_statement,
+                normalized_statement=normalized_statement,
+                contradiction_type=contra_type,
+                improving_parameter=improving_param,
+                worsening_parameter=worsening_param,
+                domain=frame_domain,
+            )
+            db.add(problem_frame)
+            has_frame = True
+
+        # 3. Import Research Notes if present
+        if isinstance(notes_data, list):
+            for n in notes_data:
+                if isinstance(n, dict) and n.get("content") and str(n.get("content")).strip():
+                    content = str(n.get("content")).strip()
+                    note_type = str(n.get("note_type") or "insight").strip().lower()
+                    if note_type not in {"insight", "hypothesis", "decision", "question", "action"}:
+                        note_type = "insight"
+
+                    source_chunk_id = None
+                    raw_chunk_id = n.get("source_chunk_id")
+                    if raw_chunk_id:
+                        try:
+                            source_chunk_id = uuid.UUID(str(raw_chunk_id))
+                        except (ValueError, TypeError):
+                            source_chunk_id = None
+
+                    note_record = ResearchNote(
+                        session_id=new_session.id,
+                        content=content,
+                        note_type=note_type,
+                        source_chunk_id=source_chunk_id,
+                    )
+                    db.add(note_record)
+                    notes_count += 1
+
+        # 4. Import Candidate Solutions if present
+        if isinstance(solutions_data, list):
+            for s in solutions_data:
+                if isinstance(s, dict) and s.get("title") and str(s.get("title")).strip():
+                    sol_title = str(s.get("title")).strip()
+                    mechanism = str(s.get("mechanism") or "").strip()
+                    sol_status = str(s.get("status") or "candidate").strip().lower()
+                    if sol_status not in {"candidate", "accepted", "rejected"}:
+                        sol_status = "candidate"
+
+                    novelty_score = None
+                    if s.get("novelty_score") is not None:
+                        try:
+                            novelty_score = float(s["novelty_score"])
+                        except (ValueError, TypeError):
+                            novelty_score = None
+
+                    feasibility_score = None
+                    if s.get("feasibility_score") is not None:
+                        try:
+                            feasibility_score = float(s["feasibility_score"])
+                        except (ValueError, TypeError):
+                            feasibility_score = None
+
+                    risk_notes = str(s.get("risk_notes") or "").strip() if s.get("risk_notes") else None
+
+                    solution_record = CandidateSolution(
+                        session_id=new_session.id,
+                        title=sol_title,
+                        mechanism=mechanism,
+                        status=sol_status,
+                        novelty_score=novelty_score,
+                        feasibility_score=feasibility_score,
+                        risk_notes=risk_notes,
+                    )
+                    db.add(solution_record)
+                    solutions_count += 1
+
+        db.commit()
+        db.refresh(new_session)
+    except Exception:
+        db.rollback()
+        raise
 
     elements_summary = {
         "problem_frame": has_frame,
