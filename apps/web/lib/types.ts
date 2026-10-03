@@ -527,3 +527,45 @@ export interface ImportSessionResponse {
   }
   message?: string
 }
+
+// ──────────────────────────────────────────────
+// Analytics Overview Types (Phase 11.1)
+// ──────────────────────────────────────────────
+
+export interface SessionAnalytics {
+  total: number
+  by_status: Record<string, number>
+  by_workflow_state: Record<string, number>
+  by_domain: Record<string, number>
+}
+
+export interface ContentAnalytics {
+  total_problem_frames: number
+  total_research_notes: number
+  notes_by_type: Record<string, number>
+  total_candidate_solutions: number
+  solutions_by_status: Record<string, number>
+}
+
+export interface KnowledgeBaseAnalytics {
+  total_documents: number
+  golden_documents: number
+  total_chunks: number
+}
+
+export interface TRIZAnalytics {
+  total_contradictions: number
+  by_contradiction_type: Record<string, number>
+}
+
+export interface AnalyticsOverviewData {
+  sessions: SessionAnalytics
+  content: ContentAnalytics
+  knowledge_base: KnowledgeBaseAnalytics
+  triz: TRIZAnalytics
+}
+
+export interface AnalyticsOverviewResponse {
+  data: AnalyticsOverviewData
+  generated_at: string
+}

@@ -3,6 +3,7 @@ import type {
   AIProblemAnalysisRequest,
   AIProblemAnalysisResponse,
   AIResearchReport,
+  AnalyticsOverviewResponse,
   CandidateSolution,
   CandidateSolutionsResponse,
   CreateCandidateSolutionInput,
@@ -434,4 +435,12 @@ export async function findRelatedSessions(
   )
   const result = response.data
   return (result as any)?.data ?? result
+}
+
+/**
+ * 32. Lấy tổng quan số liệu phân tích hệ thống và nghiên cứu (Phase 11.1).
+ */
+export async function getAnalyticsOverview(): Promise<AnalyticsOverviewResponse> {
+  const response = await apiClient.get<AnalyticsOverviewResponse>('/api/v1/analytics/overview')
+  return response.data
 }
