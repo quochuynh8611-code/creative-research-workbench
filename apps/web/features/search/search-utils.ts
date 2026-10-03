@@ -7,6 +7,8 @@ export interface SearchExplorerState {
   golden?: boolean
   phase?: string
   top_k?: number
+  offset?: number
+  limit?: number
   session_id?: string
   from_tab?: string
 }
@@ -128,6 +130,14 @@ export function buildSearchPayload(state: SearchExplorerState): SearchRequest {
   const payload: SearchRequest = {
     query: state.query.trim(),
     top_k: state.top_k && state.top_k > 0 ? state.top_k : 10,
+  }
+
+  if (state.offset !== undefined && state.offset >= 0) {
+    payload.offset = state.offset
+  }
+
+  if (state.limit !== undefined && state.limit > 0) {
+    payload.limit = state.limit
   }
 
   if (Object.keys(filters).length > 0) {

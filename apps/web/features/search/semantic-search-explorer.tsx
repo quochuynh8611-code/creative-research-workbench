@@ -211,6 +211,9 @@ export function SemanticSearchExplorer() {
   const [copiedChunkId, setCopiedChunkId] = useState<string | null>(null)
   const [activeSourceBucket, setActiveSourceBucket] = useState<string>('all')
   const [sortBy, setSortBy] = useState<SearchSortMode>('relevance')
+  const [accumulatedResults, setAccumulatedResults] = useState<SearchResultItem[]>([])
+  const [isLoadingMore, setIsLoadingMore] = useState(false)
+  const [hasMoreState, setHasMoreState] = useState<boolean | undefined>(undefined)
 
   const toggleExpandChunk = (chunkId: string) => {
     setExpandedChunkIds((prev) => {
@@ -284,6 +287,17 @@ export function SemanticSearchExplorer() {
     enabled: Boolean(submittedQuery.trim()),
     staleTime: 30_000,
   })
+
+  // Synchronize initial search results to accumulatedResults
+  useEffect(() => {
+    if (data?.results) {
+      setAccumulatedResults(data.results)
+      setHasMoreState(data.has_more)
+    } else {
+      setAccumulatedResults([])
+      setHasMoreState(undefined)
+    }
+  }, [data])
 
   // Pre-hydrate existing notes if in Contextual Mode (session_id present)
   const { data: existingNotesResponse } = useQuery({
@@ -441,22 +455,74 @@ export function SemanticSearchExplorer() {
     }
   }
 
-  const results: SearchResultItem[] = data?.results || []
+  const results: SearchResultItem[] =
+    accumulatedResults.length > 0 ? accumulatedResults : data?.results || []
   const hasSearched = Boolean(submittedQuery.trim())
-  const hasActiveFilters = Boolean(selectedTopic || selectedSourceType || goldenOnly || selectedPhase || topK !== 10)
+  const hasActiveFilters = Boolean(
+    selectedTopic || selectedSourceType || goldenOnly || selectedPhase || topK !== 10
+  )
 
-  // Calculate source bucket counts from current results
+  const totalHits = data?.total_hits !== undefined ? data.total_hits : results.length
+  const hasMore =
+    hasMoreState !== undefined
+      ? hasMoreState
+      : data?.has_more !== undefined
+      ? data.has_more
+      : totalHits > results.length && results.length > 0
+
+  const handleLoadMore = async () => {
+    if (isLoadingMore || !submittedQuery.trim()) return
+    try {
+      setIsLoadingMore(true)
+      const nextOffset = results.length
+      const response = await searchKnowledge(
+        buildSearchPayload({
+          query: submittedQuery,
+          top_k: topK,
+          offset: nextOffset,
+          topic: selectedTopic,
+          source_type: selectedSourceType,
+          golden: goldenOnly,
+          phase: selectedPhase,
+        })
+      )
+      if (response?.results && response.results.length > 0) {
+        setAccumulatedResults((prev) => {
+          const currentList = prev.length > 0 ? prev : data?.results || []
+          const existingIds = new Set(currentList.map((r) => r.chunk_id))
+          const uniqueNew = response.results.filter((r) => !existingIds.has(r.chunk_id))
+          return [...currentList, ...uniqueNew]
+        })
+      }
+      if (response?.has_more !== undefined) {
+        setHasMoreState(response.has_more)
+      } else if (response?.results) {
+        const newTotal = results.length + response.results.length
+        const total = response.total_hits ?? totalHits
+        setHasMoreState(newTotal < total && response.results.length > 0)
+      }
+    } catch (err) {
+      console.error('Lỗi khi tải thêm kết quả:', err)
+    } finally {
+      setIsLoadingMore(false)
+    }
+  }
+
+  // Calculate source bucket counts prioritizing backend facet_counts
   const sourceCounts = useMemo(() => {
+    if (data?.facet_counts?.source_type && Object.keys(data.facet_counts.source_type).length > 0) {
+      return data.facet_counts.source_type
+    }
     const counts: Record<string, number> = {}
     results.forEach((item) => {
       const st = item.metadata?.source_type || 'other'
       counts[st] = (counts[st] || 0) + 1
     })
     return counts
-  }, [results])
+  }, [results, data?.facet_counts?.source_type])
 
   const availableSourceBuckets = useMemo(() => {
-    return Object.keys(sourceCounts).filter((st) => sourceCounts[st] > 0)
+    return Object.keys(sourceCounts).filter((st) => (sourceCounts[st] || 0) > 0)
   }, [sourceCounts])
 
   const displayedResults = useMemo(() => {
@@ -470,6 +536,11 @@ export function SemanticSearchExplorer() {
   const metrics = useMemo(() => {
     return calculateResultMetrics(results, submittedQuery)
   }, [results, submittedQuery])
+
+  const goldenCount =
+    data?.facet_counts?.golden?.['true'] !== undefined
+      ? data.facet_counts.golden['true']
+      : metrics.goldenCount
 
   return (
     <div className="space-y-6 max-w-6xl mx-auto px-4 py-8">
@@ -784,7 +855,7 @@ export function SemanticSearchExplorer() {
                 <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground">
                   <div className="flex items-center gap-2 flex-wrap">
                     <span>
-                      <strong>{results.length}</strong> kết quả tìm thấy
+                      <strong>{totalHits}</strong> kết quả tìm thấy
                     </span>
                     {/* Scope Badge */}
                     <span
@@ -816,16 +887,16 @@ export function SemanticSearchExplorer() {
                       </span>
                     )}
 
-                    {metrics.goldenCount > 0 && (
+                    {goldenCount > 0 && (
                       <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-medium bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20">
                         <Star className="w-2.5 h-2.5 fill-amber-500 text-amber-500" />
-                        <span>{metrics.goldenCount} chuẩn vàng</span>
+                        <span>{goldenCount} chuẩn vàng</span>
                       </span>
                     )}
 
-                    {activeSourceBucket !== 'all' && (
+                    {displayedResults.length !== totalHits && (
                       <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-medium bg-muted text-muted-foreground border border-border">
-                        <span>Hiển thị {displayedResults.length} / {results.length} mục</span>
+                        <span>Hiển thị {displayedResults.length} / {totalHits} mục</span>
                       </span>
                     )}
                   </div>
@@ -1125,6 +1196,30 @@ export function SemanticSearchExplorer() {
                   )
                 })}
               </div>
+
+              {/* Load More Button */}
+              {hasMore && (
+                <div className="pt-4 flex justify-center">
+                  <button
+                    type="button"
+                    onClick={handleLoadMore}
+                    disabled={isLoadingMore}
+                    className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl border border-primary/30 bg-primary/10 hover:bg-primary/20 text-primary text-xs font-semibold transition-all shadow-sm cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {isLoadingMore ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        <span>Đang tải thêm...</span>
+                      </>
+                    ) : (
+                      <>
+                        <ChevronDown className="w-4 h-4" />
+                        <span>Tải thêm kết quả</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              )}
             </div>
           )}
         </main>

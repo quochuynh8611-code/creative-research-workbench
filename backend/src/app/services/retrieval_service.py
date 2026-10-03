@@ -101,49 +101,66 @@ class RetrievalService:
     ) -> list[SearchResult]:
         """
         Hybrid search trả về danh sách SearchResult sắp xếp theo RRF score giảm dần.
-
-        Args:
-            query:   Câu truy vấn người dùng (plain text).
-            top_k:   Số kết quả tối đa trả về.
-            filters: Bộ lọc tùy chọn:
-                     - "topic": list[str]   — chỉ lấy chunk từ docs có topic trong list
-                     - "phase": str         — chỉ lấy chunk từ docs có phase == str
-
-        Returns:
-            List[SearchResult] với len <= top_k.
-            Rỗng nếu không có kết quả.
         """
-        if not query or not query.strip():
-            return []
+        results, _, _ = self.search_with_facets(
+            query=query,
+            top_k=top_k,
+            filters=filters,
+        )
+        return results
 
-        n_candidates = max(top_k * _CANDIDATE_MULTIPLIER, 20)
+    def search_with_facets(
+        self,
+        query: str,
+        top_k: int = 5,
+        offset: int = 0,
+        filters: dict[str, Any] | None = None,
+    ) -> tuple[list[SearchResult], int, dict[str, Any]]:
+        """
+        Hybrid search trả về:
+        (list[SearchResult], total_hits, facet_counts) với phân trang offset/top_k.
+        """
+        empty_facets: dict[str, Any] = {
+            "topic": {},
+            "source_type": {},
+            "phase": {},
+            "golden": {},
+        }
+        if not query or not query.strip():
+            return [], 0, empty_facets
+
+        effective_offset = max(offset, 0)
+        n_candidates = max((effective_offset + top_k) * _CANDIDATE_MULTIPLIER, 20)
 
         if self._session is not None:
-            return self._execute_search(
+            return self._execute_search_with_facets(
                 session=self._session,
                 query=query,
                 top_k=top_k,
+                offset=effective_offset,
                 n_candidates=n_candidates,
                 filters=filters,
             )
 
         with Session(self._engine) as session:
-            return self._execute_search(
+            return self._execute_search_with_facets(
                 session=session,
                 query=query,
                 top_k=top_k,
+                offset=effective_offset,
                 n_candidates=n_candidates,
                 filters=filters,
             )
 
-    def _execute_search(
+    def _execute_search_with_facets(
         self,
         session: Session,
         query: str,
         top_k: int,
+        offset: int,
         n_candidates: int,
         filters: dict[str, Any] | None,
-    ) -> list[SearchResult]:
+    ) -> tuple[list[SearchResult], int, dict[str, Any]]:
         # Leg 1: Full-Text Search
         fts_rows = self._fts_search(
             session, query, limit=n_candidates, filters=filters
@@ -155,22 +172,80 @@ class RetrievalService:
             session, query_vector, limit=n_candidates, filters=filters
         )
 
-        # RRF Fusion
-        fused_ids = self._rrf_fuse(
+        # RRF Fusion on all candidate matches
+        all_fused_ids = self._rrf_fuse(
             fts_rows=fts_rows,
             vec_rows=vec_rows,
-            top_k=top_k,
+            top_k=None,
         )
 
-        if not fused_ids:
-            return []
+        if not all_fused_ids:
+            return [], 0, {
+                "topic": {},
+                "source_type": {},
+                "phase": {},
+                "golden": {},
+            }
 
-        # Hydrate SearchResult objects
-        return self._hydrate(
+        total_hits = len(all_fused_ids)
+        window_fused_ids = all_fused_ids[offset : offset + top_k]
+
+        # Calculate facet counts on all candidate matches
+        stmt = (
+            select(Document.topic, Document.source_type, Document.phase, Document.golden)
+            .join(Chunk, Chunk.document_id == Document.id)
+            .where(Chunk.id.in_(all_fused_ids))
+        )
+        facet_rows = session.execute(stmt).all()
+
+        topic_counts: dict[str, int] = {}
+        source_type_counts: dict[str, int] = {}
+        phase_counts: dict[str, int] = {}
+        golden_counts: dict[str, int] = {}
+
+        for row in facet_rows:
+            if row[0]:
+                topic_counts[str(row[0])] = topic_counts.get(str(row[0]), 0) + 1
+            if row[1]:
+                source_type_counts[str(row[1])] = source_type_counts.get(str(row[1]), 0) + 1
+            if row[2] is not None:
+                phase_counts[str(row[2])] = phase_counts.get(str(row[2]), 0) + 1
+            if row[3] is not None:
+                g_key = "true" if row[3] else "false"
+                golden_counts[g_key] = golden_counts.get(g_key, 0) + 1
+
+        facet_counts = {
+            "topic": topic_counts,
+            "source_type": source_type_counts,
+            "phase": phase_counts,
+            "golden": golden_counts,
+        }
+
+        # Hydrate SearchResult objects for current window
+        results = self._hydrate(
             session=session,
-            ranked_ids=fused_ids,
+            ranked_ids=window_fused_ids,
             query=query,
         )
+
+        return results, total_hits, facet_counts
+
+    def _execute_search(
+        self,
+        session: Session,
+        query: str,
+        top_k: int,
+        n_candidates: int,
+        filters: dict[str, Any] | None,
+    ) -> list[SearchResult]:
+        results, _, _ = self._execute_search_with_facets(
+            session=session,
+            query=query,
+            top_k=top_k,
+            n_candidates=n_candidates,
+            filters=filters,
+        )
+        return results
 
     # ──────────────────────────────────────────
     # Leg 1: Full-Text Search
@@ -250,7 +325,7 @@ class RetrievalService:
     def _rrf_fuse(
         fts_rows: list[tuple[uuid.UUID, float]],
         vec_rows: list[tuple[uuid.UUID, float]],
-        top_k: int,
+        top_k: int | None = None,
         k: int = _RRF_K,
     ) -> list[uuid.UUID]:
         """
@@ -269,7 +344,9 @@ class RetrievalService:
             rrf_scores[chunk_id] = rrf_scores.get(chunk_id, 0.0) + 1.0 / (k + rank)
 
         ranked = sorted(rrf_scores.items(), key=lambda x: x[1], reverse=True)
-        return [chunk_id for chunk_id, _ in ranked[:top_k]]
+        if top_k is not None:
+            return [chunk_id for chunk_id, _ in ranked[:top_k]]
+        return [chunk_id for chunk_id, _ in ranked]
 
     # ──────────────────────────────────────────
     # Hydration

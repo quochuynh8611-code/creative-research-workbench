@@ -53,6 +53,15 @@ function renderWithClient(ui: React.ReactElement, queryClient = createTestQueryC
 describe('SemanticSearchExplorer Component Tests (Phase 10.3 Increment 1 - 6)', () => {
   beforeEach(() => {
     jest.clearAllMocks()
+    mockedSearchKnowledge.mockReset()
+    mockedSearchKnowledge.mockResolvedValue({
+      results: [],
+      latency_ms: 0,
+      total_hits: 0,
+      facet_counts: { topic: {}, source_type: {}, phase: {}, golden: {} },
+      has_more: false,
+    })
+    mockSearchParams = new URLSearchParams()
     mockedListResearchNotes.mockResolvedValue({ data: [], meta: { total: 0 } })
     mockedGetSession.mockResolvedValue({
       id: 'default-session',
@@ -1496,6 +1505,237 @@ describe('SemanticSearchExplorer Component Tests (Phase 10.3 Increment 1 - 6)', 
 
       // Chip Hiển thị D / N bị ẩn
       expect(screen.queryByText(/Hiển thị \d+ \/ \d+ mục/i)).not.toBeInTheDocument()
+    })
+  })
+
+  describe('Phase 10.3 Increment 14: Backend Facets & Explorer Aggregate Counts', () => {
+    it('Scenario 48: Hiển thị đúng total_hits từ backend khi total_hits > results.length', async () => {
+      mockSearchParams = new URLSearchParams('q=nguyên+tắc')
+
+      mockedSearchKnowledge.mockResolvedValueOnce({
+        results: [
+          {
+            chunk_id: 'chk-1',
+            source_ref: 'docs/1.md',
+            excerpt: 'Nguyên tắc sáng chế 1.',
+            score: 0.95,
+            metadata: {},
+          },
+          {
+            chunk_id: 'chk-2',
+            source_ref: 'docs/2.md',
+            excerpt: 'Nguyên tắc sáng chế 2.',
+            score: 0.90,
+            metadata: {},
+          },
+        ],
+        total_hits: 15,
+        facet_counts: {
+          topic: {},
+          source_type: {},
+          phase: {},
+          golden: {},
+        },
+        latency_ms: 5.0,
+      } as any)
+
+      renderWithClient(<SemanticSearchExplorer />)
+
+      await screen.findByText('Nguyên tắc sáng chế 1.')
+
+      // Summary Bar phải hiển thị 15 kết quả tìm thấy
+      expect(screen.getByText(/kết quả tìm thấy/i)).toHaveTextContent('15 kết quả tìm thấy')
+      // Vì displayedResults (2) khác total_hits (15), hiển thị chip "Hiển thị 2 / 15 mục"
+      expect(screen.getByText('Hiển thị 2 / 15 mục')).toBeInTheDocument()
+    })
+
+    it('Scenario 49: Ưu tiên facet_counts backend cho source bucket và golden counts', async () => {
+      mockSearchParams = new URLSearchParams('q=triz')
+
+      mockedSearchKnowledge.mockResolvedValueOnce({
+        results: [
+          {
+            chunk_id: 'chk-1',
+            source_ref: 'docs/1.md',
+            excerpt: 'Tài liệu TRIZ tổng quan.',
+            score: 0.95,
+            metadata: { source_type: 'golden_kb', golden: true },
+          },
+        ],
+        total_hits: 10,
+        facet_counts: {
+          topic: { contradiction: 6, function: 4 },
+          source_type: { golden_kb: 4, case_study: 6 },
+          phase: { '1': 10 },
+          golden: { true: 4, false: 6 },
+        },
+        latency_ms: 4.0,
+      } as any)
+
+      renderWithClient(<SemanticSearchExplorer />)
+
+      await screen.findByText('Tài liệu TRIZ tổng quan.')
+
+      // Golden count chip lấy từ backend facet_counts (4 chuẩn vàng)
+      expect(screen.getByText('4 chuẩn vàng')).toBeInTheDocument()
+
+      // Segment tabs render dựa trên backend facet_counts
+      expect(screen.getByRole('button', { name: /Golden Knowledge Base/i })).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: /Case Study/i })).toBeInTheDocument()
+    })
+  })
+
+  describe('Phase 10.3 Increment 15: Search Pagination / Load More', () => {
+    it('Scenario 52: Hiển thị nút Tải thêm khi total_hits > results.length hoặc has_more = true', async () => {
+      mockSearchParams = new URLSearchParams('q=nguyên+tắc')
+
+      mockedSearchKnowledge.mockResolvedValueOnce({
+        results: [
+          {
+            chunk_id: 'chk-1',
+            source_ref: 'docs/1.md',
+            excerpt: 'Nguyên tắc 1.',
+            score: 0.95,
+            metadata: {},
+          },
+          {
+            chunk_id: 'chk-2',
+            source_ref: 'docs/2.md',
+            excerpt: 'Nguyên tắc 2.',
+            score: 0.90,
+            metadata: {},
+          },
+        ],
+        total_hits: 5,
+        offset: 0,
+        limit: 2,
+        has_more: true,
+        latency_ms: 5.0,
+      } as any)
+
+      renderWithClient(<SemanticSearchExplorer />)
+
+      await screen.findByText('Nguyên tắc 1.')
+
+      const loadMoreBtn = screen.getByRole('button', { name: /Tải thêm|Xem thêm/i })
+      expect(loadMoreBtn).toBeInTheDocument()
+      expect(loadMoreBtn).not.toBeDisabled()
+    })
+
+    it('Scenario 53: Nhấp Tải thêm gọi API trang kế tiếp và nối thêm kết quả (Append)', async () => {
+      mockSearchParams = new URLSearchParams('q=nguyên+tắc')
+
+      mockedSearchKnowledge
+        .mockResolvedValueOnce({
+          results: [
+            {
+              chunk_id: 'chk-1',
+              source_ref: 'docs/1.md',
+              excerpt: 'Nguyên tắc 1.',
+              score: 0.95,
+              metadata: {},
+            },
+            {
+              chunk_id: 'chk-2',
+              source_ref: 'docs/2.md',
+              excerpt: 'Nguyên tắc 2.',
+              score: 0.90,
+              metadata: {},
+            },
+          ],
+          total_hits: 4,
+          offset: 0,
+          limit: 2,
+          has_more: true,
+          latency_ms: 5.0,
+        } as any)
+        .mockResolvedValueOnce({
+          results: [
+            {
+              chunk_id: 'chk-3',
+              source_ref: 'docs/3.md',
+              excerpt: 'Nguyên tắc 3.',
+              score: 0.85,
+              metadata: {},
+            },
+            {
+              chunk_id: 'chk-4',
+              source_ref: 'docs/4.md',
+              excerpt: 'Nguyên tắc 4.',
+              score: 0.80,
+              metadata: {},
+            },
+          ],
+          total_hits: 4,
+          offset: 2,
+          limit: 2,
+          has_more: false,
+          latency_ms: 6.0,
+        } as any)
+
+      renderWithClient(<SemanticSearchExplorer />)
+
+      await screen.findByText('Nguyên tắc 1.')
+      expect(screen.queryByText('Nguyên tắc 3.')).not.toBeInTheDocument()
+
+      const loadMoreBtn = screen.getByRole('button', { name: /Tải thêm|Xem thêm/i })
+      fireEvent.click(loadMoreBtn)
+
+      // Chờ item từ trang 2 xuất hiện
+      await screen.findByText('Nguyên tắc 3.')
+      expect(screen.getByText('Nguyên tắc 1.')).toBeInTheDocument()
+      expect(screen.getByText('Nguyên tắc 4.')).toBeInTheDocument()
+
+      // Nút load more biến mất vì has_more = false (đã đủ 4/4)
+      expect(screen.queryByRole('button', { name: /Tải thêm|Xem thêm/i })).not.toBeInTheDocument()
+    })
+
+    it('Scenario 54: Ẩn nút Tải thêm khi đã xem hết toàn bộ kết quả', async () => {
+      mockSearchParams = new URLSearchParams('q=nguyên+tắc')
+
+      mockedSearchKnowledge.mockResolvedValueOnce({
+        results: [
+          {
+            chunk_id: 'chk-1',
+            source_ref: 'docs/1.md',
+            excerpt: 'Duy nhất 1 kết quả.',
+            score: 0.95,
+            metadata: {},
+          },
+        ],
+        total_hits: 1,
+        offset: 0,
+        limit: 10,
+        has_more: false,
+        latency_ms: 3.0,
+      } as any)
+
+      renderWithClient(<SemanticSearchExplorer />)
+
+      await screen.findByText('Duy nhất 1 kết quả.')
+      expect(screen.queryByRole('button', { name: /Tải thêm|Xem thêm/i })).not.toBeInTheDocument()
+    })
+
+    it('Scenario 55: Backward compatibility khi API response cũ không có has_more hoặc offset', async () => {
+      mockSearchParams = new URLSearchParams('q=nguyên+tắc')
+
+      mockedSearchKnowledge.mockResolvedValueOnce({
+        results: [
+          {
+            chunk_id: 'chk-legacy',
+            source_ref: 'docs/legacy.md',
+            excerpt: 'Kết quả từ backend legacy.',
+            score: 0.88,
+            metadata: {},
+          },
+        ],
+        latency_ms: 4.0,
+      })
+
+      renderWithClient(<SemanticSearchExplorer />)
+
+      await screen.findByText('Kết quả từ backend legacy.')
+      expect(screen.getByText('Kết quả từ backend legacy.')).toBeInTheDocument()
     })
   })
 })

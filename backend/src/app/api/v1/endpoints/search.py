@@ -65,6 +65,8 @@ def get_cross_session_discovery_service(
 class SearchRequest(BaseModel):
     query: str
     top_k: int = 5
+    offset: int = 0
+    limit: int | None = None
     filters: dict[str, Any] | None = None
 
 
@@ -78,9 +80,21 @@ class SearchResultItem(BaseModel):
     chunk_index: int = 0
 
 
+class FacetCounts(BaseModel):
+    topic: dict[str, int] = Field(default_factory=dict)
+    source_type: dict[str, int] = Field(default_factory=dict)
+    phase: dict[str, int] = Field(default_factory=dict)
+    golden: dict[str, int] = Field(default_factory=dict)
+
+
 class SearchResponse(BaseModel):
     results: list[SearchResultItem]
     latency_ms: float
+    total_hits: int = 0
+    facet_counts: FacetCounts = Field(default_factory=FacetCounts)
+    offset: int = 0
+    limit: int = 5
+    has_more: bool = False
 
 
 class MatchedSessionResponseItem(BaseModel):
@@ -112,11 +126,14 @@ async def semantic_search(
     body: SearchRequest,
     service: RetrievalService = Depends(get_retrieval_service),
 ) -> SearchResponse:
-    """Hybrid search trên Knowledge Base (Full-text + Vector + RRF)."""
+    """Hybrid search trên Knowledge Base (Full-text + Vector + RRF) có phân trang."""
     start_time = time.perf_counter()
-    raw_results = service.search(
+    effective_limit = body.limit if body.limit is not None else body.top_k
+
+    raw_results, total_hits, facet_counts = service.search_with_facets(
         query=body.query,
-        top_k=body.top_k,
+        top_k=effective_limit,
+        offset=body.offset,
         filters=body.filters,
     )
     latency_ms = round((time.perf_counter() - start_time) * 1000, 2)
@@ -134,9 +151,16 @@ async def semantic_search(
         for r in raw_results
     ]
 
+    has_more = (body.offset + len(results)) < total_hits
+
     return SearchResponse(
         results=results,
         latency_ms=latency_ms,
+        total_hits=total_hits,
+        facet_counts=FacetCounts(**facet_counts),
+        offset=body.offset,
+        limit=effective_limit,
+        has_more=has_more,
     )
 
 

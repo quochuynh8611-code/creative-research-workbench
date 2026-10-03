@@ -230,3 +230,187 @@ async def test_search_api_filters_by_source_type(
         )
         assert resp_empty.status_code == 200
         assert len(resp_empty.json()["results"]) == 0
+
+
+@pytest.mark.asyncio
+async def test_search_api_returns_total_hits_and_facet_counts(
+    override_retrieval_service_dependency,
+    db_session: Session,
+    sample_document: Document,
+    sample_chunks: list[Chunk],
+    mock_openai_embedding,
+):
+    """
+    Phase 10.3 Increment 14: Search response bao gồm total_hits và facet_counts.
+    """
+    # Create an additional document with different metadata
+    doc2 = Document(
+        filename="research_paper_1.md",
+        filepath="docs/research_paper_1.md",
+        title="Research Paper on TRIZ Contradictions",
+        topic="function",
+        source_type="research_paper",
+        phase="2",
+        golden=False,
+        content_hash="hash_rp_123",
+    )
+    db_session.add(doc2)
+    db_session.flush()
+
+    chunk2 = Chunk(
+        document_id=doc2.id,
+        content="Nghiên cứu về mâu thuẫn kỹ thuật và các quy luật phát triển hệ thống",
+        chunk_index=0,
+        embedding=[0.0] * 1536,
+    )
+    db_session.add(chunk2)
+    db_session.commit()
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        resp = await client.post(
+            "/api/v1/search",
+            json={
+                "query": "mâu thuẫn",
+                "top_k": 10,
+            },
+        )
+
+    assert resp.status_code == 200
+    data = resp.json()
+    assert "total_hits" in data
+    assert "facet_counts" in data
+    assert data["total_hits"] >= 2
+
+    facets = data["facet_counts"]
+    assert "topic" in facets
+    assert "source_type" in facets
+    assert "phase" in facets
+    assert "golden" in facets
+    assert "research_paper" in facets["source_type"]
+    assert facets["golden"].get("true", 0) >= 1
+    assert facets["golden"].get("false", 0) >= 1
+
+
+@pytest.mark.asyncio
+async def test_search_api_total_hits_exceeds_top_k(
+    override_retrieval_service_dependency,
+    db_session: Session,
+    sample_document: Document,
+    sample_chunks: list[Chunk],
+    mock_openai_embedding,
+):
+    """
+    Phase 10.3 Increment 14: Khi top_k nhỏ hơn tổng candidate match,
+    total_hits vẫn phản ánh đúng tổng số candidates trước khi slice.
+    """
+    # Create 3 more documents matching "mâu thuẫn"
+    for i in range(3):
+        d = Document(
+            filename=f"extra_doc_{i}.md",
+            filepath=f"docs/extra_{i}.md",
+            title=f"Extra Doc {i}",
+            topic="contradiction",
+            source_type="case_study",
+            golden=False,
+            content_hash=f"hash_extra_{i}",
+        )
+        db_session.add(d)
+        db_session.flush()
+        c = Chunk(
+            document_id=d.id,
+            content=f"Giải quyết mâu thuẫn kỹ thuật trường hợp số {i}",
+            chunk_index=0,
+            embedding=[0.0] * 1536,
+        )
+        db_session.add(c)
+    db_session.commit()
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        resp = await client.post(
+            "/api/v1/search",
+            json={
+                "query": "mâu thuẫn",
+                "top_k": 2,
+            },
+        )
+
+    assert resp.status_code == 200
+    data = resp.json()
+    assert len(data["results"]) == 2
+    assert data["total_hits"] >= 4
+
+
+@pytest.mark.asyncio
+async def test_search_api_pagination_offset_and_has_more(
+    override_retrieval_service_dependency,
+    db_session: Session,
+    sample_document: Document,
+    sample_chunks: list[Chunk],
+    mock_openai_embedding,
+):
+    """
+    Phase 10.3 Increment 15: Search API hỗ trợ offset, limit/top_k, và trường has_more.
+    """
+    # Create 4 documents matching "nguyên tắc"
+    for i in range(4):
+        d = Document(
+            filename=f"doc_page_{i}.md",
+            filepath=f"docs/doc_page_{i}.md",
+            title=f"Doc Page {i}",
+            topic="contradiction",
+            source_type="case_study",
+            golden=False,
+            content_hash=f"hash_page_{i}",
+        )
+        db_session.add(d)
+        db_session.flush()
+        c = Chunk(
+            document_id=d.id,
+            content=f"Áp dụng nguyên tắc giải quyết bài toán số {i}",
+            chunk_index=0,
+            embedding=[0.0] * 1536,
+        )
+        db_session.add(c)
+    db_session.commit()
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        # Page 1: offset=0, limit=2 -> has_more should be True
+        resp1 = await client.post(
+            "/api/v1/search",
+            json={
+                "query": "nguyên tắc",
+                "offset": 0,
+                "top_k": 2,
+            },
+        )
+        assert resp1.status_code == 200
+        data1 = resp1.json()
+        assert "offset" in data1
+        assert "limit" in data1
+        assert "has_more" in data1
+        assert data1["offset"] == 0
+        assert data1["limit"] == 2
+        assert len(data1["results"]) == 2
+        assert data1["total_hits"] >= 4
+        assert data1["has_more"] is True
+
+        page1_ids = [item["chunk_id"] for item in data1["results"]]
+
+        # Page 2: offset=2, limit=2 -> disjoint from page 1
+        resp2 = await client.post(
+            "/api/v1/search",
+            json={
+                "query": "nguyên tắc",
+                "offset": 2,
+                "top_k": 2,
+            },
+        )
+        assert resp2.status_code == 200
+        data2 = resp2.json()
+        assert data2["offset"] == 2
+        assert data2["limit"] == 2
+        assert len(data2["results"]) >= 1
+        page2_ids = [item["chunk_id"] for item in data2["results"]]
+        assert not set(page1_ids).intersection(set(page2_ids))
+        assert data2["total_hits"] == data1["total_hits"]
+        assert data2["facet_counts"] == data1["facet_counts"]

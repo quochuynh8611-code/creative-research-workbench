@@ -85,6 +85,8 @@ export interface NextStepResponse {
 export interface SearchRequest {
   query: string
   top_k?: number
+  offset?: number
+  limit?: number
   filters?: Record<string, any>
 }
 
@@ -96,9 +98,21 @@ export interface SearchResultItem {
   metadata: Record<string, any>
 }
 
+export interface FacetCounts {
+  topic?: Record<string, number>
+  source_type?: Record<string, number>
+  phase?: Record<string, number>
+  golden?: Record<string, number>
+}
+
 export interface SearchResponse {
   results: SearchResultItem[]
   latency_ms: number
+  total_hits?: number
+  facet_counts?: FacetCounts
+  offset?: number
+  limit?: number
+  has_more?: boolean
 }
 
 // Cross-Session Discovery Types (Phase 10.2)
