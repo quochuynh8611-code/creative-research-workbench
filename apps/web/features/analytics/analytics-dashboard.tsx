@@ -361,7 +361,10 @@ export function AnalyticsDashboard(): React.ReactElement {
 
       {/* Actionable Empty-State Guidance Panel */}
       {isEmptyDashboard && (
-        <div className="bg-muted/30 border border-dashed border-border rounded-xl p-6 text-center space-y-4">
+        <div
+          data-testid="analytics-empty-state"
+          className="bg-muted/30 border border-dashed border-border rounded-xl p-6 text-center space-y-4"
+        >
           <div className="max-w-xl mx-auto space-y-2">
             <h2 className="text-base font-semibold text-foreground">
               Chưa có dữ liệu nghiên cứu & tri thức
@@ -393,11 +396,18 @@ export function AnalyticsDashboard(): React.ReactElement {
       {/* Detailed Analytics Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Section 1: Sessions Breakdown */}
-        <div className="bg-card border border-border rounded-xl p-6 shadow-sm space-y-6">
+        <section
+          aria-labelledby="section-sessions-heading"
+          data-testid="section-sessions"
+          className="bg-card border border-border rounded-xl p-6 shadow-sm space-y-6"
+        >
           <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border pb-3">
             <div className="flex items-center gap-2">
               <Brain className="w-5 h-5 text-indigo-500" />
-              <h2 className="text-lg font-semibold text-foreground">
+              <h2
+                id="section-sessions-heading"
+                className="text-lg font-semibold text-foreground"
+              >
                 Phân tích Sessions
               </h2>
             </div>
@@ -453,14 +463,21 @@ export function AnalyticsDashboard(): React.ReactElement {
               )}
             </div>
           </div>
-        </div>
+        </section>
 
         {/* Section 2: Content & Ideation Activity */}
-        <div className="bg-card border border-border rounded-xl p-6 shadow-sm space-y-6">
+        <section
+          aria-labelledby="section-content-heading"
+          data-testid="section-content"
+          className="bg-card border border-border rounded-xl p-6 shadow-sm space-y-6"
+        >
           <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border pb-3">
             <div className="flex items-center gap-2">
               <Lightbulb className="w-5 h-5 text-amber-500" />
-              <h2 className="text-lg font-semibold text-foreground">
+              <h2
+                id="section-content-heading"
+                className="text-lg font-semibold text-foreground"
+              >
                 Nội dung & Giải pháp
               </h2>
             </div>
@@ -502,14 +519,21 @@ export function AnalyticsDashboard(): React.ReactElement {
               )}
             </div>
           </div>
-        </div>
+        </section>
 
         {/* Section 3: Knowledge Base & TRIZ Insights */}
-        <div className="bg-card border border-border rounded-xl p-6 shadow-sm space-y-6 lg:col-span-2">
+        <section
+          aria-labelledby="section-triz-heading"
+          data-testid="section-triz"
+          className="bg-card border border-border rounded-xl p-6 shadow-sm space-y-6 lg:col-span-2"
+        >
           <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border pb-3">
             <div className="flex items-center gap-2">
               <Sparkles className="w-5 h-5 text-purple-500" />
-              <h2 className="text-lg font-semibold text-foreground">
+              <h2
+                id="section-triz-heading"
+                className="text-lg font-semibold text-foreground"
+              >
                 Tri thức & Mâu thuẫn TRIZ
               </h2>
             </div>
@@ -584,7 +608,7 @@ export function AnalyticsDashboard(): React.ReactElement {
               )}
             </div>
           </div>
-        </div>
+        </section>
       </div>
     </div>
   )

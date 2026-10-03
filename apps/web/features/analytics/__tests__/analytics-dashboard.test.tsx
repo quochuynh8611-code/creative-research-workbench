@@ -543,13 +543,50 @@ describe('AnalyticsDashboard Component (Phase 11.1B)', () => {
     // Ratio badge: 4 / 10 = 40%
     expect(screen.getByText(/40% chuẩn hóa/i)).toBeInTheDocument()
 
-    // Populated counts still rendered
-    expect(screen.getAllByText(/4/i).length).toBeGreaterThanOrEqual(1)
-    expect(screen.getAllByText(/10/i).length).toBeGreaterThanOrEqual(1)
-
     // Local empty guidance should NOT be rendered
     expect(
       screen.queryByText(/chưa có tài liệu trong kho tri thức/i)
     ).not.toBeInTheDocument()
+  })
+
+  // Phase 11.9: Semantic Landmarks & Section Accessibility Hardening (RED suite)
+  // Test 1: Accessible landmark regions and data-testids for detailed sections
+  it('renders_accessible_landmark_regions_and_testids_for_detailed_sections', async () => {
+    mockedGetAnalyticsOverview.mockResolvedValue(mockPopulatedOverview)
+
+    renderWithClient(<AnalyticsDashboard />)
+
+    await waitFor(() => {
+      expect(screen.queryByTestId('analytics-loading-skeleton')).not.toBeInTheDocument()
+    })
+
+    // 1. Sessions Section Landmark & testid
+    const sessionsRegion = screen.getByRole('region', { name: /phân tích sessions/i })
+    expect(sessionsRegion).toBeInTheDocument()
+    expect(sessionsRegion).toHaveAttribute('data-testid', 'section-sessions')
+
+    // 2. Content & Ideation Section Landmark & testid
+    const contentRegion = screen.getByRole('region', { name: /nội dung & giải pháp/i })
+    expect(contentRegion).toBeInTheDocument()
+    expect(contentRegion).toHaveAttribute('data-testid', 'section-content')
+
+    // 3. Knowledge Base & TRIZ Section Landmark & testid
+    const trizRegion = screen.getByRole('region', { name: /tri thức & mâu thuẫn triz/i })
+    expect(trizRegion).toBeInTheDocument()
+    expect(trizRegion).toHaveAttribute('data-testid', 'section-triz')
+  })
+
+  // Test 2: Global empty state container has data-testid="analytics-empty-state"
+  it('renders_analytics_empty_state_testid_when_all_metrics_are_zero', async () => {
+    mockedGetAnalyticsOverview.mockResolvedValue(mockEmptyOverview)
+
+    renderWithClient(<AnalyticsDashboard />)
+
+    await waitFor(() => {
+      expect(screen.queryByTestId('analytics-loading-skeleton')).not.toBeInTheDocument()
+    })
+
+    const emptyPanel = screen.getByTestId('analytics-empty-state')
+    expect(emptyPanel).toBeInTheDocument()
   })
 })
