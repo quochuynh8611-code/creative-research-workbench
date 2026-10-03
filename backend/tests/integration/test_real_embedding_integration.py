@@ -8,8 +8,15 @@ import pathlib
 import pytest
 from sqlalchemy.orm import Session
 
+from unittest.mock import MagicMock, patch
+
 from app.domain.models import Chunk, Document
-from app.services.embedding_client import EmbeddingClient, EMBEDDING_DIM
+from app.services.embedding_client import (
+    EMBEDDING_DIM,
+    EmbeddingClient,
+    MockEmbeddingClient,
+    OpenAIEmbeddingClient,
+)
 from app.services.ingestion_service import IngestionService
 from app.services.retrieval_service import RetrievalService
 
@@ -130,3 +137,92 @@ Quản trị hệ quản trị cơ sở dữ liệu PostgreSQL và cấu hình c
     # Document về TRIZ phải đứng đầu
     assert search_results[0].document_id == res_1.document_id
     assert search_results[0].score > 0.0
+
+
+def test_ingestion_persists_document_and_fallback_zero_vectors_on_provider_error(db_session: Session, tmp_path: pathlib.Path):
+    """
+    GIVEN: IngestionService dùng OpenAIEmbeddingClient nhưng API bên ngoài bị lỗi kết nối
+    WHEN: Gọi IngestionService.ingest trên một tài liệu mới
+    THEN:
+      - Document và Chunks vẫn được lưu đầy đủ vào PostgreSQL
+      - Kết quả IngestResult trả về status='success' (degraded mode)
+      - Chunks được gán zero-vectors 1536 chiều
+      - Không ném ngoại lệ 500 ra caller
+    """
+    sample_file = tmp_path / "degraded_doc.md"
+    sample_file.write_text(
+        """---
+title: "Tài liệu nạp trong điều kiện API lỗi"
+topic: "testing"
+golden: false
+---
+
+Nội dung tài liệu kiểm thử khả năng phục hồi của Ingestion pipeline khi API nhúng gặp sự cố.
+Hệ thống phải lưu trữ thành công và gán placeholder zero-vector thay vì làm gián đoạn request.
+""",
+        encoding="utf-8",
+    )
+
+    failing_client = OpenAIEmbeddingClient(api_key="sk-fake-error-key", fallback_on_error=True)
+    with patch("openai.OpenAI") as mock_openai:
+        mock_instance = MagicMock()
+        mock_instance.embeddings.create.side_effect = RuntimeError("OpenAI Server Error 503")
+        mock_openai.return_value = mock_instance
+
+        service = IngestionService(engine=db_session.bind, embedding_client=failing_client)
+        result = service.ingest(str(sample_file))
+
+        assert result.status == "success"
+        assert result.chunks_created >= 1
+
+        doc = db_session.query(Document).filter_by(id=result.document_id).first()
+        assert doc is not None
+        assert doc.title == "Tài liệu nạp trong điều kiện API lỗi"
+
+        chunks = db_session.query(Chunk).filter_by(document_id=doc.id).all()
+        assert len(chunks) == result.chunks_created
+        for c in chunks:
+            assert c.embedding is not None
+            assert len(c.embedding) == EMBEDDING_DIM
+            assert all(v == 0.0 for v in c.embedding)
+
+
+def test_retrieval_service_bypasses_vector_leg_when_query_vector_is_all_zeros(db_session: Session, tmp_path: pathlib.Path):
+    """
+    GIVEN: RetrievalService dùng MockEmbeddingClient (toàn bộ query vector sinh ra là 0.0)
+    WHEN: Thực hiện tìm kiếm retriever.search("Full-Text Search tsvector")
+    THEN:
+      - Leg 2 (Vector Search) bị bypass an toàn (trả về list rỗng, không tính cosine trên zero-vector)
+      - Leg 1 (FTS) trả về đúng tài liệu liên quan
+      - Điểm số RRF fusion được tính toán chính xác
+    """
+    file_path = tmp_path / "fts_doc.md"
+    file_path.write_text(
+        """---
+title: "Tài liệu Kiến trúc Full-Text Search"
+topic: "search"
+golden: true
+---
+
+PostgreSQL cung cấp công cụ Full-Text Search tsvector mạnh mẽ cho tiếng Việt và tiếng Anh.
+Khi không có vector nhúng, hệ thống phải trả kết quả hoàn toàn dựa vào FTS.
+""",
+        encoding="utf-8",
+    )
+
+    mock_client = MockEmbeddingClient()
+    ingestion = IngestionService(engine=db_session.bind, embedding_client=mock_client)
+    res = ingestion.ingest(str(file_path))
+    assert res.status == "success"
+
+    retriever = RetrievalService(bind=db_session, embedding_client=mock_client)
+
+    with patch.object(retriever, "_vector_search", wraps=retriever._vector_search) as spy_vec_search:
+        results = retriever.search("Full-Text Search tsvector", top_k=5)
+
+        spy_vec_search.assert_called_once()
+        # Đảm bảo FTS vẫn trả về kết quả chính xác
+        assert len(results) >= 1
+        assert results[0].document_id == res.document_id
+        assert "tsvector" in results[0].excerpt.lower()
+        assert results[0].score > 0.0

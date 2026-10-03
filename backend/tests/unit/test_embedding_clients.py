@@ -235,3 +235,64 @@ def test_reembed_all_chunks_logic():
     assert chunk_1.embedding == [0.8] * EMBEDDING_DIM
     assert chunk_2.embedding == [0.9] * EMBEDDING_DIM
     mock_session.commit.assert_called_once()
+
+
+def test_reembed_all_chunks_only_zero_flag_skips_existing_real_vectors():
+    """
+    GIVEN: 4 chunks gồm 2 chunks zero-vectors/None và 2 chunks đã có real vectors
+    WHEN: Gọi reembed_all_chunks(..., only_zero=True)
+    THEN:
+      - Chỉ 2 zero-vector chunks được đưa vào embedding_client.embed
+      - 2 real-vector chunks giữ nguyên giá trị ban đầu
+      - Hàm trả về count = 2
+    """
+    from app.domain.models import Chunk
+    from app.scripts.reembed_chunks import reembed_all_chunks
+
+    chunk_zero_1 = MagicMock(spec=Chunk)
+    chunk_zero_1.content = "Nội dung cần re-embed 1"
+    chunk_zero_1.embedding = [0.0] * EMBEDDING_DIM
+
+    chunk_real_1 = MagicMock(spec=Chunk)
+    chunk_real_1.content = "Nội dung đã có vector thực 1"
+    chunk_real_1.embedding = [0.75] * EMBEDDING_DIM
+
+    chunk_zero_2 = MagicMock(spec=Chunk)
+    chunk_zero_2.content = "Nội dung cần re-embed 2"
+    chunk_zero_2.embedding = None
+
+    chunk_real_2 = MagicMock(spec=Chunk)
+    chunk_real_2.content = "Nội dung đã có vector thực 2"
+    chunk_real_2.embedding = [0.85] * EMBEDDING_DIM
+
+    mock_session = MagicMock()
+    mock_session.query.return_value.order_by.return_value.all.return_value = [
+        chunk_zero_1,
+        chunk_real_1,
+        chunk_zero_2,
+        chunk_real_2,
+    ]
+
+    fake_client = MagicMock()
+    fake_client.embed.return_value = [
+        [0.91] * EMBEDDING_DIM,
+        [0.92] * EMBEDDING_DIM,
+    ]
+
+    count = reembed_all_chunks(
+        db_session=mock_session,
+        embedding_client=fake_client,
+        batch_size=10,
+        only_zero=True,
+    )
+
+    assert count == 2
+    fake_client.embed.assert_called_once_with([
+        "Nội dung cần re-embed 1",
+        "Nội dung cần re-embed 2",
+    ])
+    assert chunk_zero_1.embedding == [0.91] * EMBEDDING_DIM
+    assert chunk_zero_2.embedding == [0.92] * EMBEDDING_DIM
+    assert chunk_real_1.embedding == [0.75] * EMBEDDING_DIM
+    assert chunk_real_2.embedding == [0.85] * EMBEDDING_DIM
+    mock_session.commit.assert_called_once()
