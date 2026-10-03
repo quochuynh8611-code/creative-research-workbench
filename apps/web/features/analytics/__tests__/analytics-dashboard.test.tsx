@@ -475,4 +475,81 @@ describe('AnalyticsDashboard Component (Phase 11.1B)', () => {
     const cardLink = within(trizCard).getByRole('link', { name: /tra cứu triz/i })
     expect(cardLink).toHaveAttribute('href', '/search')
   })
+
+  // Phase 11.8: Golden Documents Local-Empty Guidance & Quality Ratio (RED suite)
+  // Test 1: Local-empty guidance when knowledge base is empty in mixed-state
+  it('renders_section_local_empty_guidance_for_golden_documents_when_knowledge_base_is_empty', async () => {
+    const mockMixedWithoutKnowledge: AnalyticsOverviewResponse = {
+      data: {
+        sessions: {
+          total: 5,
+          by_status: { active: 5 },
+          by_workflow_state: { structuring: 5 },
+          by_domain: { technical: 5 },
+        },
+        content: {
+          total_problem_frames: 4,
+          total_research_notes: 6,
+          notes_by_type: { insight: 6 },
+          total_candidate_solutions: 5,
+          solutions_by_status: { candidate: 5 },
+        },
+        knowledge_base: {
+          total_documents: 0,
+          golden_documents: 0,
+          total_chunks: 0,
+        },
+        triz: {
+          total_contradictions: 3,
+          by_contradiction_type: { technical: 3 },
+        },
+      },
+      generated_at: '2026-10-03T12:00:00.000Z',
+    }
+
+    mockedGetAnalyticsOverview.mockResolvedValue(mockMixedWithoutKnowledge)
+
+    renderWithClient(<AnalyticsDashboard />)
+
+    await waitFor(() => {
+      expect(screen.queryByTestId('analytics-loading-skeleton')).not.toBeInTheDocument()
+    })
+
+    // Local-empty guidance text
+    expect(
+      screen.getByText(/chưa có tài liệu trong kho tri thức/i)
+    ).toBeInTheDocument()
+
+    // Contextual link to /knowledge
+    const openKnowledgeLink = screen.getByRole('link', {
+      name: /mở kho tri thức/i,
+    })
+    expect(openKnowledgeLink).toHaveAttribute('href', '/knowledge')
+
+    // Raw zero text should not be rendered
+    expect(screen.queryByText(/0 tổng tài liệu/i)).not.toBeInTheDocument()
+  })
+
+  // Test 2: Golden documents ratio badge when knowledge base has documents
+  it('renders_golden_documents_ratio_badge_when_knowledge_base_has_documents', async () => {
+    mockedGetAnalyticsOverview.mockResolvedValue(mockPopulatedOverview)
+
+    renderWithClient(<AnalyticsDashboard />)
+
+    await waitFor(() => {
+      expect(screen.queryByTestId('analytics-loading-skeleton')).not.toBeInTheDocument()
+    })
+
+    // Ratio badge: 4 / 10 = 40%
+    expect(screen.getByText(/40% chuẩn hóa/i)).toBeInTheDocument()
+
+    // Populated counts still rendered
+    expect(screen.getAllByText(/4/i).length).toBeGreaterThanOrEqual(1)
+    expect(screen.getAllByText(/10/i).length).toBeGreaterThanOrEqual(1)
+
+    // Local empty guidance should NOT be rendered
+    expect(
+      screen.queryByText(/chưa có tài liệu trong kho tri thức/i)
+    ).not.toBeInTheDocument()
+  })
 })

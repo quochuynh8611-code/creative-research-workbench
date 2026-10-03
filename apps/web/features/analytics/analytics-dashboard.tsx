@@ -550,20 +550,38 @@ export function AnalyticsDashboard(): React.ReactElement {
               <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                 Tài liệu Chuẩn tắc (Golden Documents)
               </h3>
-              <div className="flex items-center gap-4 text-sm text-foreground pt-1">
-                <span className="flex items-center gap-1.5">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-500" />
-                  <strong>{knowledgeBase.golden_documents}</strong> chuẩn tắc
-                </span>
-                <span className="text-muted-foreground">/</span>
-                <span>
-                  <strong>{knowledgeBase.total_documents}</strong> tổng tài liệu
-                </span>
-                <span className="text-muted-foreground">/</span>
-                <span>
-                  <strong>{knowledgeBase.total_chunks}</strong> chunks
-                </span>
-              </div>
+              {knowledgeBase.total_documents === 0 ? (
+                <div className="flex flex-wrap items-center justify-between gap-2 py-2 text-xs text-muted-foreground border border-dashed border-border/60 rounded-lg px-3 bg-muted/20">
+                  <span>Chưa có tài liệu trong kho tri thức.</span>
+                  <Link
+                    href="/knowledge"
+                    className="inline-flex items-center gap-1 font-medium text-primary hover:underline"
+                  >
+                    <span>Mở Kho tri thức</span>
+                    <ArrowRight className="w-3 h-3" />
+                  </Link>
+                </div>
+              ) : (
+                <div className="flex flex-wrap items-center gap-3 text-sm text-foreground pt-1">
+                  <div className="flex items-center gap-3 text-sm text-foreground">
+                    <span className="flex items-center gap-1.5">
+                      <CheckCircle2 className="w-4 h-4 text-emerald-500" />
+                      <strong>{knowledgeBase.golden_documents}</strong> chuẩn tắc
+                    </span>
+                    <span className="text-muted-foreground">/</span>
+                    <span>
+                      <strong>{knowledgeBase.total_documents}</strong> tổng tài liệu
+                    </span>
+                    <span className="text-muted-foreground">/</span>
+                    <span>
+                      <strong>{knowledgeBase.total_chunks}</strong> chunks
+                    </span>
+                  </div>
+                  <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300 border border-emerald-200/50 dark:border-emerald-800/50">
+                    {`${Math.round((knowledgeBase.golden_documents / knowledgeBase.total_documents) * 100)}% chuẩn hóa`}
+                  </span>
+                </div>
+              )}
             </div>
           </div>
         </div>
