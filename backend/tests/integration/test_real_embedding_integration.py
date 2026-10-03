@@ -5,12 +5,14 @@ Phase 6.1: Real Embedding Engine & Polymorphic Factory.
 from __future__ import annotations
 
 import pathlib
+import uuid
+from unittest.mock import MagicMock, patch
+
 import pytest
 from sqlalchemy.orm import Session
 
-from unittest.mock import MagicMock, patch
-
 from app.domain.models import Chunk, Document
+from app.scripts.reembed_chunks import reembed_all_chunks
 from app.services.embedding_client import (
     EMBEDDING_DIM,
     EmbeddingClient,
@@ -238,9 +240,6 @@ def test_reembed_all_chunks_real_database_integration_batch_commit(db_session: S
       - 2 chunks đã có real vector giữ nguyên giá trị ban đầu
       - Thay đổi được commit thành công vào PostgreSQL
     """
-    import uuid
-    from app.scripts.reembed_chunks import reembed_all_chunks
-
     doc = Document(
         id=uuid.uuid4(),
         filename="test_reembed_doc.md",
@@ -320,3 +319,211 @@ def test_reembed_all_chunks_real_database_integration_batch_commit(db_session: S
     # Chunks 2, 4 phải giữ nguyên vector ban đầu
     assert reloaded_chunks[2].embedding == [0.77] * EMBEDDING_DIM
     assert reloaded_chunks[4].embedding == [0.88] * EMBEDDING_DIM
+
+
+class StepFailingEmbeddingClient(EmbeddingClient):
+    """
+    Embedding Client giả lập:
+      - Lần gọi 1: trả về vector non-zero thành công ([0.55] * 1536)
+      - Lần gọi 2: ném RuntimeError('deterministic batch failure')
+    """
+
+    def __init__(self) -> None:
+        self.call_count = 0
+
+    def embed(self, texts: list[str]) -> list[list[float]]:
+        self.call_count += 1
+        if self.call_count == 1:
+            return [[0.55] * EMBEDDING_DIM for _ in texts]
+        raise RuntimeError("deterministic batch failure")
+
+
+def test_reembed_all_chunks_preserves_prior_commits_when_subsequent_batch_embed_fails(db_session: Session):
+    """
+    GIVEN: 4 chunks zero-vector trong PostgreSQL, batch_size=2
+    WHEN: Gọi reembed_all_chunks với StepFailingEmbeddingClient (batch 1 embed thành công, batch 2 ném RuntimeError ở embed step)
+    THEN:
+      - reembed_all_chunks ném lại RuntimeError
+      - Batch 1 (chunks 0, 1) giữ nguyên vector đã commit thành công ([0.55] * 1536)
+      - Batch 2 (chunks 2, 3) không bị cập nhật (vẫn là zero-vector)
+      - Client được gọi chính xác 2 lần (không gọi batch tiếp theo)
+      - db_session ở trạng thái usable
+    """
+    doc = Document(
+        id=uuid.uuid4(),
+        filename="test_partial_progress_doc.md",
+        filepath="docs/test_partial_progress_doc.md",
+        title="Tài liệu kiểm thử Partial Progress",
+        content_hash=uuid.uuid4().hex,
+    )
+    db_session.add(doc)
+
+    chunks = [
+        Chunk(
+            id=uuid.uuid4(),
+            document_id=doc.id,
+            content="Đoạn 0 - batch 1",
+            chunk_index=0,
+            token_count=10,
+            embedding=[0.0] * EMBEDDING_DIM,
+        ),
+        Chunk(
+            id=uuid.uuid4(),
+            document_id=doc.id,
+            content="Đoạn 1 - batch 1",
+            chunk_index=1,
+            token_count=10,
+            embedding=[0.0] * EMBEDDING_DIM,
+        ),
+        Chunk(
+            id=uuid.uuid4(),
+            document_id=doc.id,
+            content="Đoạn 2 - batch 2",
+            chunk_index=2,
+            token_count=10,
+            embedding=[0.0] * EMBEDDING_DIM,
+        ),
+        Chunk(
+            id=uuid.uuid4(),
+            document_id=doc.id,
+            content="Đoạn 3 - batch 2",
+            chunk_index=3,
+            token_count=10,
+            embedding=[0.0] * EMBEDDING_DIM,
+        ),
+    ]
+    db_session.add_all(chunks)
+    db_session.commit()
+
+    failing_client = StepFailingEmbeddingClient()
+
+    with pytest.raises(RuntimeError, match="deterministic batch failure"):
+        reembed_all_chunks(
+            db_session=db_session,
+            embedding_client=failing_client,
+            batch_size=2,
+            only_zero=True,
+        )
+
+    assert failing_client.call_count == 2
+
+    # Query lại database để kiểm tra tính cô lập của transaction
+    reloaded_chunks = db_session.query(Chunk).filter_by(document_id=doc.id).order_by(Chunk.chunk_index.asc()).all()
+    assert len(reloaded_chunks) == 4
+
+    # Batch 1 (chunks 0, 1) phải được lưu vĩnh viễn giá trị [0.55] * 1536
+    assert reloaded_chunks[0].embedding == [0.55] * EMBEDDING_DIM
+    assert reloaded_chunks[1].embedding == [0.55] * EMBEDDING_DIM
+
+    # Batch 2 (chunks 2, 3) phải giữ nguyên zero-vector ban đầu
+    assert reloaded_chunks[2].embedding == [0.0] * EMBEDDING_DIM
+    assert reloaded_chunks[3].embedding == [0.0] * EMBEDDING_DIM
+
+
+def test_reembed_all_chunks_rolls_back_failed_batch_and_preserves_prior_commits(db_session: Session):
+    """
+    GIVEN: 4 chunks zero-vector trong PostgreSQL, batch_size=2
+    WHEN: Gọi reembed_all_chunks với client trả về vector hợp lệ,
+          nhưng batch 2 bị ép lỗi deterministic tại commit sau khi đã mutate chunk objects
+    THEN:
+      - reembed_all_chunks ném lại RuntimeError
+      - db_session.rollback() được gọi rõ ràng để rollback transaction và dọn dirty state
+      - Batch 1 (chunks 0, 1) vẫn giữ nguyên vector đã commit ([0.55] * 1536)
+      - Batch 2 (chunks 2, 3) sau reload giữ nguyên zero-vector ban đầu
+      - db_session ở trạng thái usable sau failure
+    """
+    doc = Document(
+        id=uuid.uuid4(),
+        filename="test_rollback_doc.md",
+        filepath="docs/test_rollback_doc.md",
+        title="Tài liệu kiểm thử Rollback Batch",
+        content_hash=uuid.uuid4().hex,
+    )
+    db_session.add(doc)
+
+    chunks = [
+        Chunk(
+            id=uuid.uuid4(),
+            document_id=doc.id,
+            content="Đoạn 0 - batch 1",
+            chunk_index=0,
+            token_count=10,
+            embedding=[0.0] * EMBEDDING_DIM,
+        ),
+        Chunk(
+            id=uuid.uuid4(),
+            document_id=doc.id,
+            content="Đoạn 1 - batch 1",
+            chunk_index=1,
+            token_count=10,
+            embedding=[0.0] * EMBEDDING_DIM,
+        ),
+        Chunk(
+            id=uuid.uuid4(),
+            document_id=doc.id,
+            content="Đoạn 2 - batch 2",
+            chunk_index=2,
+            token_count=10,
+            embedding=[0.0] * EMBEDDING_DIM,
+        ),
+        Chunk(
+            id=uuid.uuid4(),
+            document_id=doc.id,
+            content="Đoạn 3 - batch 2",
+            chunk_index=3,
+            token_count=10,
+            embedding=[0.0] * EMBEDDING_DIM,
+        ),
+    ]
+    db_session.add_all(chunks)
+    db_session.commit()
+
+    class DeterministicNonZeroClient(EmbeddingClient):
+        def embed(self, texts: list[str]) -> list[list[float]]:
+            return [[0.55] * EMBEDDING_DIM for _ in texts]
+
+    client = DeterministicNonZeroClient()
+
+    # Deterministic commit failure only on batch 2
+    original_commit = db_session.commit
+    original_rollback = db_session.rollback
+    commit_count = 0
+    rollback_spy = MagicMock(side_effect=original_rollback)
+
+    def conditional_commit(*args, **kwargs):
+        nonlocal commit_count
+        commit_count += 1
+        if commit_count == 2:
+            raise RuntimeError("deterministic batch 2 commit failure")
+        return original_commit(*args, **kwargs)
+
+    db_session.commit = conditional_commit
+    db_session.rollback = rollback_spy
+
+    try:
+        with pytest.raises(RuntimeError, match="deterministic batch 2 commit failure"):
+            reembed_all_chunks(
+                db_session=db_session,
+                embedding_client=client,
+                batch_size=2,
+                only_zero=True,
+            )
+    finally:
+        # Restore original session methods
+        db_session.commit = original_commit
+        db_session.rollback = original_rollback
+
+    # Assert rollback was explicitly invoked by reembed_all_chunks
+    assert rollback_spy.call_count >= 1, "db_session.rollback() must be explicitly invoked on batch failure"
+
+    # Query lại database để kiểm tra tính cô lập của transaction
+    reloaded_chunks = db_session.query(Chunk).filter_by(document_id=doc.id).order_by(Chunk.chunk_index.asc()).all()
+    assert len(reloaded_chunks) == 4
+
+    # Batch 1 (chunks 0, 1) phải được lưu vĩnh viễn giá trị [0.55] * 1536
+    assert reloaded_chunks[0].embedding == [0.55] * EMBEDDING_DIM
+    assert reloaded_chunks[1].embedding == [0.55] * EMBEDDING_DIM
+
+    # Batch 2 (chunks 2, 3) phải giữ nguyên zero-vector ban đầu
+    assert reloaded_chunks[2].embedding == [0.0] * EMBEDDING_DIM
+    assert reloaded_chunks[3].embedding == [0.0] * EMBEDDING_DIM

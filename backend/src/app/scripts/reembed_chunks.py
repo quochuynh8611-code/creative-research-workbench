@@ -10,10 +10,8 @@ from __future__ import annotations
 
 import argparse
 import logging
-import sys
-from typing import Optional
 
-from sqlalchemy import create_engine, select
+from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
 
 from app.core.config import settings
@@ -39,6 +37,9 @@ def reembed_all_chunks(
     Returns:
         Số lượng chunk đã được re-embed thành công.
     """
+    if batch_size <= 0:
+        raise ValueError("batch_size must be greater than 0")
+
     query = db_session.query(Chunk).order_by(Chunk.created_at.asc())
     all_chunks: list[Chunk] = query.all()
 
@@ -66,14 +67,27 @@ def reembed_all_chunks(
     processed = 0
     for i in range(0, total, batch_size):
         batch = target_chunks[i : i + batch_size]
+        batch_num = (i // batch_size) + 1
         texts = [c.content for c in batch]
-        vectors = embedding_client.embed(texts)
+        try:
+            vectors = embedding_client.embed(texts)
 
-        for chunk_obj, vec in zip(batch, vectors):
-            chunk_obj.embedding = vec
+            for chunk_obj, vec in zip(batch, vectors):
+                chunk_obj.embedding = vec
 
-        db_session.flush()
-        db_session.commit()
+            db_session.flush()
+            db_session.commit()
+        except Exception as exc:
+            db_session.rollback()
+            logger.error(
+                "Lỗi khi re-embed batch %d (chunks %d-%d/%d): %s. Đã rollback transaction.",
+                batch_num,
+                i + 1,
+                min(i + batch_size, total),
+                total,
+                exc,
+            )
+            raise
 
         processed += len(batch)
         logger.info("Tiến độ: %d/%d chunks (%.1f%%)", processed, total, (processed / total) * 100)
