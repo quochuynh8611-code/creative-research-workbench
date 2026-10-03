@@ -1,12 +1,15 @@
 """
-session_import_service.py — Session Import Service for Phase 9.3.
+session_import_service.py — Session Import Service for Phase 9.3/9.4.
 Restores a full ResearchSession from an exported JSON snapshot with deep relations.
 """
 
 from __future__ import annotations
 
+import hashlib
+import json
 import uuid
 from typing import Any
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.domain.models import (
@@ -17,6 +20,15 @@ from app.domain.models import (
     ResearchNote,
     CandidateSolution,
 )
+
+# Supported template schema versions (Phase 9.4 hardening)
+_SUPPORTED_SNAPSHOT_VERSIONS: frozenset[str] = frozenset({"v1", "v1.0", "1", "1.0"})
+
+
+def _compute_payload_checksum(payload: dict) -> str:
+    """SHA-256 of canonical JSON (sorted keys, no extra whitespace, UTF-8)."""
+    canonical = json.dumps(payload, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
+    return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
 
 
 def import_session_from_json(
@@ -39,6 +51,18 @@ def import_session_from_json(
     if not isinstance(snapshot, dict):
         raise ValueError("Invalid snapshot payload: expected a JSON object.")
 
+    # ── Phase 9.4 H1: Checksum verification (pre-mutation, fail-closed) ──────
+    provided_checksum = snapshot.get("payload_checksum")
+    if provided_checksum is not None:
+        # Build the body without the checksum field for verification
+        body_without_checksum = {k: v for k, v in snapshot.items() if k != "payload_checksum"}
+        expected_checksum = _compute_payload_checksum(body_without_checksum)
+        if provided_checksum != expected_checksum:
+            raise ValueError(
+                "CHECKSUM_MISMATCH: payload_checksum does not match the canonical SHA-256 "
+                "of the request body. The snapshot may have been tampered with."
+            )
+
     session_data = snapshot.get("session")
     if not isinstance(session_data, dict):
         raise ValueError("Invalid snapshot payload: missing required 'session' object.")
@@ -56,6 +80,22 @@ def import_session_from_json(
     raw_domain = session_data.get("domain") or "technical"
     raw_workflow_state = session_data.get("workflow_state") or "intake"
     tags = session_data.get("tags") if isinstance(session_data.get("tags"), list) else None
+
+    # ── Phase 9.4 H2: Conflict session ID detection (pre-mutation, fail-closed) ──
+    source_session_id_raw = snapshot.get("source_session_id")
+    conflict_strategy = snapshot.get("conflict_strategy")  # None or "overwrite"
+    if source_session_id_raw is not None:
+        try:
+            source_uuid = uuid.UUID(str(source_session_id_raw))
+        except (ValueError, TypeError):
+            source_uuid = None
+        if source_uuid is not None and conflict_strategy != "overwrite":
+            existing = db.query(ResearchSession).filter_by(id=source_uuid).first()
+            if existing is not None:
+                raise ValueError(
+                    f"SESSION_ID_CONFLICT: A session with id '{source_uuid}' already exists. "
+                    "Use conflict_strategy='overwrite' to replace it."
+                )
 
     # Pre-mutation fail-closed validation
     frame_data = snapshot.get("problem_frame")
@@ -181,6 +221,13 @@ def import_session_from_json(
 
         db.commit()
         db.refresh(new_session)
+    except IntegrityError as exc:
+        # ── Phase 9.4 H3: FK / unique constraint violation → clean rollback ──
+        db.rollback()
+        raise ValueError(
+            f"CONSTRAINT_VIOLATION: A child entity could not be persisted due to a database "
+            f"constraint (e.g. invalid foreign key). Full rollback applied. Detail: {exc.orig}"
+        ) from exc
     except Exception:
         db.rollback()
         raise

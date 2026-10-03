@@ -362,10 +362,15 @@ async def list_sessions(
 # Session Import & Domain Templates Endpoints (Phase 9.3)
 # ──────────────────────────────────────────────
 
+# Supported template_version values for Phase 9.4 hardening
+_SUPPORTED_TEMPLATE_VERSIONS: frozenset[str] = frozenset({"v1", "v1.0", "1", "1.0"})
+
+
 class CreateSessionFromTemplateRequest(BaseModel):
     template_id: str = Field(..., min_length=1)
     custom_title: Optional[str] = None
     title: Optional[str] = None
+    template_version: Optional[str] = None
 
 
 @router.post("/import", status_code=status.HTTP_201_CREATED)
@@ -386,9 +391,16 @@ async def import_session(
     try:
         new_session, elements_summary = import_session_from_json(snapshot, db)
     except ValueError as e:
+        err_msg = str(e)
+        if err_msg.startswith("SESSION_ID_CONFLICT:"):
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail=err_msg,
+                headers={"X-Error-Code": "SESSION_ID_CONFLICT"},
+            )
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=str(e),
+            detail=err_msg,
         )
 
     now_iso = datetime.now(timezone.utc).isoformat()
@@ -438,6 +450,17 @@ async def create_session_from_template(
     db: Session | None = Depends(get_db),
 ):
     """Tạo session mới được khởi tạo sẵn từ Domain Template."""
+    # Phase 9.4 H4: Validate template_version if provided
+    if body.template_version is not None:
+        if body.template_version not in _SUPPORTED_TEMPLATE_VERSIONS:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail=(
+                    f"UNSUPPORTED_TEMPLATE_VERSION: template_version '{body.template_version}' "
+                    f"is not supported. Supported versions: {sorted(_SUPPORTED_TEMPLATE_VERSIONS)}"
+                ),
+            )
+
     template = get_template_by_id(body.template_id)
     if not template:
         raise HTTPException(
