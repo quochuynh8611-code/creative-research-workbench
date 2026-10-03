@@ -226,3 +226,97 @@ Khi không có vector nhúng, hệ thống phải trả kết quả hoàn toàn 
         assert results[0].document_id == res.document_id
         assert "tsvector" in results[0].excerpt.lower()
         assert results[0].score > 0.0
+
+
+def test_reembed_all_chunks_real_database_integration_batch_commit(db_session: Session, tmp_path: pathlib.Path):
+    """
+    GIVEN: 5 chunks trong PostgreSQL (3 chunks zero-vectors và 2 chunks đã có real vectors)
+    WHEN: Gọi reembed_all_chunks(batch_size=2, only_zero=True) với DeterministicFakeEmbeddingClient
+    THEN:
+      - Hàm trả về đúng số lượng 3 chunks đã xử lý
+      - 3 chunks zero-vector được cập nhật vector thực trong database
+      - 2 chunks đã có real vector giữ nguyên giá trị ban đầu
+      - Thay đổi được commit thành công vào PostgreSQL
+    """
+    import uuid
+    from app.scripts.reembed_chunks import reembed_all_chunks
+
+    doc = Document(
+        id=uuid.uuid4(),
+        filename="test_reembed_doc.md",
+        filepath="docs/test_reembed_doc.md",
+        title="Tài liệu kiểm thử Re-embed",
+        content_hash=uuid.uuid4().hex,
+    )
+    db_session.add(doc)
+
+    chunks = [
+        Chunk(
+            id=uuid.uuid4(),
+            document_id=doc.id,
+            content="Đoạn văn 1 về nguyên lý TRIZ",
+            chunk_index=0,
+            token_count=10,
+            embedding=[0.0] * EMBEDDING_DIM,
+        ),
+        Chunk(
+            id=uuid.uuid4(),
+            document_id=doc.id,
+            content="Đoạn văn 2 về kiến trúc database PostgreSQL",
+            chunk_index=1,
+            token_count=12,
+            embedding=[0.0] * EMBEDDING_DIM,
+        ),
+        Chunk(
+            id=uuid.uuid4(),
+            document_id=doc.id,
+            content="Đoạn văn 3 đã có vector sẵn",
+            chunk_index=2,
+            token_count=10,
+            embedding=[0.77] * EMBEDDING_DIM,
+        ),
+        Chunk(
+            id=uuid.uuid4(),
+            document_id=doc.id,
+            content="Đoạn văn 4 chưa có vector (None)",
+            chunk_index=3,
+            token_count=10,
+            embedding=None,
+        ),
+        Chunk(
+            id=uuid.uuid4(),
+            document_id=doc.id,
+            content="Đoạn văn 5 đã có vector sẵn",
+            chunk_index=4,
+            token_count=10,
+            embedding=[0.88] * EMBEDDING_DIM,
+        ),
+    ]
+    db_session.add_all(chunks)
+    db_session.commit()
+
+    client = DeterministicFakeEmbeddingClient()
+    processed_count = reembed_all_chunks(
+        db_session=db_session,
+        embedding_client=client,
+        batch_size=2,
+        only_zero=True,
+    )
+
+    assert processed_count == 3
+
+    # Query lại database để verify persistence thật
+    reloaded_chunks = db_session.query(Chunk).filter_by(document_id=doc.id).order_by(Chunk.chunk_index.asc()).all()
+    assert len(reloaded_chunks) == 5
+
+    # Chunks 0, 1, 3 phải có real vector mới
+    assert reloaded_chunks[0].embedding is not None
+    assert any(abs(v) > 0.0 for v in reloaded_chunks[0].embedding)
+    assert reloaded_chunks[1].embedding is not None
+    assert any(abs(v) > 0.0 for v in reloaded_chunks[1].embedding)
+    assert reloaded_chunks[3].embedding is not None
+    assert any(abs(v) > 0.0 for v in reloaded_chunks[3].embedding)
+
+    # Chunks 2, 4 phải giữ nguyên vector ban đầu
+    assert reloaded_chunks[2].embedding == [0.77] * EMBEDDING_DIM
+    assert reloaded_chunks[4].embedding == [0.88] * EMBEDDING_DIM
