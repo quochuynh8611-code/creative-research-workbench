@@ -74,6 +74,11 @@
 }
 
 @media print {
+  @page {
+    size: A4;
+    margin: 15mm;
+  }
+
   body {
     background: #ffffff !important;
     color: #000000 !important;
@@ -96,5 +101,15 @@
 
   .border {
     border-color: #e5e7eb !important;
+  }
+
+  /* Avoid breaking cards and sections across pages */
+  .rounded-2xl,
+  .rounded-xl,
+  .print-avoid-break,
+  article,
+  section {
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
   }
 }

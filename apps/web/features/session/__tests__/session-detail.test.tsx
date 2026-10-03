@@ -573,6 +573,59 @@ describe('Phase 5.4 — Problem Intake & Structuring Canvas Tests', () => {
       expect(screen.getByRole('menuitem', { name: /In \/ Lưu PDF|PDF/i })).toBeInTheDocument()
     })
 
+    it('nút export và menu có thuộc tính accessibility (aria-controls, id, aria-expanded) chính xác', async () => {
+      mockedGetSession.mockResolvedValue(MOCK_SESSION_WITH_FRAME)
+      renderWithClient(<SessionDetail sessionId="ses-456" />)
+
+      await waitFor(() => {
+        expect(screen.getByText('Tối ưu độ bền và trọng lượng cánh tay robot')).toBeInTheDocument()
+      })
+
+      const exportTrigger = screen.getByRole('button', { name: /Xuất dữ liệu|Export/i })
+      expect(exportTrigger).toHaveAttribute('aria-haspopup', 'menu')
+      expect(exportTrigger).toHaveAttribute('aria-expanded', 'false')
+      expect(screen.queryByRole('menu')).not.toBeInTheDocument()
+
+      fireEvent.click(exportTrigger)
+      expect(exportTrigger).toHaveAttribute('aria-expanded', 'true')
+      expect(exportTrigger).toHaveAttribute('aria-controls', 'export-menu-dropdown')
+
+      const menu = screen.getByRole('menu')
+      expect(menu).toHaveAttribute('id', 'export-menu-dropdown')
+    })
+
+    it('nhấn phím Escape đóng dropdown menu xuất dữ liệu', async () => {
+      mockedGetSession.mockResolvedValue(MOCK_SESSION_WITH_FRAME)
+      renderWithClient(<SessionDetail sessionId="ses-456" />)
+
+      await waitFor(() => {
+        expect(screen.getByText('Tối ưu độ bền và trọng lượng cánh tay robot')).toBeInTheDocument()
+      })
+
+      const exportTrigger = screen.getByRole('button', { name: /Xuất dữ liệu|Export/i })
+      fireEvent.click(exportTrigger)
+      expect(screen.getByRole('menu')).toBeInTheDocument()
+
+      fireEvent.keyDown(document, { key: 'Escape', code: 'Escape' })
+      expect(screen.queryByRole('menu')).not.toBeInTheDocument()
+    })
+
+    it('click ra bên ngoài vùng dropdown menu đóng menu xuất dữ liệu', async () => {
+      mockedGetSession.mockResolvedValue(MOCK_SESSION_WITH_FRAME)
+      renderWithClient(<SessionDetail sessionId="ses-456" />)
+
+      await waitFor(() => {
+        expect(screen.getByText('Tối ưu độ bền và trọng lượng cánh tay robot')).toBeInTheDocument()
+      })
+
+      const exportTrigger = screen.getByRole('button', { name: /Xuất dữ liệu|Export/i })
+      fireEvent.click(exportTrigger)
+      expect(screen.getByRole('menu')).toBeInTheDocument()
+
+      fireEvent.mouseDown(document.body)
+      expect(screen.queryByRole('menu')).not.toBeInTheDocument()
+    })
+
     it('chọn In / Lưu PDF gọi window.print()', async () => {
       mockedGetSession.mockResolvedValue(MOCK_SESSION_WITH_FRAME)
       renderWithClient(<SessionDetail sessionId="ses-456" />)

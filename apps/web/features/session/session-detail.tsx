@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
 import {
   ArrowLeft,
@@ -66,6 +66,32 @@ export function SessionDetail({ sessionId }: SessionDetailProps) {
   const [isGeneratingReport, setIsGeneratingReport] = useState<boolean>(false)
   const [reportError, setReportError] = useState<string | null>(null)
   const [hasCopied, setHasCopied] = useState<boolean>(false)
+  const exportMenuRef = useRef<HTMLDivElement>(null)
+
+  // Đóng export dropdown khi nhấn phím Escape hoặc click ra ngoài menu
+  useEffect(() => {
+    if (!isExportOpen) return
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setIsExportOpen(false)
+      }
+    }
+
+    const handleClickOutside = (event: MouseEvent) => {
+      if (exportMenuRef.current && !exportMenuRef.current.contains(event.target as Node)) {
+        setIsExportOpen(false)
+      }
+    }
+
+    document.addEventListener('keydown', handleKeyDown)
+    document.addEventListener('mousedown', handleClickOutside)
+
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown)
+      document.removeEventListener('mousedown', handleClickOutside)
+    }
+  }, [isExportOpen])
 
   const {
     data: session,
@@ -316,7 +342,7 @@ export function SessionDetail({ sessionId }: SessionDetailProps) {
         </div>
 
         {/* Header Actions - Unified Export Dropdown */}
-        <div className="relative inline-block text-left no-print">
+        <div ref={exportMenuRef} className="relative inline-block text-left no-print">
           <button
             type="button"
             onClick={() => setIsExportOpen(!isExportOpen)}
@@ -324,6 +350,7 @@ export function SessionDetail({ sessionId }: SessionDetailProps) {
             className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-semibold border border-border bg-card hover:bg-accent hover:text-accent-foreground disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-sm cursor-pointer"
             aria-haspopup="menu"
             aria-expanded={isExportOpen}
+            aria-controls={isExportOpen ? 'export-menu-dropdown' : undefined}
           >
             {isExporting ? (
               <>
@@ -341,6 +368,7 @@ export function SessionDetail({ sessionId }: SessionDetailProps) {
 
           {isExportOpen && (
             <div
+              id="export-menu-dropdown"
               role="menu"
               className="absolute right-0 mt-1.5 w-52 rounded-xl border border-border bg-card shadow-lg z-50 p-1 space-y-0.5"
             >
