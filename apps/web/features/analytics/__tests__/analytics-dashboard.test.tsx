@@ -624,4 +624,60 @@ describe('AnalyticsDashboard Component (Phase 11.1B)', () => {
       within(trizCard).getByText(/chưa ghi nhận mâu thuẫn/i)
     ).toBeInTheDocument()
   })
+
+  // Phase 11.11: Refresh Button Dynamic Status, aria-busy & Selector Hardening (RED suite)
+  // Test 1: Idle state of refresh button
+  it('renders_idle_refresh_button_with_aria_attributes_and_testid', async () => {
+    mockedGetAnalyticsOverview.mockResolvedValue(mockPopulatedOverview)
+
+    renderWithClient(<AnalyticsDashboard />)
+
+    await waitFor(() => {
+      expect(screen.queryByTestId('analytics-loading-skeleton')).not.toBeInTheDocument()
+    })
+
+    const refreshButton = screen.getByTestId('analytics-refresh-button')
+    expect(refreshButton).toBeInTheDocument()
+    expect(refreshButton).toHaveAttribute('aria-label', 'Làm mới dữ liệu phân tích')
+    expect(refreshButton).toHaveAttribute('aria-busy', 'false')
+    expect(refreshButton).not.toBeDisabled()
+    expect(refreshButton).toHaveTextContent('Làm mới')
+  })
+
+  // Test 2: Fetching state of refresh button
+  it('renders_fetching_refresh_button_state_with_dynamic_label_and_busy_attributes', async () => {
+    mockedGetAnalyticsOverview.mockResolvedValue(mockPopulatedOverview)
+
+    renderWithClient(<AnalyticsDashboard />)
+
+    await waitFor(() => {
+      expect(screen.queryByTestId('analytics-loading-skeleton')).not.toBeInTheDocument()
+    })
+
+    let resolveRefetch!: (value: any) => void
+    const pendingPromise = new Promise((resolve) => {
+      resolveRefetch = resolve
+    })
+
+    mockedGetAnalyticsOverview.mockImplementationOnce(() => pendingPromise)
+
+    const refreshButton = screen.getByTestId('analytics-refresh-button')
+    fireEvent.click(refreshButton)
+
+    await waitFor(() => {
+      expect(refreshButton).toBeDisabled()
+      expect(refreshButton).toHaveAttribute('aria-busy', 'true')
+      expect(refreshButton).toHaveAttribute('aria-label', 'Đang làm mới dữ liệu phân tích')
+      expect(refreshButton).toHaveTextContent('Đang làm mới...')
+    })
+
+    resolveRefetch(mockPopulatedOverview)
+
+    await waitFor(() => {
+      expect(refreshButton).not.toBeDisabled()
+      expect(refreshButton).toHaveAttribute('aria-busy', 'false')
+      expect(refreshButton).toHaveAttribute('aria-label', 'Làm mới dữ liệu phân tích')
+      expect(refreshButton).toHaveTextContent('Làm mới')
+    })
+  })
 })

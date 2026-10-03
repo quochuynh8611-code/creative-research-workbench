@@ -241,12 +241,15 @@ export function AnalyticsDashboard(): React.ReactElement {
             )}
             <button
               type="button"
+              data-testid="analytics-refresh-button"
               onClick={() => refetch()}
               disabled={isFetching}
+              aria-busy={isFetching}
+              aria-label={isFetching ? 'Đang làm mới dữ liệu phân tích' : 'Làm mới dữ liệu phân tích'}
               className="inline-flex items-center gap-2 px-3.5 py-2 bg-secondary hover:bg-secondary/80 text-secondary-foreground text-sm font-medium rounded-lg border border-border shadow-sm transition-all"
             >
               <RefreshCw className={cn('w-4 h-4', isFetching && 'animate-spin')} />
-              <span>Làm mới</span>
+              <span>{isFetching ? 'Đang làm mới...' : 'Làm mới'}</span>
             </button>
           </div>
         </div>
