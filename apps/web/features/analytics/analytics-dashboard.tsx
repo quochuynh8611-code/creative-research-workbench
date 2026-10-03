@@ -1,6 +1,7 @@
 'use client'
 
 import React from 'react'
+import Link from 'next/link'
 import { useQuery } from '@tanstack/react-query'
 import {
   Brain,
@@ -15,6 +16,8 @@ import {
   Layers,
   Activity,
   CheckCircle2,
+  ArrowLeft,
+  ArrowRight,
 } from 'lucide-react'
 import { getAnalyticsOverview } from '@/lib/api-client'
 import { cn } from '@/lib/utils'
@@ -158,36 +161,63 @@ export function AnalyticsDashboard(): React.ReactElement {
 
   return (
     <div className="w-full max-w-7xl mx-auto p-6 space-y-8">
-      {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-border pb-5">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight text-foreground flex items-center gap-2.5">
-            <Activity className="w-6 h-6 text-primary" />
-            <span>Tổng quan Nghiên cứu & Tri thức</span>
-          </h1>
-          <p className="text-sm text-muted-foreground mt-1">
-            Tổng hợp chỉ số toàn diện qua các phiên nghiên cứu, nội dung sáng tạo, kho tài liệu và phân tích TRIZ.
-          </p>
+      {/* Contextual Navigation Bar & Header */}
+      <div className="space-y-4 border-b border-border pb-5">
+        <div className="flex flex-wrap items-center justify-between gap-3 text-xs font-medium">
+          <Link
+            href="/sessions"
+            className="inline-flex items-center gap-1.5 text-muted-foreground hover:text-foreground transition-colors"
+          >
+            <ArrowLeft className="w-3.5 h-3.5" />
+            <span>Quay lại Sessions</span>
+          </Link>
+
+          <div className="flex items-center gap-4">
+            <Link
+              href="/knowledge"
+              className="text-muted-foreground hover:text-foreground transition-colors"
+            >
+              Cơ sở Tri thức
+            </Link>
+            <Link
+              href="/search"
+              className="text-muted-foreground hover:text-foreground transition-colors"
+            >
+              Tìm kiếm
+            </Link>
+          </div>
         </div>
 
-        <div className="flex items-center gap-3">
-          {res?.generated_at && (
-            <span
-              suppressHydrationWarning
-              className="text-xs text-muted-foreground hidden sm:inline"
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div>
+            <h1 className="text-2xl font-bold tracking-tight text-foreground flex items-center gap-2.5">
+              <Activity className="w-6 h-6 text-primary" />
+              <span>Tổng quan Nghiên cứu & Tri thức</span>
+            </h1>
+            <p className="text-sm text-muted-foreground mt-1">
+              Tổng hợp chỉ số toàn diện qua các phiên nghiên cứu, nội dung sáng tạo, kho tài liệu và phân tích TRIZ.
+            </p>
+          </div>
+
+          <div className="flex items-center gap-3">
+            {res?.generated_at && (
+              <span
+                suppressHydrationWarning
+                className="text-xs text-muted-foreground hidden sm:inline"
+              >
+                Cập nhật: {new Date(res.generated_at).toLocaleTimeString('vi-VN')}
+              </span>
+            )}
+            <button
+              type="button"
+              onClick={() => refetch()}
+              disabled={isFetching}
+              className="inline-flex items-center gap-2 px-3.5 py-2 bg-secondary hover:bg-secondary/80 text-secondary-foreground text-sm font-medium rounded-lg border border-border shadow-sm transition-all"
             >
-              Cập nhật: {new Date(res.generated_at).toLocaleTimeString('vi-VN')}
-            </span>
-          )}
-          <button
-            type="button"
-            onClick={() => refetch()}
-            disabled={isFetching}
-            className="inline-flex items-center gap-2 px-3.5 py-2 bg-secondary hover:bg-secondary/80 text-secondary-foreground text-sm font-medium rounded-lg border border-border shadow-sm transition-all"
-          >
-            <RefreshCw className={cn('w-4 h-4', isFetching && 'animate-spin')} />
-            <span>Làm mới</span>
-          </button>
+              <RefreshCw className={cn('w-4 h-4', isFetching && 'animate-spin')} />
+              <span>Làm mới</span>
+            </button>
+          </div>
         </div>
       </div>
 
@@ -208,6 +238,15 @@ export function AnalyticsDashboard(): React.ReactElement {
           <p className="text-xs text-muted-foreground">
             Tổng số phiên nghiên cứu đang lưu trữ
           </p>
+          <div className="pt-2 border-t border-border/40">
+            <Link
+              href="/sessions"
+              className="inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline"
+            >
+              <span>Xem danh sách</span>
+              <ArrowRight className="w-3 h-3" />
+            </Link>
+          </div>
         </div>
 
         {/* Card 2: Candidate Solutions */}
@@ -242,6 +281,15 @@ export function AnalyticsDashboard(): React.ReactElement {
           <p className="text-xs text-muted-foreground">
             {knowledgeBase.golden_documents} tài liệu chuẩn tắc / {knowledgeBase.total_chunks} chunks
           </p>
+          <div className="pt-2 border-t border-border/40">
+            <Link
+              href="/knowledge"
+              className="inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline"
+            >
+              <span>Xem kho tài liệu</span>
+              <ArrowRight className="w-3 h-3" />
+            </Link>
+          </div>
         </div>
 
         {/* Card 4: TRIZ Contradictions */}

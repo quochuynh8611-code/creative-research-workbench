@@ -1,6 +1,6 @@
 /** @jest-environment jsdom */
 import React from 'react'
-import { render, screen, fireEvent, waitFor } from '@testing-library/react'
+import { render, screen, fireEvent, waitFor, within } from '@testing-library/react'
 import '@testing-library/jest-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import * as apiClient from '@/lib/api-client'
@@ -189,5 +189,59 @@ describe('AnalyticsDashboard Component (Phase 11.1B)', () => {
     await waitFor(() => {
       expect(mockedGetAnalyticsOverview).toHaveBeenCalledTimes(2)
     })
+  })
+
+  // Phase 11.3: Contextual Deep Links (RED suite)
+  // Test A: Header contextual links to core workspaces
+  it('renders_header_contextual_links_to_core_workspaces', async () => {
+    mockedGetAnalyticsOverview.mockResolvedValue(mockPopulatedOverview)
+
+    renderWithClient(<AnalyticsDashboard />)
+
+    await waitFor(() => {
+      expect(screen.queryByTestId('analytics-loading-skeleton')).not.toBeInTheDocument()
+    })
+
+    // Header should contain contextual links
+    const sessionsLink = screen.getByRole('link', { name: /sessions/i })
+    expect(sessionsLink).toHaveAttribute('href', '/sessions')
+
+    const knowledgeLink = screen.getByRole('link', { name: /cơ sở tri thức/i })
+    expect(knowledgeLink).toHaveAttribute('href', '/knowledge')
+
+    const searchLink = screen.getByRole('link', { name: /tìm kiếm/i })
+    expect(searchLink).toHaveAttribute('href', '/search')
+  })
+
+  // Test B: Contextual link in Research Sessions KPI card
+  it('renders_contextual_link_in_research_sessions_kpi_card', async () => {
+    mockedGetAnalyticsOverview.mockResolvedValue(mockPopulatedOverview)
+
+    renderWithClient(<AnalyticsDashboard />)
+
+    await waitFor(() => {
+      expect(screen.queryByTestId('analytics-loading-skeleton')).not.toBeInTheDocument()
+    })
+
+    const sessionsStat = screen.getByTestId('stat-total-sessions')
+    const sessionsCard = sessionsStat.parentElement!
+    const cardLink = within(sessionsCard).getByRole('link')
+    expect(cardLink).toHaveAttribute('href', '/sessions')
+  })
+
+  // Test C: Contextual link in Knowledge Base KPI card
+  it('renders_contextual_link_in_knowledge_base_kpi_card', async () => {
+    mockedGetAnalyticsOverview.mockResolvedValue(mockPopulatedOverview)
+
+    renderWithClient(<AnalyticsDashboard />)
+
+    await waitFor(() => {
+      expect(screen.queryByTestId('analytics-loading-skeleton')).not.toBeInTheDocument()
+    })
+
+    const documentsStat = screen.getByTestId('stat-total-documents')
+    const documentsCard = documentsStat.parentElement!
+    const cardLink = within(documentsCard).getByRole('link')
+    expect(cardLink).toHaveAttribute('href', '/knowledge')
   })
 })
