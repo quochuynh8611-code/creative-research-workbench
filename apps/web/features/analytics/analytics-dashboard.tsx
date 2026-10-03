@@ -133,12 +133,37 @@ export function AnalyticsDashboard(): React.ReactElement {
     knowledgeBase.total_documents === 0 &&
     triz.total_contradictions === 0
 
+  interface EmptyBreakdownConfig {
+    emptyText: string
+    emptyLink?: {
+      href: string
+      label: string
+    }
+  }
+
   const renderBreakdown = (
     map: Record<string, number>,
-    colorClass: string = 'bg-primary/10 text-primary'
+    colorClass: string = 'bg-primary/10 text-primary',
+    emptyConfig?: EmptyBreakdownConfig
   ) => {
     const entries = Object.entries(map || {}).filter(([_, count]) => count > 0)
     if (entries.length === 0) {
+      if (emptyConfig) {
+        return (
+          <div className="flex flex-wrap items-center justify-between gap-2 py-2 text-xs text-muted-foreground border border-dashed border-border/60 rounded-lg px-3 bg-muted/20">
+            <span>{emptyConfig.emptyText}</span>
+            {emptyConfig.emptyLink && (
+              <Link
+                href={emptyConfig.emptyLink.href}
+                className="inline-flex items-center gap-1 font-medium text-primary hover:underline"
+              >
+                <span>{emptyConfig.emptyLink.label}</span>
+                <ArrowRight className="w-3 h-3" />
+              </Link>
+            )}
+          </div>
+        )
+      }
       return (
         <div className="text-sm text-muted-foreground italic py-2">
           Chưa có dữ liệu
@@ -374,7 +399,11 @@ export function AnalyticsDashboard(): React.ReactElement {
               </h3>
               {renderBreakdown(
                 sessions.by_status,
-                'bg-blue-50 text-blue-700 dark:bg-blue-950/50 dark:text-blue-300'
+                'bg-blue-50 text-blue-700 dark:bg-blue-950/50 dark:text-blue-300',
+                {
+                  emptyText: 'Chưa có phân loại phiên để hiển thị.',
+                  emptyLink: { href: '/sessions', label: 'Mở Sessions' },
+                }
               )}
             </div>
 
@@ -384,7 +413,11 @@ export function AnalyticsDashboard(): React.ReactElement {
               </h3>
               {renderBreakdown(
                 sessions.by_workflow_state,
-                'bg-violet-50 text-violet-700 dark:bg-violet-950/50 dark:text-violet-300'
+                'bg-violet-50 text-violet-700 dark:bg-violet-950/50 dark:text-violet-300',
+                {
+                  emptyText: 'Chưa có phân loại phiên để hiển thị.',
+                  emptyLink: { href: '/sessions', label: 'Mở Sessions' },
+                }
               )}
             </div>
 
@@ -394,7 +427,11 @@ export function AnalyticsDashboard(): React.ReactElement {
               </h3>
               {renderBreakdown(
                 sessions.by_domain,
-                'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300'
+                'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300',
+                {
+                  emptyText: 'Chưa có phân loại phiên để hiển thị.',
+                  emptyLink: { href: '/sessions', label: 'Mở Sessions' },
+                }
               )}
             </div>
           </div>
@@ -425,7 +462,11 @@ export function AnalyticsDashboard(): React.ReactElement {
               </h3>
               {renderBreakdown(
                 content.notes_by_type,
-                'bg-amber-50 text-amber-700 dark:bg-amber-950/50 dark:text-amber-300'
+                'bg-amber-50 text-amber-700 dark:bg-amber-950/50 dark:text-amber-300',
+                {
+                  emptyText: 'Chưa có phân loại ghi chú để phân tích.',
+                  emptyLink: { href: '/sessions', label: 'Xem Sessions' },
+                }
               )}
             </div>
 
@@ -435,7 +476,11 @@ export function AnalyticsDashboard(): React.ReactElement {
               </h3>
               {renderBreakdown(
                 content.solutions_by_status,
-                'bg-teal-50 text-teal-700 dark:bg-teal-950/50 dark:text-teal-300'
+                'bg-teal-50 text-teal-700 dark:bg-teal-950/50 dark:text-teal-300',
+                {
+                  emptyText: 'Chưa có trạng thái giải pháp để phân tích.',
+                  emptyLink: { href: '/sessions', label: 'Xem Sessions' },
+                }
               )}
             </div>
           </div>
@@ -475,7 +520,11 @@ export function AnalyticsDashboard(): React.ReactElement {
               </h3>
               {renderBreakdown(
                 triz.by_contradiction_type,
-                'bg-purple-50 text-purple-700 dark:bg-purple-950/50 dark:text-purple-300'
+                'bg-purple-50 text-purple-700 dark:bg-purple-950/50 dark:text-purple-300',
+                {
+                  emptyText: 'Chưa có loại mâu thuẫn để phân tích.',
+                  emptyLink: { href: '/search', label: 'Tra cứu Semantic' },
+                }
               )}
             </div>
 

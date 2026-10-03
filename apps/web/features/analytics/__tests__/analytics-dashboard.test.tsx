@@ -83,6 +83,34 @@ const mockEmptyOverview: AnalyticsOverviewResponse = {
   generated_at: '2026-10-03T12:00:00.000Z',
 }
 
+const mockMixedOverview: AnalyticsOverviewResponse = {
+  data: {
+    sessions: {
+      total: 5,
+      by_status: {},
+      by_workflow_state: { structuring: 3, ideation: 2 },
+      by_domain: {},
+    },
+    content: {
+      total_problem_frames: 4,
+      total_research_notes: 6,
+      notes_by_type: { insight: 4, decision: 2 },
+      total_candidate_solutions: 5,
+      solutions_by_status: {},
+    },
+    knowledge_base: {
+      total_documents: 8,
+      golden_documents: 3,
+      total_chunks: 25,
+    },
+    triz: {
+      total_contradictions: 3,
+      by_contradiction_type: {},
+    },
+  },
+  generated_at: '2026-10-03T12:00:00.000Z',
+}
+
 describe('AnalyticsDashboard Component (Phase 11.1B)', () => {
   beforeEach(() => {
     jest.clearAllMocks()
@@ -339,5 +367,83 @@ describe('AnalyticsDashboard Component (Phase 11.1B)', () => {
 
     const searchLink = screen.getByRole('link', { name: /tra cứu semantic/i })
     expect(searchLink).toHaveAttribute('href', '/search')
+  })
+
+  // Phase 11.6: Section-Local Empty Breakdown Affordance (RED suite)
+  // Test 1: Local-empty guidance when sessions breakdown is empty
+  it('renders_section_local_empty_guidance_when_sessions_breakdown_is_empty', async () => {
+    mockedGetAnalyticsOverview.mockResolvedValue(mockMixedOverview)
+
+    renderWithClient(<AnalyticsDashboard />)
+
+    await waitFor(() => {
+      expect(screen.queryByTestId('analytics-loading-skeleton')).not.toBeInTheDocument()
+    })
+
+    // Subsections by_status and by_domain are empty
+    const emptyNotices = screen.getAllByText(/chưa có phân loại phiên để hiển thị/i)
+    expect(emptyNotices.length).toBeGreaterThanOrEqual(1)
+
+    // Contextual link in local empty state
+    const openSessionsLinks = screen.getAllByRole('link', { name: /mở sessions/i })
+    expect(openSessionsLinks.length).toBeGreaterThanOrEqual(1)
+    expect(openSessionsLinks[0]).toHaveAttribute('href', '/sessions')
+  })
+
+  // Test 2: Local-empty guidance when solutions breakdown is empty
+  it('renders_section_local_empty_guidance_when_solutions_breakdown_is_empty', async () => {
+    mockedGetAnalyticsOverview.mockResolvedValue(mockMixedOverview)
+
+    renderWithClient(<AnalyticsDashboard />)
+
+    await waitFor(() => {
+      expect(screen.queryByTestId('analytics-loading-skeleton')).not.toBeInTheDocument()
+    })
+
+    expect(
+      screen.getByText(/chưa có trạng thái giải pháp để phân tích/i)
+    ).toBeInTheDocument()
+
+    const viewSessionsLinks = screen.getAllByRole('link', { name: /xem sessions/i })
+    expect(viewSessionsLinks.length).toBeGreaterThanOrEqual(1)
+    expect(viewSessionsLinks[0]).toHaveAttribute('href', '/sessions')
+  })
+
+  // Test 3: Local-empty guidance when TRIZ breakdown is empty
+  it('renders_section_local_empty_guidance_when_triz_breakdown_is_empty', async () => {
+    mockedGetAnalyticsOverview.mockResolvedValue(mockMixedOverview)
+
+    renderWithClient(<AnalyticsDashboard />)
+
+    await waitFor(() => {
+      expect(screen.queryByTestId('analytics-loading-skeleton')).not.toBeInTheDocument()
+    })
+
+    expect(
+      screen.getByText(/chưa có loại mâu thuẫn để phân tích/i)
+    ).toBeInTheDocument()
+  })
+
+  // Test 4: Preserves populated breakdown chips and does not render global empty state in mixed data
+  it('preserves_populated_breakdown_chips_and_hides_global_empty_state_in_mixed_data', async () => {
+    mockedGetAnalyticsOverview.mockResolvedValue(mockMixedOverview)
+
+    renderWithClient(<AnalyticsDashboard />)
+
+    await waitFor(() => {
+      expect(screen.queryByTestId('analytics-loading-skeleton')).not.toBeInTheDocument()
+    })
+
+    // Populated chips still render
+    expect(screen.getByText(/structuring/i)).toBeInTheDocument()
+    expect(screen.getByText(/insight/i)).toBeInTheDocument()
+
+    // Global empty-state guidance panel must NOT render for mixed data
+    expect(
+      screen.queryByText(/chưa có dữ liệu nghiên cứu & tri thức/i)
+    ).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole('link', { name: /tạo research session đầu tiên/i })
+    ).not.toBeInTheDocument()
   })
 })
