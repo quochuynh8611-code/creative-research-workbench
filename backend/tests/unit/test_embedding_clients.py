@@ -296,3 +296,107 @@ def test_reembed_all_chunks_only_zero_flag_skips_existing_real_vectors():
     assert chunk_real_1.embedding == [0.75] * EMBEDDING_DIM
     assert chunk_real_2.embedding == [0.85] * EMBEDDING_DIM
     mock_session.commit.assert_called_once()
+
+
+def test_gemini_embedding_client_truncates_oversized_dimension():
+    """
+    GIVEN: Gemini REST API trả về vector có kích thước 3072 chiều (> 1536)
+    WHEN: Gọi client.embed(["Văn bản kiểm thử"])
+    THEN:
+      - Vector trả về có chính xác 1536 chiều
+      - 1536 phần tử bằng chính 1536 phần tử đầu tiên của vector phản hồi
+      - Không ném exception
+    """
+    oversized_vector = [float(i) for i in range(3072)]
+    mock_response = MagicMock()
+    mock_response.status_code = 200
+    mock_response.json.return_value = {
+        "embeddings": [{"values": oversized_vector}]
+    }
+
+    with patch("httpx.Client.post", return_value=mock_response):
+        client = GeminiEmbeddingClient(api_key="fake-gemini-key")
+        vectors = client.embed(["Văn bản kiểm thử"])
+
+        assert len(vectors) == 1
+        assert len(vectors[0]) == EMBEDDING_DIM
+        assert vectors[0] == oversized_vector[:EMBEDDING_DIM]
+
+
+def test_openai_embedding_client_rate_limit_error_retry_and_fallback(caplog):
+    """
+    GIVEN: OpenAI client gặp lỗi RateLimitError liên tục ở mỗi lần gọi
+    WHEN: Gọi client.embed(["Văn bản 1"])
+    THEN:
+      - Retry đúng 2 lần (tổng cộng 3 invocations)
+      - Fallback trả về zero-vector 1536 chiều
+      - Log cảnh báo không để lộ secret API key
+    """
+    secret_key = "sk-super-secret-api-key-12345"
+    with patch("openai.OpenAI") as mock_openai_cls:
+        import openai
+
+        mock_response = MagicMock()
+        mock_response.status_code = 429
+        mock_response.headers = {}
+        rate_limit_err = openai.RateLimitError(
+            message="Rate limit exceeded: quota 429",
+            response=mock_response,
+            body={"error": {"message": "Rate limit reached"}},
+        )
+
+        mock_instance = MagicMock()
+        mock_instance.embeddings.create.side_effect = rate_limit_err
+        mock_openai_cls.return_value = mock_instance
+
+        with caplog.at_level(logging.WARNING):
+            client = OpenAIEmbeddingClient(
+                api_key=secret_key,
+                max_retries=2,
+                retry_delay=0.01,
+                fallback_on_error=True,
+            )
+            vectors = client.embed(["Nghiên cứu nguyên lý TRIZ"])
+
+        assert len(vectors) == 1
+        assert len(vectors[0]) == EMBEDDING_DIM
+        assert all(v == 0.0 for v in vectors[0])
+        assert mock_instance.embeddings.create.call_count == 3
+        for record in caplog.records:
+            assert secret_key not in record.message
+
+
+def test_openai_embedding_client_api_connection_error_retry_and_fallback(caplog):
+    """
+    GIVEN: OpenAI client gặp lỗi APIConnectionError (mất kết nối mạng)
+    WHEN: Gọi client.embed(["Văn bản 2"])
+    THEN:
+      - Retry đúng 2 lần (tổng cộng 3 invocations)
+      - Fallback trả về zero-vector 1536 chiều
+      - Không gọi network thật
+    """
+    secret_key = "sk-secret-connection-key-67890"
+    with patch("openai.OpenAI") as mock_openai_cls:
+        import openai
+
+        conn_err = openai.APIConnectionError(request=MagicMock())
+
+        mock_instance = MagicMock()
+        mock_instance.embeddings.create.side_effect = conn_err
+        mock_openai_cls.return_value = mock_instance
+
+        with caplog.at_level(logging.WARNING):
+            client = OpenAIEmbeddingClient(
+                api_key=secret_key,
+                max_retries=2,
+                retry_delay=0.01,
+                fallback_on_error=True,
+            )
+            vectors = client.embed(["Kiểm tra kết nối mạng"])
+
+        assert len(vectors) == 1
+        assert len(vectors[0]) == EMBEDDING_DIM
+        assert all(v == 0.0 for v in vectors[0])
+        assert mock_instance.embeddings.create.call_count == 3
+        for record in caplog.records:
+            assert secret_key not in record.message
