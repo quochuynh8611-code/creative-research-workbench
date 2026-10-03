@@ -589,4 +589,39 @@ describe('AnalyticsDashboard Component (Phase 11.1B)', () => {
     const emptyPanel = screen.getByTestId('analytics-empty-state')
     expect(emptyPanel).toBeInTheDocument()
   })
+
+  // Phase 11.10: KPI Card 4 Dynamic Contradiction Breakdown Subtitle (RED suite)
+  // Test 1: Dynamic subtitle when TRIZ contradictions exist
+  it('renders_dynamic_contradiction_breakdown_subtitle_in_triz_kpi_card_when_populated', async () => {
+    mockedGetAnalyticsOverview.mockResolvedValue(mockPopulatedOverview)
+
+    renderWithClient(<AnalyticsDashboard />)
+
+    await waitFor(() => {
+      expect(screen.queryByTestId('analytics-loading-skeleton')).not.toBeInTheDocument()
+    })
+
+    const trizStat = screen.getByTestId('stat-total-contradictions')
+    const trizCard = trizStat.parentElement!
+    expect(
+      within(trizCard).getByText(/4 kỹ thuật & 2 vật lý/i)
+    ).toBeInTheDocument()
+  })
+
+  // Test 2: Empty subtitle when no TRIZ contradictions exist
+  it('renders_empty_subtitle_in_triz_kpi_card_when_no_contradictions', async () => {
+    mockedGetAnalyticsOverview.mockResolvedValue(mockEmptyOverview)
+
+    renderWithClient(<AnalyticsDashboard />)
+
+    await waitFor(() => {
+      expect(screen.queryByTestId('analytics-loading-skeleton')).not.toBeInTheDocument()
+    })
+
+    const trizStat = screen.getByTestId('stat-total-contradictions')
+    const trizCard = trizStat.parentElement!
+    expect(
+      within(trizCard).getByText(/chưa ghi nhận mâu thuẫn/i)
+    ).toBeInTheDocument()
+  })
 })

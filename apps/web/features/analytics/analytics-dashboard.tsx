@@ -345,7 +345,9 @@ export function AnalyticsDashboard(): React.ReactElement {
             {triz.total_contradictions}
           </div>
           <p className="text-xs text-muted-foreground">
-            Thực thể mâu thuẫn được định hình
+            {triz.total_contradictions > 0
+              ? `${triz.by_contradiction_type?.technical ?? 0} kỹ thuật & ${triz.by_contradiction_type?.physical ?? 0} vật lý`
+              : 'Chưa ghi nhận mâu thuẫn'}
           </p>
           <div className="pt-2 border-t border-border/40">
             <Link
