@@ -127,6 +127,12 @@ export function AnalyticsDashboard(): React.ReactElement {
     by_contradiction_type: {},
   }
 
+  const isEmptyDashboard =
+    sessions.total === 0 &&
+    content.total_candidate_solutions === 0 &&
+    knowledgeBase.total_documents === 0 &&
+    triz.total_contradictions === 0
+
   const renderBreakdown = (
     map: Record<string, number>,
     colorClass: string = 'bg-primary/10 text-primary'
@@ -309,6 +315,37 @@ export function AnalyticsDashboard(): React.ReactElement {
           </p>
         </div>
       </div>
+
+      {/* Actionable Empty-State Guidance Panel */}
+      {isEmptyDashboard && (
+        <div className="bg-muted/30 border border-dashed border-border rounded-xl p-6 text-center space-y-4">
+          <div className="max-w-xl mx-auto space-y-2">
+            <h2 className="text-base font-semibold text-foreground">
+              Chưa có dữ liệu nghiên cứu & tri thức
+            </h2>
+            <p className="text-sm text-muted-foreground">
+              Hệ thống chưa ghi nhận phiên nghiên cứu hoặc tài liệu nào. Bắt đầu tạo phiên nghiên cứu đầu tiên hoặc nạp tài liệu vào cơ sở tri thức để kích hoạt các chỉ số phân tích.
+            </p>
+          </div>
+
+          <div className="flex flex-wrap items-center justify-center gap-3 pt-2">
+            <Link
+              href="/sessions"
+              className="inline-flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground text-sm font-medium rounded-lg hover:opacity-90 transition-opacity shadow-sm"
+            >
+              <span>Tạo Research Session đầu tiên</span>
+              <ArrowRight className="w-4 h-4" />
+            </Link>
+            <Link
+              href="/knowledge"
+              className="inline-flex items-center gap-2 px-4 py-2 bg-secondary text-secondary-foreground text-sm font-medium rounded-lg border border-border hover:bg-secondary/80 transition-colors"
+            >
+              <BookOpen className="w-4 h-4 text-emerald-500" />
+              <span>Mở Cơ sở Tri thức</span>
+            </Link>
+          </div>
+        </div>
+      )}
 
       {/* Detailed Analytics Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

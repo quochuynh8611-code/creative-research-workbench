@@ -244,4 +244,54 @@ describe('AnalyticsDashboard Component (Phase 11.1B)', () => {
     const cardLink = within(documentsCard).getByRole('link')
     expect(cardLink).toHaveAttribute('href', '/knowledge')
   })
+
+  // Phase 11.4: Actionable Empty-State Guidance (RED suite)
+  // Test 1: Actionable empty state when all metrics are zero
+  it('renders_actionable_empty_state_guidance_when_all_analytics_metrics_are_zero', async () => {
+    mockedGetAnalyticsOverview.mockResolvedValue(mockEmptyOverview)
+
+    renderWithClient(<AnalyticsDashboard />)
+
+    await waitFor(() => {
+      expect(screen.queryByTestId('analytics-loading-skeleton')).not.toBeInTheDocument()
+    })
+
+    // 1. Heading / Description guidance
+    expect(
+      screen.getByText(/chưa có dữ liệu nghiên cứu & tri thức/i)
+    ).toBeInTheDocument()
+
+    // 2. Actionable CTAs
+    const createSessionCTA = screen.getByRole('link', {
+      name: /tạo research session đầu tiên/i,
+    })
+    expect(createSessionCTA).toHaveAttribute('href', '/sessions')
+
+    const openKnowledgeCTA = screen.getByRole('link', {
+      name: /mở cơ sở tri thức/i,
+    })
+    expect(openKnowledgeCTA).toHaveAttribute('href', '/knowledge')
+  })
+
+  // Test 2: Does not render global empty state guidance when populated
+  it('does_not_render_global_empty_state_guidance_when_dashboard_has_data', async () => {
+    mockedGetAnalyticsOverview.mockResolvedValue(mockPopulatedOverview)
+
+    renderWithClient(<AnalyticsDashboard />)
+
+    await waitFor(() => {
+      expect(screen.queryByTestId('analytics-loading-skeleton')).not.toBeInTheDocument()
+    })
+
+    // Assert guidance panel and CTAs are NOT rendered
+    expect(
+      screen.queryByText(/chưa có dữ liệu nghiên cứu & tri thức/i)
+    ).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole('link', { name: /tạo research session đầu tiên/i })
+    ).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole('link', { name: /mở cơ sở tri thức/i })
+    ).not.toBeInTheDocument()
+  })
 })
