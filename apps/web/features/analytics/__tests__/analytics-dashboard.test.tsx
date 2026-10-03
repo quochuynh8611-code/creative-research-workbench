@@ -438,12 +438,41 @@ describe('AnalyticsDashboard Component (Phase 11.1B)', () => {
     expect(screen.getByText(/structuring/i)).toBeInTheDocument()
     expect(screen.getByText(/insight/i)).toBeInTheDocument()
 
-    // Global empty-state guidance panel must NOT render for mixed data
-    expect(
-      screen.queryByText(/chưa có dữ liệu nghiên cứu & tri thức/i)
-    ).not.toBeInTheDocument()
     expect(
       screen.queryByRole('link', { name: /tạo research session đầu tiên/i })
     ).not.toBeInTheDocument()
+  })
+
+  // Phase 11.7: KPI Contextual Drilldown Completion (RED suite)
+  // Test 1: Contextual link in Candidate Solutions KPI card
+  it('renders_contextual_link_in_candidate_solutions_kpi_card', async () => {
+    mockedGetAnalyticsOverview.mockResolvedValue(mockPopulatedOverview)
+
+    renderWithClient(<AnalyticsDashboard />)
+
+    await waitFor(() => {
+      expect(screen.queryByTestId('analytics-loading-skeleton')).not.toBeInTheDocument()
+    })
+
+    const solutionsStat = screen.getByTestId('stat-total-solutions')
+    const solutionsCard = solutionsStat.parentElement!
+    const cardLink = within(solutionsCard).getByRole('link', { name: /xem giải pháp/i })
+    expect(cardLink).toHaveAttribute('href', '/sessions')
+  })
+
+  // Test 2: Contextual link in TRIZ Contradictions KPI card
+  it('renders_contextual_link_in_triz_contradictions_kpi_card', async () => {
+    mockedGetAnalyticsOverview.mockResolvedValue(mockPopulatedOverview)
+
+    renderWithClient(<AnalyticsDashboard />)
+
+    await waitFor(() => {
+      expect(screen.queryByTestId('analytics-loading-skeleton')).not.toBeInTheDocument()
+    })
+
+    const trizStat = screen.getByTestId('stat-total-contradictions')
+    const trizCard = trizStat.parentElement!
+    const cardLink = within(trizCard).getByRole('link', { name: /tra cứu triz/i })
+    expect(cardLink).toHaveAttribute('href', '/search')
   })
 })

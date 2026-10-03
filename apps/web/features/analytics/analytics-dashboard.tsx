@@ -295,6 +295,15 @@ export function AnalyticsDashboard(): React.ReactElement {
           <p className="text-xs text-muted-foreground">
             {content.total_research_notes} ghi chú & {content.total_problem_frames} khung bài toán
           </p>
+          <div className="pt-2 border-t border-border/40">
+            <Link
+              href="/sessions"
+              className="inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline"
+            >
+              <span>Xem giải pháp</span>
+              <ArrowRight className="w-3 h-3" />
+            </Link>
+          </div>
         </div>
 
         {/* Card 3: Documents */}
@@ -338,6 +347,15 @@ export function AnalyticsDashboard(): React.ReactElement {
           <p className="text-xs text-muted-foreground">
             Thực thể mâu thuẫn được định hình
           </p>
+          <div className="pt-2 border-t border-border/40">
+            <Link
+              href="/search"
+              className="inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline"
+            >
+              <span>Tra cứu TRIZ</span>
+              <ArrowRight className="w-3 h-3" />
+            </Link>
+          </div>
         </div>
       </div>
 
