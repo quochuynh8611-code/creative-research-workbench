@@ -294,4 +294,50 @@ describe('AnalyticsDashboard Component (Phase 11.1B)', () => {
       screen.queryByRole('link', { name: /mở cơ sở tri thức/i })
     ).not.toBeInTheDocument()
   })
+
+  // Phase 11.5: Section-Level Contextual Navigation (RED suite)
+  // Test 1: Section 1 (Sessions Breakdown) header contextual link
+  it('renders_contextual_link_in_sessions_breakdown_section_header', async () => {
+    mockedGetAnalyticsOverview.mockResolvedValue(mockPopulatedOverview)
+
+    renderWithClient(<AnalyticsDashboard />)
+
+    await waitFor(() => {
+      expect(screen.queryByTestId('analytics-loading-skeleton')).not.toBeInTheDocument()
+    })
+
+    const sectionLink = screen.getByRole('link', { name: /xem toàn bộ phiên/i })
+    expect(sectionLink).toHaveAttribute('href', '/sessions')
+  })
+
+  // Test 2: Section 2 (Content & Solutions) header contextual link
+  it('renders_contextual_link_in_content_and_solutions_section_header', async () => {
+    mockedGetAnalyticsOverview.mockResolvedValue(mockPopulatedOverview)
+
+    renderWithClient(<AnalyticsDashboard />)
+
+    await waitFor(() => {
+      expect(screen.queryByTestId('analytics-loading-skeleton')).not.toBeInTheDocument()
+    })
+
+    const sectionLink = screen.getByRole('link', { name: /xem các giải pháp/i })
+    expect(sectionLink).toHaveAttribute('href', '/sessions')
+  })
+
+  // Test 3: Section 3 (Knowledge Base & TRIZ) header contextual links
+  it('renders_contextual_links_in_knowledge_and_triz_section_header', async () => {
+    mockedGetAnalyticsOverview.mockResolvedValue(mockPopulatedOverview)
+
+    renderWithClient(<AnalyticsDashboard />)
+
+    await waitFor(() => {
+      expect(screen.queryByTestId('analytics-loading-skeleton')).not.toBeInTheDocument()
+    })
+
+    const knowledgeLink = screen.getByRole('link', { name: /kho tri thức/i })
+    expect(knowledgeLink).toHaveAttribute('href', '/knowledge')
+
+    const searchLink = screen.getByRole('link', { name: /tra cứu semantic/i })
+    expect(searchLink).toHaveAttribute('href', '/search')
+  })
 })

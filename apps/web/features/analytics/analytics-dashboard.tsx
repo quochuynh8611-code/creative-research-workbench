@@ -351,11 +351,20 @@ export function AnalyticsDashboard(): React.ReactElement {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Section 1: Sessions Breakdown */}
         <div className="bg-card border border-border rounded-xl p-6 shadow-sm space-y-6">
-          <div className="flex items-center gap-2 border-b border-border pb-3">
-            <Brain className="w-5 h-5 text-indigo-500" />
-            <h2 className="text-lg font-semibold text-foreground">
-              Phân tích Sessions
-            </h2>
+          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border pb-3">
+            <div className="flex items-center gap-2">
+              <Brain className="w-5 h-5 text-indigo-500" />
+              <h2 className="text-lg font-semibold text-foreground">
+                Phân tích Sessions
+              </h2>
+            </div>
+            <Link
+              href="/sessions"
+              className="inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline"
+            >
+              <span>Xem toàn bộ phiên</span>
+              <ArrowRight className="w-3 h-3" />
+            </Link>
           </div>
 
           <div className="space-y-4">
@@ -393,11 +402,20 @@ export function AnalyticsDashboard(): React.ReactElement {
 
         {/* Section 2: Content & Ideation Activity */}
         <div className="bg-card border border-border rounded-xl p-6 shadow-sm space-y-6">
-          <div className="flex items-center gap-2 border-b border-border pb-3">
-            <Lightbulb className="w-5 h-5 text-amber-500" />
-            <h2 className="text-lg font-semibold text-foreground">
-              Nội dung & Giải pháp
-            </h2>
+          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border pb-3">
+            <div className="flex items-center gap-2">
+              <Lightbulb className="w-5 h-5 text-amber-500" />
+              <h2 className="text-lg font-semibold text-foreground">
+                Nội dung & Giải pháp
+              </h2>
+            </div>
+            <Link
+              href="/sessions"
+              className="inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline"
+            >
+              <span>Xem các giải pháp</span>
+              <ArrowRight className="w-3 h-3" />
+            </Link>
           </div>
 
           <div className="space-y-4">
@@ -425,11 +443,29 @@ export function AnalyticsDashboard(): React.ReactElement {
 
         {/* Section 3: Knowledge Base & TRIZ Insights */}
         <div className="bg-card border border-border rounded-xl p-6 shadow-sm space-y-6 lg:col-span-2">
-          <div className="flex items-center gap-2 border-b border-border pb-3">
-            <Sparkles className="w-5 h-5 text-purple-500" />
-            <h2 className="text-lg font-semibold text-foreground">
-              Tri thức & Mâu thuẫn TRIZ
-            </h2>
+          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border pb-3">
+            <div className="flex items-center gap-2">
+              <Sparkles className="w-5 h-5 text-purple-500" />
+              <h2 className="text-lg font-semibold text-foreground">
+                Tri thức & Mâu thuẫn TRIZ
+              </h2>
+            </div>
+            <div className="flex items-center gap-3">
+              <Link
+                href="/knowledge"
+                className="inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline"
+              >
+                <span>Kho tri thức</span>
+                <ArrowRight className="w-3 h-3" />
+              </Link>
+              <Link
+                href="/search"
+                className="inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline"
+              >
+                <span>Tra cứu Semantic</span>
+                <ArrowRight className="w-3 h-3" />
+              </Link>
+            </div>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
