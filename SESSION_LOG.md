@@ -33,8 +33,27 @@
 | **Phase 12.1** | Alembic Revision 003 — IVFFlat Vector Index | ✅ DONE | `a6ea28b` |
 | **Phase 12.1A** | Migration Artifact Freshness & Drift Governance | ✅ DONE | `635a8f0` |
 | **Phase 12.1B** | Runtime Migration Verification Module & Drift Detection | ✅ DONE | `083b805` |
-| **Phase 12.1C** | Runtime Startup Verification & Fail-Closed Lifecycle Wiring | ✅ 100% DONE (Staged) | — |
+| **Phase 12.1C** | Runtime Startup Verification & Fail-Closed Lifecycle Wiring | ✅ 100% DONE | `74d5c64` |
+| **Phase 12.2** | Async Background Processing & Job Tracking | ✅ 100% DONE | `53c0c99` |
 | **Phase 6–12** | Professional Upgrade (AI Core, Canvas, Export…) | 🔵 IN PROGRESS | — |
+
+---
+
+## 📅 Phiên làm việc: 2026-10-04 (Phase 12.2 — Async Background Processing & Job Tracking)
+
+### ✅ Đã hoàn thành trong phiên này
+
+| # | Task | Chi tiết |
+|---|---|---|
+| 1 | **Đặc tả & Quyết định Kiến trúc** | Ban hành `docs/PHASE_12_2_ASYNC_PROCESSING_SPEC.md` và `docs/ADR-004-async-background-processing.md` (chọn Phương án A: FastAPI `BackgroundTasks` + PostgreSQL `background_jobs` store) |
+| 2 | **Domain Model & Enum Types** | Bổ sung enums `JobStatus` (`pending`, `running`, `completed`, `failed`), `JobType` (`document_ingestion`, `reembed_knowledge_base`) và ORM entity `BackgroundJob` vào `backend/src/app/domain/models.py` |
+| 3 | **Alembic Migration 004** | Tạo file migration `backend/alembic/versions/004_create_background_jobs_table.py` với các cột UUID, status, job_type, progress_percentage, error_message, result_summary JSON và đánh index `ix_background_jobs_status`, `ix_background_jobs_created_at` |
+| 4 | **Background Job Service Layer** | Xây dựng `JobService` (`create_job`, `get_job`, `run_job`) quản lý chu kỳ tác vụ nền, tự quản lý Session độc lập và đảm bảo đóng kết nối an toàn trong khối `finally` |
+| 5 | **Job Tracking REST API** | Triển khai endpoint `GET /api/v1/jobs/{job_id}` trong `backend/src/app/api/v1/endpoints/jobs.py` trả về metadata trạng thái, tiến độ thực thi và kết quả tổng hợp |
+| 6 | **Dual-Mode Document Ingestion Endpoint** | Mở rộng `POST /api/v1/documents/upload` tiếp nhận `async: bool = False`: mặc định chạy đồng bộ (HTTP 200) tương thích ngược 100%, khi `async=true` trả về HTTP 202 Accepted kèm `job_id` |
+| 7 | **Regression Alignment & Hardening** | Nâng cấp toàn diện các test suite của hệ thống từ head `003` lên `004`, bổ sung dọn dẹp bảng `background_jobs` trong test harness |
+| 8 | **Test-First Quality Gate (57/57 Tests GREEN)** | Đạt 100% GREEN trên toàn bộ 9 test suite liên quan: unit `JobService`, integration async upload, integration job tracking, documents regression, runtime verification, migration runner, postflight, artifact freshness, và alembic 001-004 |
+| 9 | **Version Control & Remote Synchronization** | Đã commit `53c0c99` và push thành công lên `origin/main` |
 
 ---
 
