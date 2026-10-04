@@ -36,6 +36,40 @@ jobs:
         working-directory: backend
         run: pip install -e ".[dev]"
 
+      - name: Verify source Alembic head
+        working-directory: backend
+        run: |
+          python - <<'PY'
+          from alembic.config import Config
+          from alembic.script import ScriptDirectory
+
+          cfg = Config("alembic.ini")
+          cfg.set_main_option("script_location", "alembic")
+          script = ScriptDirectory.from_config(cfg)
+          heads = script.get_heads()
+          print(f"Source Alembic heads: {heads} (expected: ['003'])")
+          assert heads == ["003"], f"Expected source Alembic head ['003'], got {heads}"
+          PY
+
+      - name: Build backend image
+        run: docker build -t crw-backend-ci:migration-freshness -f backend/Dockerfile backend
+
+      - name: Verify backend image migration artifact freshness
+        run: |
+          docker run --rm --entrypoint sh crw-backend-ci:migration-freshness -lc '
+            python - <<'"'"'PY'"'"'
+from alembic.config import Config
+from alembic.script import ScriptDirectory
+
+cfg = Config("/app/alembic.ini")
+cfg.set_main_option("script_location", "/app/alembic")
+script = ScriptDirectory.from_config(cfg)
+heads = script.get_heads()
+print(f"Image Alembic heads: {heads} (expected: ['\''003'\''])")
+assert heads == ["003"], f"Expected image Alembic head ['\''003'\''], got {heads}"
+PY
+          '
+
       - name: Run tests
         working-directory: backend
         env:
