@@ -56,19 +56,7 @@ jobs:
 
       - name: Verify backend image migration artifact freshness
         run: |
-          docker run --rm --entrypoint sh crw-backend-ci:migration-freshness -lc '
-            python - <<'"'"'PY'"'"'
-from alembic.config import Config
-from alembic.script import ScriptDirectory
-
-cfg = Config("/app/alembic.ini")
-cfg.set_main_option("script_location", "/app/alembic")
-script = ScriptDirectory.from_config(cfg)
-heads = script.get_heads()
-print(f"Image Alembic heads: {heads} (expected: ['\''003'\''])")
-assert heads == ["003"], f"Expected image Alembic head ['\''003'\''], got {heads}"
-PY
-          '
+          docker run --rm --entrypoint python crw-backend-ci:migration-freshness -c "from alembic.config import Config; from alembic.script import ScriptDirectory; cfg = Config('/app/alembic.ini'); cfg.set_main_option('script_location', '/app/alembic'); heads = ScriptDirectory.from_config(cfg).get_heads(); print(f'Image Alembic heads: {heads} (expected: [\"003\"])'); assert heads == ['003'], f'Expected image Alembic head [\"003\"], got {heads}'"
 
       - name: Run tests
         working-directory: backend
