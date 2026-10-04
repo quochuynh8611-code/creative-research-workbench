@@ -12,13 +12,24 @@ from __future__ import annotations
 import uuid
 from typing import Any, Optional
 
-from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile, status
+from fastapi import (
+    APIRouter,
+    BackgroundTasks,
+    Depends,
+    File,
+    HTTPException,
+    Query,
+    Response,
+    UploadFile,
+    status,
+)
 from sqlalchemy import func, or_, select
 from sqlalchemy.orm import Session
 
 from app.api.v1.endpoints.sessions import get_db
-from app.domain.models import Chunk, Document, DocumentStatus
+from app.domain.models import Chunk, Document, DocumentStatus, JobStatus, JobType
 from app.services.ingestion_service import IngestionService
+from app.services.job_service import JobService
 
 router = APIRouter()
 
@@ -163,12 +174,17 @@ MAX_UPLOAD_SIZE_BYTES: int = 10 * 1024 * 1024  # 10MB limit
 
 @router.post("/upload", response_model=None)
 async def upload_document(
+    response: Response,
+    background_tasks: BackgroundTasks,
     file: UploadFile = File(...),
+    async_mode: bool = Query(False, alias="async", description="Chạy nạp tài liệu bất đồng bộ"),
     db: Session = Depends(get_db),
 ) -> dict[str, Any]:
     """
     Upload và nạp tài liệu Markdown / TXT vào Knowledge Base.
-    Nếu nội dung đã tồn tại (trùng content_hash) sẽ trả về status=already_exists.
+    Hỗ trợ 2 chế độ:
+      - Đồng bộ (mặc định async=false): Chờ ingest hoàn tất, trả về HTTP 200.
+      - Bất đồng bộ (async=true): Tạo job, kích hoạt BackgroundTasks, trả về HTTP 202 Accepted.
     """
     filename = file.filename or "uploaded.md"
     ext = filename.lower().split(".")[-1] if "." in filename else ""
@@ -193,6 +209,38 @@ async def upload_document(
         )
 
     engine = db.get_bind()
+
+    # --- CHẾ ĐỘ BẤT ĐỒNG BỘ (ASYNC MODE) ---
+    if async_mode:
+        job_service = JobService(engine=engine)
+        job = job_service.create_job(job_type=JobType.document_ingestion)
+
+        def _async_ingest_worker(worker_session: Session) -> dict[str, Any]:
+            worker_engine = worker_session.get_bind()
+            worker_ingest_service = IngestionService(engine=worker_engine)
+            res = worker_ingest_service.ingest_bytes(raw_bytes=raw_bytes, filename=filename)
+            if res.status == "error":
+                raise RuntimeError(res.error_message or "Lỗi không xác định khi nạp tài liệu")
+            return {
+                "status": res.status,
+                "document_id": str(res.document_id) if res.document_id else None,
+                "chunks_created": res.chunks_created,
+                "embeddings_created": res.embeddings_created,
+            }
+
+        background_tasks.add_task(job_service.run_job, job.id, _async_ingest_worker)
+        response.status_code = status.HTTP_202_ACCEPTED
+
+        return {
+            "data": {
+                "job_id": str(job.id),
+                "job_type": job.job_type.value if hasattr(job.job_type, "value") else str(job.job_type),
+                "status": job.status.value if hasattr(job.status, "value") else str(job.status),
+                "created_at": job.created_at.isoformat() if job.created_at else None,
+            }
+        }
+
+    # --- CHẾ ĐỘ ĐỒNG BỘ (SYNC MODE - DEFAULT) ---
     service = IngestionService(engine=engine)
     result = service.ingest_bytes(raw_bytes=raw_bytes, filename=filename)
 

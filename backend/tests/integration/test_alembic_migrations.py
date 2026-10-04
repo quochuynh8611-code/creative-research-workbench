@@ -37,6 +37,7 @@ def get_alembic_config(engine: Engine) -> Config:
 def _clean_database(engine: Engine) -> None:
     """Hạ toàn bộ bảng và kiểu dữ liệu phục vụ test cô lập."""
     with engine.begin() as conn:
+        conn.execute(text("DROP TABLE IF EXISTS background_jobs CASCADE"))
         conn.execute(text("DROP TABLE IF EXISTS candidate_solutions CASCADE"))
         conn.execute(text("DROP TABLE IF EXISTS research_notes CASCADE"))
         conn.execute(text("DROP TABLE IF EXISTS contradictions CASCADE"))
@@ -76,7 +77,7 @@ def test_two_stage_alembic_migrations(sync_engine: Engine):
     """
     Given: Database trống có extension vector.
     When: Chạy lần lượt upgrade 001 -> head -> downgrade 001 -> downgrade base.
-    Then: Schema DDL tại mỗi giai đoạn phải khớp 100% với đặc tả 5 bảng baseline và 2 bảng mới.
+    Then: Schema DDL tại mỗi giai đoạn phải khớp 100% với đặc tả 5 bảng baseline và các bảng mới.
     """
     assert ALEMBIC_INI_PATH.exists(), f"alembic.ini không tồn tại tại {ALEMBIC_INI_PATH}"
     _clean_database(sync_engine)
@@ -101,13 +102,14 @@ def test_two_stage_alembic_migrations(sync_engine: Engine):
     )
     assert "research_notes" not in tables_after_001, "research_notes không được xuất hiện ở 001"
     assert "candidate_solutions" not in tables_after_001, "candidate_solutions không được xuất hiện ở 001"
+    assert "background_jobs" not in tables_after_001, "background_jobs không được xuất hiện ở 001"
 
-    # 2. UPGRADE ĐẾN HEAD (Bao gồm 002)
+    # 2. UPGRADE ĐẾN HEAD (Bao gồm 002, 003, 004)
     command.upgrade(cfg, "head")
 
     inspector = inspect(sync_engine)
     tables_after_head = set(inspector.get_table_names())
-    expected_feature_tables = expected_baseline_tables.union({"research_notes", "candidate_solutions"})
+    expected_feature_tables = expected_baseline_tables.union({"research_notes", "candidate_solutions", "background_jobs"})
     assert expected_feature_tables.issubset(tables_after_head), (
         f"upgrade head thiếu bảng: {expected_feature_tables - tables_after_head}"
     )
@@ -118,13 +120,14 @@ def test_two_stage_alembic_migrations(sync_engine: Engine):
     fks = inspector.get_foreign_keys("research_notes")
     assert any(fk["referred_table"] == "research_sessions" for fk in fks), "Thiếu FK tới research_sessions"
 
-    # 3. DOWNGRADE VỀ 001 (Rollback 002)
+    # 3. DOWNGRADE VỀ 001 (Rollback 002, 003, 004)
     command.downgrade(cfg, "001")
 
     inspector = inspect(sync_engine)
     tables_after_downgrade_001 = set(inspector.get_table_names())
     assert "research_notes" not in tables_after_downgrade_001, "research_notes phải bị gỡ khi rollback về 001"
     assert "candidate_solutions" not in tables_after_downgrade_001, "candidate_solutions phải bị gỡ khi rollback về 001"
+    assert "background_jobs" not in tables_after_downgrade_001, "background_jobs phải bị gỡ khi rollback về 001"
     assert expected_baseline_tables.issubset(tables_after_downgrade_001), "5 bảng baseline phải còn nguyên vẹn"
 
     # 4. DOWNGRADE VỀ BASE (Rollback 001)
@@ -140,7 +143,7 @@ def test_two_stage_alembic_migrations(sync_engine: Engine):
 def test_alembic_version_tracked_accurately(sync_engine: Engine):
     """
     Given: Database trống.
-    When: Nâng cấp lên từng revision cụ thể ('001' và 'head').
+    When: Nâng cấp lên từng revision cụ thể ('001', '002', '003', '004' và 'head').
     Then: Bảng alembic_version phải lưu chính xác revision ID tương ứng.
     """
     _clean_database(sync_engine)
@@ -156,10 +159,21 @@ def test_alembic_version_tracked_accurately(sync_engine: Engine):
         rev = conn.execute(text("SELECT version_num FROM alembic_version")).scalar()
         assert rev == "002", f"Expected revision 002, got {rev}"
 
-    command.upgrade(cfg, "head")
+    command.upgrade(cfg, "003")
     with sync_engine.connect() as conn:
         rev = conn.execute(text("SELECT version_num FROM alembic_version")).scalar()
         assert rev == "003", f"Expected revision 003, got {rev}"
+
+    command.upgrade(cfg, "004")
+    with sync_engine.connect() as conn:
+        rev = conn.execute(text("SELECT version_num FROM alembic_version")).scalar()
+        assert rev == "004", f"Expected revision 004, got {rev}"
+
+    command.upgrade(cfg, "head")
+    with sync_engine.connect() as conn:
+        rev = conn.execute(text("SELECT version_num FROM alembic_version")).scalar()
+        assert rev == "004", f"Expected revision 004, got {rev}"
+
 
 
 def test_data_level_cascade_and_set_null_integrity(sync_engine: Engine):
@@ -373,7 +387,7 @@ def test_alembic_upgrade_to_revision_003_creates_ivfflat_cosine_index(sync_engin
     """
     Scenario 1: Upgrade database lên revision 003 tạo đúng IVFFlat cosine index trên chunks.embedding
     Given: Database đang được quản lý bởi Alembic ở revision 002.
-    When: Thực thi command.upgrade(cfg, 'head').
+    When: Thực thi command.upgrade(cfg, '003').
     Then:
       - Current revision của database là '003'.
       - Index 'ix_chunks_embedding_cosine' tồn tại trên bảng 'chunks'.
@@ -382,8 +396,8 @@ def test_alembic_upgrade_to_revision_003_creates_ivfflat_cosine_index(sync_engin
     _clean_database(sync_engine)
     cfg = get_alembic_config(sync_engine)
 
-    # Upgrade lên head (mong đợi revision 003)
-    command.upgrade(cfg, "head")
+    # Upgrade lên revision 003
+    command.upgrade(cfg, "003")
 
     with sync_engine.connect() as conn:
         version = conn.execute(text("SELECT version_num FROM alembic_version LIMIT 1")).scalar()
@@ -410,7 +424,7 @@ def test_alembic_downgrade_to_revision_002_drops_vector_index(sync_engine: Engin
     _clean_database(sync_engine)
     cfg = get_alembic_config(sync_engine)
 
-    command.upgrade(cfg, "head")
+    command.upgrade(cfg, "003")
 
     with sync_engine.connect() as conn:
         rev_before = conn.execute(text("SELECT version_num FROM alembic_version LIMIT 1")).scalar()
@@ -439,7 +453,7 @@ def test_alembic_downgrade_preserves_documents_and_chunks_data(sync_engine: Engi
     """
     _clean_database(sync_engine)
     cfg = get_alembic_config(sync_engine)
-    command.upgrade(cfg, "head")
+    command.upgrade(cfg, "003")
 
     with sync_engine.connect() as conn:
         rev_before = conn.execute(text("SELECT version_num FROM alembic_version LIMIT 1")).scalar()
@@ -474,3 +488,67 @@ def test_alembic_downgrade_preserves_documents_and_chunks_data(sync_engine: Engi
         assert chunk_row is not None, "Chunk record was lost during migration downgrade"
         assert chunk_row[0] == "Nội dung chunk vector"
         assert chunk_row[1] is not None, "Chunk embedding was cleared during migration downgrade"
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Phase 12.2: Alembic Revision 004 (Background Jobs Table) Scenarios
+# ─────────────────────────────────────────────────────────────────────────────
+
+def test_alembic_upgrade_to_revision_004_creates_background_jobs_table(sync_engine: Engine):
+    """
+    Scenario 4: Upgrade database lên revision 004 tạo đúng bảng background_jobs
+    Given: Database đang ở revision 003.
+    When: Thực thi command.upgrade(cfg, '004').
+    Then:
+      - Current revision của database là '004'.
+      - Bảng 'background_jobs' tồn tại trong danh sách bảng.
+      - Các cột và index ix_background_jobs_status, ix_background_jobs_created_at tồn tại.
+    """
+    _clean_database(sync_engine)
+    cfg = get_alembic_config(sync_engine)
+
+    command.upgrade(cfg, "004")
+
+    with sync_engine.connect() as conn:
+        version = conn.execute(text("SELECT version_num FROM alembic_version LIMIT 1")).scalar()
+        assert version == "004", f"Expected current revision to be '004', got '{version}'"
+
+    inspector = inspect(sync_engine)
+    assert "background_jobs" in inspector.get_table_names(), "Bảng 'background_jobs' không tồn tại sau khi upgrade 004"
+
+    columns = {c["name"] for c in inspector.get_columns("background_jobs")}
+    expected_columns = {
+        "id",
+        "job_type",
+        "status",
+        "progress_percentage",
+        "error_message",
+        "result_summary",
+        "created_at",
+        "started_at",
+        "finished_at",
+    }
+    assert expected_columns.issubset(columns), f"background_jobs thiếu cột: {expected_columns - columns}"
+
+
+def test_alembic_downgrade_to_revision_003_drops_background_jobs_table(sync_engine: Engine):
+    """
+    Scenario 5: Downgrade database về revision 003 gỡ bỏ bảng background_jobs an toàn
+    Given: Database đã nâng cấp lên revision 004.
+    When: Thực thi command.downgrade(cfg, '003').
+    Then:
+      - Current revision của database trở về '003'.
+      - Bảng 'background_jobs' không còn tồn tại.
+    """
+    _clean_database(sync_engine)
+    cfg = get_alembic_config(sync_engine)
+
+    command.upgrade(cfg, "004")
+    command.downgrade(cfg, "003")
+
+    with sync_engine.connect() as conn:
+        version = conn.execute(text("SELECT version_num FROM alembic_version LIMIT 1")).scalar()
+        assert version == "003", f"Expected revision '003' after downgrade, got '{version}'"
+
+    inspector = inspect(sync_engine)
+    assert "background_jobs" not in inspector.get_table_names(), "Bảng 'background_jobs' phải bị xóa khi downgrade về 003"

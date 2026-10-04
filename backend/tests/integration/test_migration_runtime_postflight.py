@@ -57,6 +57,7 @@ def _get_script_directory() -> ScriptDirectory:
 def _clean_database(engine: Engine) -> None:
     """Clean all database tables and types for test isolation."""
     with engine.begin() as conn:
+        conn.execute(text("DROP TABLE IF EXISTS background_jobs CASCADE"))
         conn.execute(text("DROP TABLE IF EXISTS candidate_solutions CASCADE"))
         conn.execute(text("DROP TABLE IF EXISTS research_notes CASCADE"))
         conn.execute(text("DROP TABLE IF EXISTS contradictions CASCADE"))
@@ -114,7 +115,7 @@ def test_runtime_preflight_reports_source_head_and_database_current(sync_engine:
     Test A: Runtime preflight dual-check reports source head and database revision.
     Given: Disposable database migrated to baseline '002'.
     When: Reading source heads from ScriptDirectory and current revision from database.
-    Then: Source head is ['003'] and database revision is '002' (recognizes pending migration).
+    Then: Source head is ['004'] and database revision is '002' (recognizes pending migration).
     """
     _clean_database(sync_engine)
     cfg = _get_alembic_config(sync_engine)
@@ -125,7 +126,7 @@ def test_runtime_preflight_reports_source_head_and_database_current(sync_engine:
     # 1. Source heads inspection
     script = _get_script_directory()
     source_heads = script.get_heads()
-    assert source_heads == ["003"], f"Expected source head ['003'], got {source_heads}"
+    assert source_heads == ["004"], f"Expected source head ['004'], got {source_heads}"
 
     # 2. Database current revision inspection
     current_rev = _get_database_revision(sync_engine)
@@ -140,19 +141,19 @@ def test_runtime_preflight_reports_source_head_and_database_current(sync_engine:
 
 def test_schema_postflight_verifies_revision_and_cosine_index(sync_engine: Engine) -> None:
     """
-    Test B: Schema-level postflight verifies revision '003' and pgvector IVFFlat cosine index.
-    Given: Disposable database upgraded to head ('003').
+    Test B: Schema-level postflight verifies revision '004' and pgvector IVFFlat cosine index.
+    Given: Disposable database upgraded to head ('004').
     When: Querying PostgreSQL catalog for alembic_version and pg_indexes.
-    Then: Revision is '003', index 'ix_chunks_embedding_cosine' exists with 'vector_cosine_ops' and lists=10.
+    Then: Revision is '004', index 'ix_chunks_embedding_cosine' exists with 'vector_cosine_ops' and lists=10.
     """
     _clean_database(sync_engine)
     cfg = _get_alembic_config(sync_engine)
 
-    # Upgrade to head (003)
+    # Upgrade to head (004)
     command.upgrade(cfg, "head")
 
     current_rev = _get_database_revision(sync_engine)
-    assert current_rev == "003", f"Expected revision '003' after upgrade, got '{current_rev}'"
+    assert current_rev == "004", f"Expected revision '004' after upgrade, got '{current_rev}'"
 
     # Query catalog for chunks indexes
     with sync_engine.connect() as conn:
@@ -180,10 +181,10 @@ def test_schema_postflight_verifies_revision_and_cosine_index(sync_engine: Engin
 
 def test_schema_postflight_preserves_document_and_chunk_counts(sync_engine: Engine) -> None:
     """
-    Test C: Schema-level postflight preserves document and chunk counts across migration 002 -> 003.
+    Test C: Schema-level postflight preserves document and chunk counts across migration 002 -> 004.
     Given: Database at baseline '002' with existing document and chunk records.
-    When: Upgrading to revision '003'.
-    Then: Record counts before and after remain identical and version is '003'.
+    When: Upgrading to revision head ('004').
+    Then: Record counts before and after remain identical and version is '004'.
     """
     _clean_database(sync_engine)
     cfg = _get_alembic_config(sync_engine)
@@ -219,7 +220,7 @@ def test_schema_postflight_preserves_document_and_chunk_counts(sync_engine: Engi
     assert doc_count_before == 1
     assert chunk_count_before == 1
 
-    # Upgrade from 002 to 003
+    # Upgrade from 002 to head (004)
     command.upgrade(cfg, "head")
 
     with sync_engine.connect() as conn:
@@ -233,17 +234,17 @@ def test_schema_postflight_preserves_document_and_chunk_counts(sync_engine: Engi
     assert chunk_count_after == chunk_count_before == 1, (
         f"Chunk count mismatch: before={chunk_count_before}, after={chunk_count_after}"
     )
-    assert current_rev == "003", f"Expected revision '003', got '{current_rev}'"
+    assert current_rev == "004", f"Expected revision '004', got '{current_rev}'"
 
 
 def test_runtime_postflight_fails_on_revision_drift() -> None:
     """
     Test D: Runtime postflight contract fails explicitly with descriptive message on revision drift.
-    Given: Expected source head is '003' and actual database revision is '002'.
+    Given: Expected source head is '004' and actual database revision is '002'.
     When: Running assert_migration_runtime_postflight.
-    Then: Raises AssertionError containing both expected '003' and actual '002'.
+    Then: Raises AssertionError containing both expected '004' and actual '002'.
     """
-    expected_head = "003"
+    expected_head = "004"
     stale_db_revision = "002"
 
     with pytest.raises(AssertionError) as exc_info:
@@ -253,6 +254,6 @@ def test_runtime_postflight_fails_on_revision_drift() -> None:
         )
 
     error_msg = str(exc_info.value)
-    assert "003" in error_msg, f"Expected '003' in drift failure message, got: {error_msg}"
+    assert "004" in error_msg, f"Expected '004' in drift failure message, got: {error_msg}"
     assert "002" in error_msg, f"Expected '002' in drift failure message, got: {error_msg}"
     assert "drift" in error_msg.lower(), f"Expected 'drift' in message, got: {error_msg}"

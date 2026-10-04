@@ -36,12 +36,12 @@ def test_source_repository_reports_expected_single_head_revision() -> None:
     """
     Given: Source repository chứa các Alembic revisions trong backend/alembic/versions.
     When: Truy vấn danh sách current heads từ ScriptDirectory.
-    Then: Phải có đúng một head và head đó là revision '003'.
+    Then: Phải có đúng một head và head đó là revision '004'.
     """
     script = _get_script_directory()
     heads = script.get_heads()
 
-    assert heads == ["003"], f"Expected Alembic source head ['003'], got {heads}"
+    assert heads == ["004"], f"Expected Alembic source head ['004'], got {heads}"
 
 
 def test_ci_workflow_enforces_backend_image_or_migration_artifact_verification() -> None:

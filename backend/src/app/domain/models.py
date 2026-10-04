@@ -26,6 +26,7 @@ from sqlalchemy import (
     ForeignKey,
     Index,
     Integer,
+    JSON,
     String,
     Text,
     UniqueConstraint,
@@ -66,6 +67,18 @@ class ContradictionType(str, enum.Enum):
     physical = "physical"
     none = "none"
     unknown = "unknown"
+
+
+class JobStatus(str, enum.Enum):
+    pending = "pending"
+    running = "running"
+    completed = "completed"
+    failed = "failed"
+
+
+class JobType(str, enum.Enum):
+    document_ingestion = "document_ingestion"
+    reembed_knowledge_base = "reembed_knowledge_base"
 
 
 # ──────────────────────────────────────────────
@@ -427,6 +440,54 @@ class CandidateSolution(Base):
 
     def __repr__(self) -> str:
         return f"<CandidateSolution id={self.id} title='{self.title[:30]}' status={self.status}>"
+
+
+# ──────────────────────────────────────────────
+# BackgroundJob — Tác vụ Nền Bất đồng bộ (Phase 12.2)
+# ──────────────────────────────────────────────
+
+class BackgroundJob(Base):
+    """
+    Đại diện cho 1 tác vụ xử lý nền bất đồng bộ (Phase 12.2).
+    Ref: docs/ADR-004-async-background-processing.md & docs/PHASE_12_2_ASYNC_PROCESSING_SPEC.md
+    """
+    __tablename__ = "background_jobs"
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
+    )
+    job_type: Mapped[JobType] = mapped_column(
+        Enum(JobType), nullable=False
+    )
+    status: Mapped[JobStatus] = mapped_column(
+        Enum(JobStatus), nullable=False, default=JobStatus.pending
+    )
+    progress_percentage: Mapped[float] = mapped_column(
+        Float, nullable=False, default=0.0
+    )
+    error_message: Mapped[str | None] = mapped_column(
+        Text, nullable=True
+    )
+    result_summary: Mapped[dict[str, Any] | None] = mapped_column(
+        JSON, nullable=True
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+    started_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    finished_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+
+    __table_args__ = (
+        Index("ix_background_jobs_status", "status"),
+        Index("ix_background_jobs_created_at", "created_at"),
+    )
+
+    def __repr__(self) -> str:
+        return f"<BackgroundJob id={self.id} type={self.job_type} status={self.status}>"
 
 
 # ──────────────────────────────────────────────

@@ -83,11 +83,11 @@ def test_read_source_heads_returns_expected_single_head_tuple() -> None:
     """
     Given: Thư mục script Alembic của repository backend/alembic.
     When: Gọi hàm read_source_heads(script_location).
-    Then: Trả về tuple chứa đúng 1 head duy nhất là ('003',).
+    Then: Trả về tuple chứa đúng 1 head duy nhất là ('004',).
     """
     heads = read_source_heads(ALEMBIC_DIR)
     assert isinstance(heads, tuple)
-    assert heads == ("003",)
+    assert heads == ("004",)
 
 
 def test_read_database_revision_when_table_exists() -> None:
