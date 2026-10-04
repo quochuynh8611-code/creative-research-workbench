@@ -202,26 +202,28 @@ Từ: Tool ghi chú TRIZ cơ bản
 
 ---
 
-### PHASE 11 — Analytics & Research Intelligence 📊
-**Mục tiêu:** Nhìn thấy được patterns trong nghiên cứu của mình
+### PHASE 11 — Analytics & Research Intelligence 📊 ✅ (COMPLETED)
+**Mục tiêu:** Nhìn thấy được patterns trong nghiên cứu của mình qua Dashboard trực quan, contextual deep links, semantic landmarks và phản hồi tương tác đầy đủ.
 
-#### 11.1 Session Analytics Dashboard
-- **Frontend:** `/analytics` page với:
-  - Sessions theo thời gian (chart)
-  - Distribution: domain, status, workflow stage
-  - Knowledge base growth (documents ingested over time)
-  - Most used TRIZ principles
-- **Backend:** `GET /api/v1/analytics/overview` aggregation query
+#### 11.1 Overview & Architecture (11.1A & 11.1B) ✅
+- **Backend:** `GET /api/v1/analytics/overview` tổng hợp toàn diện chỉ số: Sessions, Content, Solutions, Knowledge Base, TRIZ, kèm Postgres testcontainer suite (`test_analytics_overview_api.py`).
+- **Frontend:** `/analytics` page với `AnalyticsDashboard` component, TanStack Query, loading skeleton, error retry.
 
-#### 11.2 Research Progress Tracking
-- **Per-session:** Timeline của session — khi nào tạo problem frame, khi nào next-step, khi nào có note
-- **Visual:** Gantt-style timeline trong session detail
-- **Backend:** Event log table `SessionEvent(id, session_id, event_type, payload, created_at)`
+#### 11.2 Discoverability & Navigation (11.2, 11.3, 11.4) ✅
+- **Header & Navbar:** Contextual deep links đến `/sessions`, `/knowledge`, `/search`.
+- **Section Headers:** Link điều hướng theo ngữ cảnh trên từng tiêu đề breakdown section.
 
-#### 11.3 TRIZ Principle Usage Heatmap
-- **Aggregate:** Những principles nào được gợi ý nhiều nhất, trong domain nào
-- **Insight:** Giúp người dùng nhận ra patterns trong bài toán của mình
-- **Frontend:** Heatmap matrix 40×N trong `/analytics`
+#### 11.3 Empty States & Quality Indicators (11.5, 11.6, 11.8) ✅
+- **Global Empty State:** Actionable Empty-State Guidance Panel khi toàn bộ hệ thống chưa có dữ liệu.
+- **Local Empty States:** Guidance cục bộ theo từng breakdown khi dữ liệu rỗng một phần.
+- **Golden Document Ratio:** Badge tỷ lệ tài liệu chuẩn hóa trên tổng số tài liệu tri thức.
+
+#### 11.4 Accessibility, Symmetry & Feedback Hardening (11.7, 11.9, 11.10, 11.11) ✅
+- **KPI Card Drilldowns:** Link chuyên sâu ở chân 4 thẻ chỉ số KPI.
+- **Semantic Landmarks:** `<section aria-labelledby="...">` và các data-testid ổn định.
+- **TRIZ Subtitle Symmetry:** Subtitle động theo phân loại mâu thuẫn kỹ thuật/vật lý.
+- **Refresh Feedback:** Nút làm mới với nhãn động `Đang làm mới...`, `aria-busy`, `aria-label`, `data-testid="analytics-refresh-button"`.
+- **Tài liệu đặc tả:** Chi tiết tại `docs/PHASE_11_ANALYTICS_SPEC.md` và `docs/PHASE_11_ANALYTICS_GHERKIN_MATRIX.md`.
 
 ---
 
@@ -275,7 +277,7 @@ graph LR
 | **9.2** AI Report Generator | 🟡 Medium | Medium | **#8** |
 | **10.1** Full 39 Parameters | 🟡 Medium | Low | **#9** |
 | **7.4** Solution Tracking | 🟡 Medium | Medium | **#10** |
-| **11.1** Analytics Dashboard | 🟢 Nice-to-have | Medium | #11 |
+| **11.1** Analytics Dashboard | 🟢 Nice-to-have | Medium | ✅ **Hoàn tất** (11.1A → 11.11) |
 | **8.3** Knowledge Graph | 🟢 Nice-to-have | High | #12 |
 | **12.4** Alembic | 🟢 Tech debt | Medium | #13 |
 | **12.1** IVFFlat Index | 🟢 Performance | Low | #14 |
