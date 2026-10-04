@@ -151,10 +151,15 @@ def test_alembic_version_tracked_accurately(sync_engine: Engine):
         rev = conn.execute(text("SELECT version_num FROM alembic_version")).scalar()
         assert rev == "001", f"Expected revision 001, got {rev}"
 
-    command.upgrade(cfg, "head")
+    command.upgrade(cfg, "002")
     with sync_engine.connect() as conn:
         rev = conn.execute(text("SELECT version_num FROM alembic_version")).scalar()
         assert rev == "002", f"Expected revision 002, got {rev}"
+
+    command.upgrade(cfg, "head")
+    with sync_engine.connect() as conn:
+        rev = conn.execute(text("SELECT version_num FROM alembic_version")).scalar()
+        assert rev == "003", f"Expected revision 003, got {rev}"
 
 
 def test_data_level_cascade_and_set_null_integrity(sync_engine: Engine):
@@ -360,3 +365,112 @@ def test_fastapi_lifespan_does_not_call_create_all():
     with open(main_py_path, "r", encoding="utf-8") as f:
         code = f.read()
     assert "create_all" not in code, "main.py không được chứa Base.metadata.create_all trong startup lifespan"
+# ─────────────────────────────────────────────────────────────────────────────
+# Phase 12.1: Alembic Revision 003 (pgvector IVFFlat Cosine Index) Scenarios
+# ─────────────────────────────────────────────────────────────────────────────
+
+def test_alembic_upgrade_to_revision_003_creates_ivfflat_cosine_index(sync_engine: Engine):
+    """
+    Scenario 1: Upgrade database lên revision 003 tạo đúng IVFFlat cosine index trên chunks.embedding
+    Given: Database đang được quản lý bởi Alembic ở revision 002.
+    When: Thực thi command.upgrade(cfg, 'head').
+    Then:
+      - Current revision của database là '003'.
+      - Index 'ix_chunks_embedding_cosine' tồn tại trên bảng 'chunks'.
+      - Access method là 'ivfflat', operator class là 'vector_cosine_ops', lists = 10.
+    """
+    _clean_database(sync_engine)
+    cfg = get_alembic_config(sync_engine)
+
+    # Upgrade lên head (mong đợi revision 003)
+    command.upgrade(cfg, "head")
+
+    with sync_engine.connect() as conn:
+        version = conn.execute(text("SELECT version_num FROM alembic_version LIMIT 1")).scalar()
+        assert version == "003", f"Expected current revision to be '003', got '{version}'"
+
+        index_def = conn.execute(
+            text("SELECT indexdef FROM pg_indexes WHERE tablename = 'chunks' AND indexname = 'ix_chunks_embedding_cosine'")
+        ).scalar()
+        assert index_def is not None, "Index 'ix_chunks_embedding_cosine' was not created on table 'chunks'"
+        assert "ivfflat" in index_def.lower(), f"Expected access method 'ivfflat' in indexdef, got: {index_def}"
+        assert "vector_cosine_ops" in index_def.lower(), f"Expected 'vector_cosine_ops' in indexdef, got: {index_def}"
+        assert "lists" in index_def.lower() and "10" in index_def, f"Expected 'lists = 10' in indexdef, got: {index_def}"
+
+
+def test_alembic_downgrade_to_revision_002_drops_vector_index(sync_engine: Engine):
+    """
+    Scenario 2: Downgrade database về revision 002 gỡ bỏ index an toàn
+    Given: Database đã nâng cấp lên revision 003 có index 'ix_chunks_embedding_cosine'.
+    When: Thực thi command.downgrade(cfg, '002').
+    Then:
+      - Current revision của database trở về '002'.
+      - Index 'ix_chunks_embedding_cosine' không còn tồn tại trong pg_indexes.
+    """
+    _clean_database(sync_engine)
+    cfg = get_alembic_config(sync_engine)
+
+    command.upgrade(cfg, "head")
+
+    with sync_engine.connect() as conn:
+        rev_before = conn.execute(text("SELECT version_num FROM alembic_version LIMIT 1")).scalar()
+        assert rev_before == "003", f"Expected revision '003' after upgrade, got '{rev_before}'"
+
+    command.downgrade(cfg, "002")
+
+    with sync_engine.connect() as conn:
+        version = conn.execute(text("SELECT version_num FROM alembic_version LIMIT 1")).scalar()
+        assert version == "002", f"Expected revision '002' after downgrade, got '{version}'"
+
+        index_def = conn.execute(
+            text("SELECT indexdef FROM pg_indexes WHERE tablename = 'chunks' AND indexname = 'ix_chunks_embedding_cosine'")
+        ).scalar()
+        assert index_def is None, f"Expected index 'ix_chunks_embedding_cosine' to be dropped, but found: {index_def}"
+
+
+def test_alembic_downgrade_preserves_documents_and_chunks_data(sync_engine: Engine):
+    """
+    Scenario 3: Downgrade từ 003 về 002 không làm biến đổi hoặc mất mát dữ liệu tài liệu và vector chunks
+    Given: Database ở revision 003 có chứa bản ghi document và chunks kèm vector embedding.
+    When: Thực thi command.downgrade(cfg, '002').
+    Then:
+      - Bản ghi document và chunk vẫn tồn tại 100%.
+      - Nội dung content và vector embedding không bị null hay thay đổi.
+    """
+    _clean_database(sync_engine)
+    cfg = get_alembic_config(sync_engine)
+    command.upgrade(cfg, "head")
+
+    with sync_engine.connect() as conn:
+        rev_before = conn.execute(text("SELECT version_num FROM alembic_version LIMIT 1")).scalar()
+        assert rev_before == "003", f"Expected revision '003' after upgrade, got '{rev_before}'"
+
+    doc_id = uuid.uuid4()
+    chunk_id = uuid.uuid4()
+    test_vector = [0.05] * 1536
+
+    with sync_engine.begin() as conn:
+        conn.execute(
+            text("INSERT INTO documents (id, filename, filepath, title, content_hash, status, golden) "
+                 "VALUES (:id, 'test_vector_doc.md', 'docs/test_vector_doc.md', 'Tài liệu Vector', 'hash_003_test', 'canonical', true)"),
+            {"id": doc_id},
+        )
+        conn.execute(
+            text("INSERT INTO chunks (id, document_id, content, chunk_index, token_count, embedding) "
+                 "VALUES (:id, :doc_id, 'Nội dung chunk vector', 0, 10, :embedding)"),
+            {"id": chunk_id, "doc_id": doc_id, "embedding": str(test_vector)},
+        )
+
+    # Thực thi downgrade về 002
+    command.downgrade(cfg, "002")
+
+    with sync_engine.connect() as conn:
+        doc_title = conn.execute(text("SELECT title FROM documents WHERE id = :id"), {"id": doc_id}).scalar()
+        assert doc_title == "Tài liệu Vector", "Document record was lost during migration downgrade"
+
+        chunk_row = conn.execute(
+            text("SELECT content, embedding FROM chunks WHERE id = :id"), {"id": chunk_id}
+        ).fetchone()
+        assert chunk_row is not None, "Chunk record was lost during migration downgrade"
+        assert chunk_row[0] == "Nội dung chunk vector"
+        assert chunk_row[1] is not None, "Chunk embedding was cleared during migration downgrade"
