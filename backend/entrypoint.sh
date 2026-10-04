@@ -7,8 +7,8 @@ if [ -z "${DATABASE_URL:-}" ]; then
   exit 1
 fi
 
-echo "==> Running Alembic migrations (upgrade head)..."
-alembic upgrade head
+echo "==> Running runtime migration verification and upgrade..."
+python -m app.infrastructure.migrations.runner
 
 echo "==> Starting application server..."
 exec "$@"

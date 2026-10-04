@@ -5,7 +5,7 @@
 
 ---
 
-## 🚦 Trạng thái tổng quan (cập nhật: 2026-10-01)
+## 🚦 Trạng thái tổng quan (cập nhật: 2026-10-04)
 
 | Phase | Tên | Trạng thái | Commit cuối |
 |---|---|---|---|
@@ -30,7 +30,29 @@
 | **Phase 6.2 (QW-4)** | LLM Problem Structuring Service & AI Trust Contract | ✅ DONE | `96efc84` |
 | **Phase 7.4** | Candidate Solutions Persistence & Session-Scoped REST API | ✅ DONE | `ef5614b` |
 | **Phase 7.2 (UI)** | Candidate Solutions UI & Canvas Integration in Ideation Tab | ✅ DONE | `800bbff` |
+| **Phase 12.1** | Alembic Revision 003 — IVFFlat Vector Index | ✅ DONE | `a6ea28b` |
+| **Phase 12.1A** | Migration Artifact Freshness & Drift Governance | ✅ DONE | `635a8f0` |
+| **Phase 12.1B** | Runtime Migration Verification Module & Drift Detection | ✅ DONE | `083b805` |
+| **Phase 12.1C** | Runtime Startup Verification & Fail-Closed Lifecycle Wiring | ✅ 100% DONE (Staged) | — |
 | **Phase 6–12** | Professional Upgrade (AI Core, Canvas, Export…) | 🔵 IN PROGRESS | — |
+
+---
+
+## 📅 Phiên làm việc: 2026-10-04 (Phase 12.1C — Runtime Startup Migration Verification & Lifecycle Wiring)
+
+### ✅ Đã hoàn thành trong phiên này
+
+| # | Task | Chi tiết |
+|---|---|---|
+| 1 | **Orchestration Module `runner.py`** | Xây dựng `app.infrastructure.migrations.runner` với hàm `run_migration_and_verify` và CLI `main()`, kết nối toàn bộ vòng đời migration |
+| 2 | **Dynamic Head Discovery** | Tự động phát hiện expected head từ `ScriptDirectory.get_heads()` tại runtime, loại bỏ hoàn toàn hardcoded literal revision (`'003'`) |
+| 3 | **Dual-check Preflight Guard** | Kiểm tra source heads (yêu cầu đúng 1 head duy nhất, không phân nhánh) và đọc revision hiện tại từ `alembic_version` trước khi cho phép nâng cấp |
+| 4 | **Schema-level Postflight Catalog Verification** | Kiểm tra trực tiếp PostgreSQL catalog (`alembic_version`, `pg_indexes`), xác nhận revision khớp expected head và index vector `ix_chunks_embedding_cosine` (`ivfflat`, `vector_cosine_ops`, `lists=10`) tồn tại |
+| 5 | **Fail-Closed Lifecycle Wiring** | Tích hợp vào `backend/entrypoint.sh` qua `python -m app.infrastructure.migrations.runner` với `set -e`; nếu có bất kỳ lỗi nào, tiến trình container thoát exit code 1 và chặn app server (`exec "$@"`) |
+| 6 | **Test-First Suite Toàn diện (26/26 Tests GREEN)** | 8 Unit tests cho Runner (`test_migration_runner.py`), 10 Unit tests cho Verification (`test_runtime_verification.py`), 2 Integration tests cho Runner (`test_migration_runner_integration.py`), 4 Integration postflight tests, 2 Integration freshness tests |
+| 7 | **Đặc tả & Quyết định Kiến trúc** | Ban hành `docs/PHASE_12_1C_RUNTIME_STARTUP_VERIFICATION_SPEC.md` và `docs/ADR-003-runtime-startup-migration-verification.md` |
+| 8 | **Scope Control** | Đã stage 7 files thuộc đúng scope Phase 12.1C, không sửa business logic, không thay đổi domain model hay DDL schema |
+
 
 ---
 
@@ -298,7 +320,7 @@ frontend/   ← ⚠️ DEPRECATED (xem DEPRECATED.md)
 
 ---
 
-*Last updated: 2026-09-30 14:16 +07 — Phiên 6 với Antigravity IDE*
+*Last updated: 2026-10-04 15:38 +07 — Phiên với Antigravity IDE (Phase 12.1C DONE)*
 
 ---
 
