@@ -62,7 +62,7 @@ def test_everyday_triz_lens_json_structure():
 def test_everyday_triz_lens_service():
     """Kiểm tra service EverydayTrizLens cung cấp API truy vấn hợp lệ."""
     lens = get_everyday_triz_lens()
-    
+
     # Principle 1: Segmentation
     p1 = lens.get_principle_lens(1)
     assert p1 is not None
