@@ -390,4 +390,55 @@ describe('IntakeForm Component — Phase 6.2 AI Problem Structuring UI', () => {
       expect(onCreated).toHaveBeenCalledWith(mockProblemFrame)
     })
   })
+
+  // ──────────────────────────────────────────────
+  // Intake Upgrade: Khung "Muốn... Nhưng..." & Quick Examples
+  // ──────────────────────────────────────────────
+  it('Scenario 3.1: Nhập vào khung "Muốn... Nhưng..." tự động ghép thành câu bài toán và gửi API khi submit', async () => {
+    mockedCreateProblemFrame.mockResolvedValueOnce({
+      id: 'frame-test-01',
+      session_id: sessionId,
+      raw_statement: 'Muốn nấu ăn tại nhà đủ chất dinh dưỡng nhưng lại bị vướng đi làm về muộn và ít thời gian sơ chế. Bối cảnh thực tế: Ngân sách gia đình tiết kiệm',
+      contradiction_type: 'technical',
+      improving_parameter: 'ease_of_operation',
+      worsening_parameter: 'loss_of_time',
+      created_at: '2026-10-01T08:00:00Z',
+    })
+
+    renderWithClient(<IntakeForm sessionId={sessionId} />)
+
+    const wantInput = screen.getByLabelText(/Điều tôi muốn đạt được \/ cải thiện/i)
+    const obstacleInput = screen.getByLabelText(/Nhưng lại bị vướng \/ lo ngại/i)
+    const contextInput = screen.getByLabelText(/Bối cảnh \/ ràng buộc thực tế/i)
+
+    fireEvent.change(wantInput, { target: { value: 'nấu ăn tại nhà đủ chất dinh dưỡng' } })
+    fireEvent.change(obstacleInput, { target: { value: 'đi làm về muộn và ít thời gian sơ chế' } })
+    fireEvent.change(contextInput, { target: { value: 'Ngân sách gia đình tiết kiệm' } })
+
+    const submitButton = screen.getByRole('button', {
+      name: /Lưu và chuyển sang Phân tích cấu trúc/i,
+    })
+    expect(submitButton).toBeEnabled()
+    fireEvent.click(submitButton)
+
+    await waitFor(() => {
+      expect(mockedCreateProblemFrame).toHaveBeenCalledWith(
+        sessionId,
+        expect.objectContaining({
+          raw_statement: expect.stringContaining('nấu ăn tại nhà đủ chất dinh dưỡng'),
+        })
+      )
+    })
+  })
+
+  it('Scenario 3.2: Bấm nút Quick Example (Đời sống cá nhân) điền sẵn dữ liệu và cập nhật bài toán', async () => {
+    renderWithClient(<IntakeForm sessionId={sessionId} />)
+
+    const exampleBtn = screen.getByRole('button', { name: /Đời sống cá nhân/i })
+    expect(exampleBtn).toBeInTheDocument()
+    fireEvent.click(exampleBtn)
+
+    const textarea = screen.getByPlaceholderText(/Bạn muốn đạt được điều gì/i) as HTMLTextAreaElement
+    expect(textarea.value).toContain('Dậy sớm')
+  })
 })

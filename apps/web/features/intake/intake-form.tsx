@@ -79,6 +79,58 @@ function TagInput({
   )
 }
 
+const QUICK_EXAMPLES = [
+  {
+    category: 'Đời sống cá nhân',
+    want: 'Dậy sớm lúc 5h sáng để rèn luyện thói quen và đọc sách',
+    obstacle: 'Thiếu ngủ, mệt mỏi và kiệt sức vào buổi chiều',
+    context: 'Công việc văn phòng 8 tiếng mỗi ngày',
+  },
+  {
+    category: 'Học tập',
+    want: 'Học ngoại ngữ 45 phút mỗi ngày đều đặn và nhớ lâu',
+    obstacle: 'Dễ nản lòng, hay trì hoãn và quên từ vựng nhanh',
+    context: 'Chỉ có thời gian rảnh vào buổi tối muộn',
+  },
+  {
+    category: 'Kinh doanh nhỏ',
+    want: 'Đóng gói hàng nhanh, bảo vệ hàng chống vỡ và chuyên nghiệp',
+    obstacle: 'Chi phí bao bì xốp nổ và hộp carton đội lên quá cao',
+    context: 'Cửa hàng online 1 người tự đóng hàng gửi đi xa',
+  },
+  {
+    category: 'Kỹ thuật',
+    want: 'Tăng khả năng chịu tải và độ cứng vững của cấu trúc',
+    obstacle: 'Không được tăng khối lượng để đảm bảo quán tính thấp',
+    context: 'Cánh tay robot công nghiệp tải trọng cao',
+  },
+  {
+    category: 'Nghiên cứu/tri thức',
+    want: 'Ghi chép và kết nối sâu kiến thức từ nhiều tài liệu sách báo',
+    obstacle: 'Ghi chú phân tán, khó tìm lại và dễ bị lãng quên',
+    context: 'Second Brain cá nhân với hàng trăm tài liệu chuyên sâu',
+  },
+]
+
+function composeConflictStatement(want: string, obstacle: string, context?: string): string {
+  const w = want.trim()
+  const o = obstacle.trim()
+  const c = (context || '').trim()
+  if (!w && !o) return ''
+  let text = ''
+  if (w && o) {
+    text = `Muốn ${w.replace(/^muốn\s+/i, '')} nhưng lại bị vướng ${o.replace(/^nhưng\s+/i, '')}`
+  } else if (w) {
+    text = `Muốn ${w.replace(/^muốn\s+/i, '')}`
+  } else {
+    text = `Bị vướng ${o.replace(/^nhưng\s+/i, '')}`
+  }
+  if (c) {
+    text += `. Bối cảnh thực tế: ${c}`
+  }
+  return text
+}
+
 interface IntakeFormProps {
   sessionId: string
   domain?: string | null
@@ -101,6 +153,36 @@ export function IntakeForm({
     failure_signals: [],
     success_criteria: [],
   })
+
+  const [wantText, setWantText] = useState('')
+  const [obstacleText, setObstacleText] = useState('')
+  const [contextText, setContextText] = useState('')
+
+  const handleWantChange = (val: string) => {
+    setWantText(val)
+    const composed = composeConflictStatement(val, obstacleText, contextText)
+    if (composed) setForm((f) => ({ ...f, goal: composed }))
+  }
+
+  const handleObstacleChange = (val: string) => {
+    setObstacleText(val)
+    const composed = composeConflictStatement(wantText, val, contextText)
+    if (composed) setForm((f) => ({ ...f, goal: composed }))
+  }
+
+  const handleContextChange = (val: string) => {
+    setContextText(val)
+    const composed = composeConflictStatement(wantText, obstacleText, val)
+    if (composed) setForm((f) => ({ ...f, goal: composed }))
+  }
+
+  const handleSelectExample = (ex: typeof QUICK_EXAMPLES[0]) => {
+    setWantText(ex.want)
+    setObstacleText(ex.obstacle)
+    setContextText(ex.context)
+    const composed = composeConflictStatement(ex.want, ex.obstacle, ex.context)
+    setForm((f) => ({ ...f, goal: composed }))
+  }
 
   const [submitError, setSubmitError] = useState<string | null>(null)
   const [aiError, setAiError] = useState<string | null>(null)
@@ -189,13 +271,15 @@ export function IntakeForm({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     setSubmitError(null)
-    const statement = form.goal.trim()
+    const composed = composeConflictStatement(wantText, obstacleText, contextText)
+    const statement = (composed || form.goal).trim()
     if (!statement) return
     mutation.mutate(statement)
   }
 
-  const isValid = form.goal.trim().length >= 10
-  const isAiEligible = form.goal.trim().length >= 10
+  const statementForValidation = (composeConflictStatement(wantText, obstacleText, contextText) || form.goal).trim()
+  const isValid = statementForValidation.length >= 10
+  const isAiEligible = statementForValidation.length >= 10
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6 max-w-2xl">
@@ -219,6 +303,83 @@ export function IntakeForm({
           <span>{aiError}</span>
         </div>
       )}
+
+      {/* Khung "Muốn... Nhưng..." và Quick Examples */}
+      <div className="p-4 rounded-xl border border-border bg-card/60 backdrop-blur-sm space-y-4">
+        <div>
+          <h3 className="text-sm font-bold text-foreground flex items-center gap-2">
+            <Sparkles className="w-4 h-4 text-amber-500" />
+            <span>Khung định hình mâu thuẫn đời thường (&quot;Muốn... Nhưng...&quot;)</span>
+          </h3>
+          <p className="text-xs text-muted-foreground mt-0.5">
+            Không cần thuật ngữ kỹ thuật. Hãy điền điều bạn muốn và trở ngại đang gặp phải để hệ thống tự động nhận diện mâu thuẫn.
+          </p>
+        </div>
+
+        {/* Quick Examples */}
+        <div className="space-y-1.5">
+          <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
+            Ví dụ mẫu nhanh:
+          </span>
+          <div className="flex flex-wrap gap-1.5">
+            {QUICK_EXAMPLES.map((ex) => (
+              <button
+                key={ex.category}
+                type="button"
+                onClick={() => handleSelectExample(ex)}
+                className="px-2.5 py-1 text-xs font-medium rounded-lg bg-secondary/80 hover:bg-secondary text-secondary-foreground border border-border transition-all cursor-pointer shadow-2xs"
+              >
+                {ex.category}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* 3 Guided Inputs */}
+        <div className="space-y-3 pt-1">
+          <div>
+            <label htmlFor="want-input" className="block text-xs font-semibold text-foreground mb-1">
+              Điều tôi muốn đạt được / cải thiện <span className="text-destructive">*</span>
+            </label>
+            <input
+              id="want-input"
+              type="text"
+              value={wantText}
+              onChange={(e) => handleWantChange(e.target.value)}
+              placeholder="Ví dụ: Dậy sớm lúc 5h sáng để rèn luyện thói quen và đọc sách..."
+              className="w-full px-3 py-2 text-sm border border-input rounded-lg bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+            />
+          </div>
+
+          <div>
+            <label htmlFor="obstacle-input" className="block text-xs font-semibold text-foreground mb-1">
+              Nhưng lại bị vướng / lo ngại <span className="text-destructive">*</span>
+            </label>
+            <input
+              id="obstacle-input"
+              type="text"
+              value={obstacleText}
+              onChange={(e) => handleObstacleChange(e.target.value)}
+              placeholder="Ví dụ: Thiếu ngủ, mệt mỏi và kiệt sức vào buổi chiều..."
+              className="w-full px-3 py-2 text-sm border border-input rounded-lg bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+            />
+          </div>
+
+          <div>
+            <label htmlFor="context-input" className="block text-xs font-semibold text-muted-foreground mb-1">
+              Bối cảnh / ràng buộc thực tế <span className="text-xs text-muted-foreground font-normal">(tùy chọn)</span>
+            </label>
+            <input
+              id="context-input"
+              type="text"
+              value={contextText}
+              onChange={(e) => handleContextChange(e.target.value)}
+              placeholder="Ví dụ: Công việc văn phòng 8 tiếng mỗi ngày, thời gian có hạn..."
+              className="w-full px-3 py-2 text-sm border border-input rounded-lg bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+            />
+          </div>
+        </div>
+      </div>
 
       {/* Goal / Raw Statement */}
       <div className="space-y-2">
