@@ -30,6 +30,7 @@ ALEMBIC_DIR = REPO_ROOT / "alembic"
 def _clean_database(engine: Engine) -> None:
     """Clean all database tables and types for test isolation."""
     with engine.begin() as conn:
+        conn.execute(text("DROP TABLE IF EXISTS background_jobs CASCADE"))
         conn.execute(text("DROP TABLE IF EXISTS candidate_solutions CASCADE"))
         conn.execute(text("DROP TABLE IF EXISTS research_notes CASCADE"))
         conn.execute(text("DROP TABLE IF EXISTS contradictions CASCADE"))
@@ -70,7 +71,7 @@ def test_runner_e2e_full_rollout_and_verification(sync_engine: Engine) -> None:
     )
 
     assert isinstance(snapshot, MigrationRuntimeSnapshot)
-    assert snapshot.database_revision == "003"
+    assert snapshot.database_revision == "004"
     assert snapshot.index_name == "ix_chunks_embedding_cosine"
     assert "ivfflat" in snapshot.index_definition.lower()
     assert "vector_cosine_ops" in snapshot.index_definition.lower()
@@ -78,12 +79,12 @@ def test_runner_e2e_full_rollout_and_verification(sync_engine: Engine) -> None:
     # Query catalog directly to independently confirm
     with sync_engine.connect() as conn:
         current_rev = conn.execute(text("SELECT version_num FROM alembic_version")).scalar()
-        assert current_rev == "003"
+        assert current_rev == "004"
 
 
 def test_runner_e2e_idempotency_when_already_at_head(sync_engine: Engine) -> None:
     """
-    Given: Database already at head revision '003'.
+    Given: Database already at head revision '004'.
     When: run_migration_and_verify is executed again.
     Then: Succeeds idempotently without error and confirms snapshot.
     """
@@ -104,5 +105,5 @@ def test_runner_e2e_idempotency_when_already_at_head(sync_engine: Engine) -> Non
         database_url=url_str,
     )
 
-    assert snapshot.database_revision == "003"
+    assert snapshot.database_revision == "004"
     assert snapshot.index_name == "ix_chunks_embedding_cosine"

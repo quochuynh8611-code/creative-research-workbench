@@ -1,6 +1,15 @@
 import pytest
 from httpx import AsyncClient, ASGITransport
+from sqlalchemy.orm import Session
 from app.main import app
+from app.api.v1.endpoints.sessions import get_db
+
+
+@pytest.fixture(autouse=True)
+def override_db_dependency(db_session: Session):
+    app.dependency_overrides[get_db] = lambda: db_session
+    yield
+    app.dependency_overrides.pop(get_db, None)
 
 
 @pytest.mark.asyncio
