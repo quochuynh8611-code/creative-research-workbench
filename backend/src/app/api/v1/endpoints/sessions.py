@@ -818,11 +818,19 @@ async def next_step(
     if target_state:
         try:
             current_state = engine.transition(session_id, target_state=target_state)
+            if db is not None:
+                db.commit()
         except InvalidTransitionError as e:
+            if db is not None:
+                db.rollback()
             raise HTTPException(
                 status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
                 detail=str(e),
             )
+        except Exception:
+            if db is not None:
+                db.rollback()
+            raise
     else:
         current_state = previous_state
 
