@@ -231,9 +231,13 @@ _PARAM_TO_ID_MAP: dict[str, int] = {
     "power": 21,
     "energy_consumption": 22,
     "loss_of_energy": 22,
+    # loss_of_money ánh xạ tới #22 energy_consumption vì là hao tổn nguồn lực/chi phí.
+    "loss_of_money": 22,
     "loss_of_substance": 23,
     "loss_of_information": 24,
     "loss_of_time": 25,
+    # duration_action ánh xạ tới #25 loss_of_time vì là thời gian thực thi/độ trễ.
+    "duration_action": 25,
     "quantity_of_substance": 26,
     "reliability": 27,
     "measurement_accuracy": 28,
