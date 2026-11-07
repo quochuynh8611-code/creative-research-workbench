@@ -22,6 +22,7 @@ import type {
   NextStepResponse,
   ProblemFrame,
   ProblemFrameCreateInput,
+  RecommendedMethod,
   ResearchNote,
   ResearchNotesResponse,
   ResearchSession,
@@ -111,6 +112,16 @@ export async function createProblemFrame(
 export async function nextStep(sessionId: string): Promise<NextStepResponse> {
   const response = await apiClient.post<{ data?: NextStepResponse } & NextStepResponse>(
     `/api/v1/sessions/${sessionId}/next-step`
+  )
+  return response.data.data ?? response.data
+}
+
+/**
+ * 5b. Lấy danh sách nguyên tắc sáng tạo TRIZ gợi ý trực tiếp theo session (Phase 1B).
+ */
+export async function getSessionRecommendations(sessionId: string): Promise<RecommendedMethod[]> {
+  const response = await apiClient.get<{ data?: RecommendedMethod[] } & { data: RecommendedMethod[] }>(
+    `/api/v1/sessions/${sessionId}/recommendations`
   )
   return response.data.data ?? response.data
 }

@@ -21,7 +21,7 @@ import {
 } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import { DOMAIN_LABELS, STATUS_LABELS, STAGE_LABELS, WORKFLOW_STAGES, formatDate, cn } from '@/lib/utils'
-import { getSession, exportSessionMarkdown, exportSessionJson, generateAIResearchReport } from '@/lib/api-client'
+import { getSession, getSessionRecommendations, exportSessionMarkdown, exportSessionJson, generateAIResearchReport } from '@/lib/api-client'
 import { IntakeForm } from '@/features/intake/intake-form'
 import { NormalizedView } from '@/features/structuring/normalized-view'
 import { WorkflowStepper } from '@/features/session/workflow-stepper'
@@ -58,6 +58,11 @@ export function SessionDetail({ sessionId }: SessionDetailProps) {
   const [hasInitializedTab, setHasInitializedTab] = useState<boolean>(false)
   const [localProblemFrame, setLocalProblemFrame] = useState<ProblemFrame | null>(null)
   const [recommendedMethods, setRecommendedMethods] = useState<RecommendedMethod[]>([])
+  const [solutionDraft, setSolutionDraft] = useState<{
+    title?: string
+    mechanism?: string
+    principle_used?: number | string
+  } | null>(null)
   const [noteDraft, setNoteDraft] = useState<NoteDraft | null>(null)
   const [isExporting, setIsExporting] = useState<boolean>(false)
   const [isExportOpen, setIsExportOpen] = useState<boolean>(false)
@@ -129,6 +134,8 @@ export function SessionDetail({ sessionId }: SessionDetailProps) {
   useEffect(() => {
     setHasInitializedTab(false)
     setLocalProblemFrame(null)
+    setRecommendedMethods([])
+    setSolutionDraft(null)
     setNoteDraft(null)
     setIsExportOpen(false)
     setExportError(null)
@@ -139,6 +146,33 @@ export function SessionDetail({ sessionId }: SessionDetailProps) {
   }, [sessionId])
 
   const effectiveProblemFrame = localProblemFrame || session?.problem_frame || null
+
+  // Tự động tải gợi ý nguyên tắc sáng chế khi vào tab ideation và đã có problem_frame
+  const { data: fetchedRecommendations = [] } = useQuery<RecommendedMethod[]>({
+    queryKey: ['session', sessionId, 'recommendations'],
+    queryFn: () => getSessionRecommendations(sessionId),
+    enabled: Boolean(sessionId && effectiveProblemFrame && activeTab === 'ideation'),
+    staleTime: 1000 * 60 * 5,
+  })
+
+  const effectiveRecommendations =
+    recommendedMethods && recommendedMethods.length > 0
+      ? recommendedMethods
+      : fetchedRecommendations
+
+  const handleApplyPrincipleToSolution = (principle: any) => {
+    const pid = principle.principle_id || principle.principle || principle.id || ''
+    const titleText = principle.title || principle.name_vi || `Nguyên tắc #${pid}`
+    const descText = principle.description || ''
+    const explanationText = principle.explanation ? `\n\nCơ chế đề xuất: ${principle.explanation}` : ''
+
+    setSolutionDraft({
+      title: `Giải pháp theo Nguyên tắc #${pid}: ${titleText}`,
+      mechanism: `${descText}${explanationText}`.trim(),
+      principle_used: pid,
+    })
+    // Không chuyển sang notebook, giữ người dùng ở ideation để tinh chỉnh và lưu
+  }
 
   const handleProblemFrameCreated = (frame: ProblemFrame) => {
     setLocalProblemFrame(frame)
@@ -555,16 +589,19 @@ export function SessionDetail({ sessionId }: SessionDetailProps) {
         {activeTab === 'ideation' && (
           <div className="space-y-8">
             <TrizMatrixLookup
-              onSelectPrinciple={() => setActiveTab('notebook')}
+              improvingParameter={effectiveProblemFrame?.improving_parameter}
+              worseningParameter={effectiveProblemFrame?.worsening_parameter}
+              onSelectPrinciple={handleApplyPrincipleToSolution}
               onSaveAsNote={handleSaveAsNote}
             />
             <PrincipleSuggestions
-              methods={recommendedMethods}
-              onSelectPrinciple={() => setActiveTab('notebook')}
+              methods={effectiveRecommendations}
+              onSelectPrinciple={handleApplyPrincipleToSolution}
               onSaveAsNote={handleSaveAsNote}
             />
             <CandidateSolutions
               sessionId={sessionId}
+              initialDraft={solutionDraft}
               onSaveAsNote={handleSaveAsNote}
             />
           </div>

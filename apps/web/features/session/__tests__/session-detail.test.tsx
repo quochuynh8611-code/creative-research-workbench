@@ -23,12 +23,14 @@ import {
   getTrizParameters,
   lookupTrizMatrix,
   findRelatedSessions,
+  getSessionRecommendations,
 } from '@/lib/api-client'
 import type { ProblemFrame, ResearchSession } from '@/lib/types'
 
 // Mock api-client
 jest.mock('@/lib/api-client', () => ({
   getSession: jest.fn(),
+  getSessionRecommendations: jest.fn(),
   createProblemFrame: jest.fn(),
   nextStep: jest.fn(),
   searchKnowledge: jest.fn(),
@@ -46,6 +48,8 @@ jest.mock('@/lib/api-client', () => ({
   lookupTrizMatrix: jest.fn(),
   findRelatedSessions: jest.fn(),
 }))
+
+const mockedGetSessionRecommendations = getSessionRecommendations as jest.MockedFunction<typeof getSessionRecommendations>
 
 
 const mockedGetSession = getSession as jest.MockedFunction<typeof getSession>
@@ -120,6 +124,7 @@ describe('Phase 5.4 — Problem Intake & Structuring Canvas Tests', () => {
     mockedSearchKnowledge.mockResolvedValue({ results: [], latency_ms: 10 })
     mockedListResearchNotes.mockResolvedValue({ data: [], meta: { total: 0 } })
     mockedListCandidateSolutions.mockResolvedValue({ data: [], meta: { total: 0, session_id: 'ses-456' } })
+    mockedGetSessionRecommendations.mockResolvedValue([])
     mockedGetTrizParameters.mockResolvedValue({ data: [], meta: { total: 0 } })
     mockedLookupTrizMatrix.mockResolvedValue({
       improving_parameter: { id: 1, code: 'weight_moving', name_vi: 'Trọng lượng', name_en: 'Weight' },
@@ -383,6 +388,72 @@ describe('Phase 5.4 — Problem Intake & Structuring Canvas Tests', () => {
 
       expect(screen.getByText(/Chưa có gợi ý nguyên tắc sáng chế/i)).toBeInTheDocument()
       expect(screen.getByText(/Giải pháp sáng tạo ứng viên/i)).toBeInTheDocument()
+    })
+
+    it('tự động tải recommendations khi vào tab ideation mà không cần bấm next-step', async () => {
+      mockedGetSession.mockResolvedValue(MOCK_SESSION_WITH_FRAME)
+      mockedGetSessionRecommendations.mockResolvedValue([
+        {
+          id: 1,
+          title: 'Nguyên tắc Phân đoạn (Segmentation)',
+          description: 'Chia nhỏ đối tượng thành các thành phần độc lập.',
+          principle_id: 1,
+        },
+      ])
+
+      renderWithClient(<SessionDetail sessionId="ses-456" />)
+
+      await waitFor(() => {
+        expect(screen.getByText('Tối ưu độ bền và trọng lượng cánh tay robot')).toBeInTheDocument()
+      })
+
+      const ideationTab = screen.getByRole('button', { name: /Ý tưởng & Nguyên tắc/i })
+      fireEvent.click(ideationTab)
+
+      await waitFor(() => {
+        expect(mockedGetSessionRecommendations).toHaveBeenCalledWith('ses-456')
+        expect(screen.getByText('Nguyên tắc Phân đoạn (Segmentation)')).toBeInTheDocument()
+      })
+    })
+
+    it('bấm Áp dụng nguyên tắc sẽ prefill CandidateSolutions draft mà không chuyển sang Notebook', async () => {
+      mockedGetSession.mockResolvedValue(MOCK_SESSION_WITH_FRAME)
+      mockedGetSessionRecommendations.mockResolvedValue([
+        {
+          id: 1,
+          title: 'Nguyên tắc Phân đoạn',
+          description: 'Chia nhỏ đối tượng thành các phần độc lập.',
+          principle_id: 1,
+        },
+      ])
+      mockedListCandidateSolutions.mockResolvedValue({ data: [], meta: { total: 0 } })
+
+      renderWithClient(<SessionDetail sessionId="ses-456" />)
+
+      await waitFor(() => {
+        expect(screen.getByText('Tối ưu độ bền và trọng lượng cánh tay robot')).toBeInTheDocument()
+      })
+
+      const ideationTab = screen.getByRole('button', { name: /Ý tưởng & Nguyên tắc/i })
+      fireEvent.click(ideationTab)
+
+      await waitFor(() => {
+        expect(screen.getByText('Nguyên tắc Phân đoạn')).toBeInTheDocument()
+      })
+
+      // Bấm nút "Áp dụng nguyên tắc" trên PrincipleSuggestions
+      const applyBtn = screen.getByRole('button', { name: /Áp dụng nguyên tắc/i })
+      fireEvent.click(applyBtn)
+
+      // Kiểm tra: Vẫn ở tab ideation, KHÔNG chuyển sang notebook
+      expect(screen.queryByText('Thêm ghi chú nghiên cứu')).not.toBeInTheDocument()
+      expect(screen.getByText('Đề xuất giải pháp mới')).toBeInTheDocument()
+
+      // Kiểm tra: CandidateSolutions form được điền sẵn
+      const titleInput = screen.getByPlaceholderText(/nhập tiêu đề giải pháp sáng tạo/i) as HTMLInputElement
+      expect(titleInput.value).toContain('Nguyên tắc #1')
+      const mechanismInput = screen.getByPlaceholderText(/mô tả cơ chế hoạt động/i) as HTMLTextAreaElement
+      expect(mechanismInput.value).toContain('Chia nhỏ đối tượng')
     })
   })
 

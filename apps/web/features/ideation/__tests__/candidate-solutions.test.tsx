@@ -379,4 +379,36 @@ describe('CandidateSolutions Component', () => {
       })
     )
   })
+
+  // 12. Draft filling & no auto-persist without explicit submit
+  it('12. CandidateSolutions nhận initialDraft điền vào form nhưng KHÔNG tự động persist nếu chưa bấm submit', async () => {
+    ;(apiClient.listCandidateSolutions as jest.Mock).mockResolvedValueOnce({
+      data: [],
+      meta: { total: 0, session_id: 'ses-123' },
+    })
+
+    const initialDraft = {
+      title: 'Giải pháp theo Nguyên tắc #35: Chuyển đổi thông số',
+      mechanism: 'Thay đổi trạng thái vật lý để thích ứng tải trọng.',
+      principle_used: 35,
+    }
+
+    const queryClient = createTestQueryClient()
+    render(
+      <QueryClientProvider client={queryClient}>
+        <CandidateSolutions sessionId="ses-123" initialDraft={initialDraft} />
+      </QueryClientProvider>
+    )
+
+    // Form inputs should be filled
+    expect(screen.getByLabelText(/Tiêu đề giải pháp/i)).toHaveValue(
+      'Giải pháp theo Nguyên tắc #35: Chuyển đổi thông số'
+    )
+    expect(screen.getByLabelText(/Cơ chế hoạt động/i)).toHaveValue(
+      'Thay đổi trạng thái vật lý để thích ứng tải trọng.'
+    )
+
+    // Ensure createCandidateSolution was NOT called automatically
+    expect(apiClient.createCandidateSolution).not.toHaveBeenCalled()
+  })
 })

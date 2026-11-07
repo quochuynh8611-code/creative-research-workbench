@@ -271,4 +271,32 @@ describe('Track 1.3 — TrizMatrixLookup Component Tests', () => {
       })
     )
   })
+
+  it('7. TrizMatrixLookup nhận improving/worsening props và tự động chạy lookup khi có đủ tham số', async () => {
+    ;(apiClient.getTrizParameters as jest.Mock).mockResolvedValueOnce(MOCK_PARAMETERS_RESPONSE)
+    ;(apiClient.lookupTrizMatrix as jest.Mock).mockResolvedValueOnce(MOCK_LOOKUP_OFF_DIAGONAL)
+    const queryClient = createTestQueryClient()
+
+    render(
+      <QueryClientProvider client={queryClient}>
+        <TrizMatrixLookup
+          improvingParameter="temperature"
+          worseningParameter="strength"
+        />
+      </QueryClientProvider>
+    )
+
+    // Should automatically call lookupTrizMatrix with resolved IDs: temperature=17, strength=14
+    await waitFor(() => {
+      expect(apiClient.lookupTrizMatrix).toHaveBeenCalledWith({
+        improving: 17,
+        worsening: 14,
+      })
+    })
+
+    // Principles should be displayed without manual click
+    await waitFor(() => {
+      expect(screen.getByText(/Nguyên tắc Chuyển đổi thông số/i)).toBeInTheDocument()
+    })
+  })
 })

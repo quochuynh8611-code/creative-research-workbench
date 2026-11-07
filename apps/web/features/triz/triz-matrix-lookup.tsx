@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import {
   Grid3X3,
@@ -19,12 +19,42 @@ import type { TrizPrinciple, TrizLookupResponse, NoteDraft } from '@/lib/types'
 import { cn } from '@/lib/utils'
 
 interface TrizMatrixLookupProps {
+  improvingParameter?: string | number | null
+  worseningParameter?: string | number | null
   onSelectPrinciple?: (principle: TrizPrinciple) => void
   onSaveAsNote?: (draft: NoteDraft) => void
   className?: string
 }
 
+function resolveParamId(
+  param: string | number | null | undefined,
+  params: Array<{ id: number; code: string; name_vi: string; name_en: string }>
+): number | null {
+  if (param === null || param === undefined || param === '') return null
+  if (typeof param === 'number' && !isNaN(param)) {
+    return param >= 1 && param <= 39 ? param : null
+  }
+  const str = String(param).trim()
+  const numeric = parseInt(str, 10)
+  if (!isNaN(numeric) && String(numeric) === str && numeric >= 1 && numeric <= 39) {
+    return numeric
+  }
+  const lower = str.toLowerCase()
+  const found = params.find(
+    (p) =>
+      p.code.toLowerCase() === lower ||
+      p.name_vi.toLowerCase() === lower ||
+      p.name_en.toLowerCase() === lower ||
+      p.name_vi.toLowerCase().includes(lower) ||
+      lower.includes(p.name_vi.toLowerCase()) ||
+      p.code.toLowerCase().replace(/_/g, ' ') === lower
+  )
+  return found ? found.id : null
+}
+
 export function TrizMatrixLookup({
+  improvingParameter,
+  worseningParameter,
   onSelectPrinciple,
   onSaveAsNote,
   className,
@@ -47,6 +77,23 @@ export function TrizMatrixLookup({
     staleTime: 1000 * 60 * 30, // Dữ liệu chuẩn 39 thông số tĩnh trong 30 phút
   })
 
+  const parameters = paramsData?.data || []
+
+  // Tự động phân giải tham số và chạy lookup khi có improvingParameter và worseningParameter
+  useEffect(() => {
+    if (!parameters || parameters.length === 0) return
+    if (!improvingParameter || !worseningParameter) return
+
+    const impId = resolveParamId(improvingParameter, parameters)
+    const worsId = resolveParamId(worseningParameter, parameters)
+
+    if (impId && worsId) {
+      setImprovingId(impId)
+      setWorseningId(worsId)
+      setActiveLookupQuery({ improving: impId, worsening: worsId })
+    }
+  }, [improvingParameter, worseningParameter, parameters])
+
   // 2. Tra cứu ma trận mâu thuẫn Altshuller 39x39
   const {
     data: lookupResult,
@@ -62,8 +109,6 @@ export function TrizMatrixLookup({
       }),
     enabled: !!activeLookupQuery,
   })
-
-  const parameters = paramsData?.data || []
 
   const handleLookup = () => {
     if (improvingId !== '' && worseningId !== '') {
@@ -269,9 +314,10 @@ export function TrizMatrixLookup({
                               type="button"
                               onClick={() => onSelectPrinciple(principle)}
                               className="text-[11px] text-primary font-medium hover:underline flex items-center gap-1"
+                              aria-label={`Áp dụng nguyên tắc #${pid}`}
                             >
                               <Lightbulb className="w-3 h-3" />
-                              <span>Đưa vào ý tưởng nghiên cứu</span>
+                              <span>Áp dụng thành giải pháp</span>
                             </button>
                           )}
                         </div>
