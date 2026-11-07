@@ -252,8 +252,9 @@ export function IntakeForm({
 
   const handleAnalyzeAI = () => {
     setAiError(null)
+    if (form.goal.trim().length < 10) return
     const statement = composeStatement()
-    if (!statement || statement.length < 10) return
+    if (!statement) return
     aiMutation.mutate(statement)
   }
 
@@ -271,15 +272,14 @@ export function IntakeForm({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     setSubmitError(null)
-    const composed = composeConflictStatement(wantText, obstacleText, contextText)
-    const statement = (composed || form.goal).trim()
+    if (form.goal.trim().length < 10) return
+    const statement = composeStatement()
     if (!statement) return
     mutation.mutate(statement)
   }
 
-  const statementForValidation = (composeConflictStatement(wantText, obstacleText, contextText) || form.goal).trim()
-  const isValid = statementForValidation.length >= 10
-  const isAiEligible = statementForValidation.length >= 10
+  const isValid = form.goal.trim().length >= 10
+  const isAiEligible = form.goal.trim().length >= 10
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6 max-w-2xl">
