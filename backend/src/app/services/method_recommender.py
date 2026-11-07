@@ -21,6 +21,7 @@ from sqlalchemy import Engine
 from sqlalchemy.orm import Session
 
 from app.domain.models import Contradiction, ProblemFrame, ResearchSession
+from app.services.everyday_triz_lens import get_everyday_triz_lens
 
 logger = logging.getLogger(__name__)
 
@@ -176,7 +177,7 @@ class MethodRecommender:
                     name_en = ""
                     name_vi = title
 
-                recommendations.append({
+                rec_item: dict[str, Any] = {
                     "id": p_num,
                     "principle_id": p_num,
                     "principle": p_num,
@@ -186,7 +187,15 @@ class MethodRecommender:
                     "description": description,
                     "explanation": explanation,
                     "examples": examples,
-                })
+                }
+                lens = get_everyday_triz_lens().get_principle_lens(p_num)
+                if lens:
+                    rec_item["everyday_title"] = lens.get("everyday_title", "")
+                    rec_item["daily_application"] = lens.get("daily_application", "")
+                    rec_item["daily_examples"] = lens.get("daily_examples", [])
+                    rec_item["action_prompt"] = lens.get("action_prompt", "")
+
+                recommendations.append(rec_item)
             return recommendations
         finally:
             if should_close:
