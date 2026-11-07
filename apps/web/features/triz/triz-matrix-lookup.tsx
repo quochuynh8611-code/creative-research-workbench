@@ -17,6 +17,8 @@ import {
 import { getTrizParameters, lookupTrizMatrix } from '@/lib/api-client'
 import type { TrizPrinciple, TrizLookupResponse, NoteDraft } from '@/lib/types'
 import { cn } from '@/lib/utils'
+import { resolveParamId } from '@/lib/triz-param-resolver'
+import { EverydayMetadataSection } from '@/features/triz/everyday-metadata-section'
 
 interface TrizMatrixLookupProps {
   improvingParameter?: string | number | null
@@ -24,32 +26,6 @@ interface TrizMatrixLookupProps {
   onSelectPrinciple?: (principle: TrizPrinciple) => void
   onSaveAsNote?: (draft: NoteDraft) => void
   className?: string
-}
-
-function resolveParamId(
-  param: string | number | null | undefined,
-  params: Array<{ id: number; code: string; name_vi: string; name_en: string }>
-): number | null {
-  if (param === null || param === undefined || param === '') return null
-  if (typeof param === 'number' && !isNaN(param)) {
-    return param >= 1 && param <= 39 ? param : null
-  }
-  const str = String(param).trim()
-  const numeric = parseInt(str, 10)
-  if (!isNaN(numeric) && String(numeric) === str && numeric >= 1 && numeric <= 39) {
-    return numeric
-  }
-  const lower = str.toLowerCase()
-  const found = params.find(
-    (p) =>
-      p.code.toLowerCase() === lower ||
-      p.name_vi.toLowerCase() === lower ||
-      p.name_en.toLowerCase() === lower ||
-      p.name_vi.toLowerCase().includes(lower) ||
-      lower.includes(p.name_vi.toLowerCase()) ||
-      p.code.toLowerCase().replace(/_/g, ' ') === lower
-  )
-  return found ? found.id : null
 }
 
 export function TrizMatrixLookup({
@@ -160,7 +136,7 @@ export function TrizMatrixLookup({
             <option value="">-- Chọn thông số cần nâng cao --</option>
             {parameters.map((param) => (
               <option key={`imp-${param.id}`} value={param.id}>
-                {`#${param.id}. ${param.name_vi} (${param.name_en})`}
+                {`#${param.id}. ${param.name_vi} (${param.name_en})${param.everyday_label ? ` — ${param.everyday_label}` : ''}`}
               </option>
             ))}
           </select>
@@ -186,7 +162,7 @@ export function TrizMatrixLookup({
             <option value="">-- Chọn thông số bị ảnh hưởng tiêu cực --</option>
             {parameters.map((param) => (
               <option key={`wors-${param.id}`} value={param.id}>
-                {`#${param.id}. ${param.name_vi} (${param.name_en})`}
+                {`#${param.id}. ${param.name_vi} (${param.name_en})${param.everyday_label ? ` — ${param.everyday_label}` : ''}`}
               </option>
             ))}
           </select>
@@ -271,7 +247,7 @@ export function TrizMatrixLookup({
                         key={`principle-${pid}`}
                         className="p-4 rounded-xl border border-border bg-card/80 space-y-2.5 flex flex-col justify-between hover:border-amber-500/40 transition-all shadow-sm"
                       >
-                        <div className="space-y-1.5">
+                        <div className="space-y-2">
                           <div className="flex items-center justify-between">
                             <span className="px-2 py-0.5 rounded-md text-[11px] font-bold bg-amber-500/15 text-amber-600 border border-amber-500/25">
                               #{pid}
@@ -280,17 +256,17 @@ export function TrizMatrixLookup({
                               {principle.name_en}
                             </span>
                           </div>
-                          <h5 className="text-sm font-bold text-foreground">
-                            {principle.name_vi}
-                          </h5>
-                          <p className="text-xs text-muted-foreground leading-relaxed line-clamp-3">
-                            {principle.description}
-                          </p>
-                          {principle.explanation && (
-                            <div className="p-2 rounded bg-muted/40 text-[11px] text-muted-foreground italic border-l-2 border-amber-500/40">
-                              {principle.explanation}
-                            </div>
-                          )}
+
+                          <EverydayMetadataSection
+                            principleId={pid}
+                            everydayTitle={principle.everyday_title}
+                            dailyApplication={principle.daily_application}
+                            dailyExamples={principle.daily_examples}
+                            actionPrompt={principle.action_prompt}
+                            technicalTitle={principle.name_vi}
+                            technicalDescription={principle.description}
+                            explanation={principle.explanation}
+                          />
                         </div>
 
                         <div className="pt-2 border-t border-border/50 flex flex-wrap items-center justify-end gap-2">

@@ -53,17 +53,21 @@ const MOCK_SESSION_STRUCTURING: ResearchSession = {
 
 const MOCK_PARAMETERS_RESPONSE: TrizParametersResponse = {
   data: [
-    { id: 1, code: 'weight_moving', name_vi: 'Trọng lượng vật thể di động', name_en: 'Weight of moving object' },
-    { id: 5, code: 'area_moving', name_vi: 'Diện tích vật thể di động', name_en: 'Area of moving object' },
-    { id: 14, code: 'strength', name_vi: 'Độ bền / Độ cứng', name_en: 'Strength' },
-    { id: 17, code: 'temperature', name_vi: 'Nhiệt độ', name_en: 'Temperature' },
+    { id: 1, code: 'weight_moving', name_vi: 'Trọng lượng vật thể di động', name_en: 'Weight of moving object', everyday_label: 'Độ nặng, tải trọng hoặc khối lượng cần di chuyển' },
+    { id: 5, code: 'area_moving', name_vi: 'Diện tích vật thể di động', name_en: 'Area of moving object', everyday_label: 'Diện tích chiếm dụng hoặc bề mặt tiếp xúc' },
+    { id: 9, code: 'speed', name_vi: 'Tốc độ / Vận tốc', name_en: 'Speed', everyday_label: 'Tốc độ hoàn thành công việc, thao tác hoặc tiến độ dự án' },
+    { id: 14, code: 'strength', name_vi: 'Độ bền / Độ cứng', name_en: 'Strength', everyday_label: 'Độ bền chắc, khả năng chịu lực hoặc sức chịu đựng gian khó' },
+    { id: 17, code: 'temperature', name_vi: 'Nhiệt độ', name_en: 'Temperature', everyday_label: 'Mức độ nhiệt hoặc sự thay đổi nóng lạnh của môi trường' },
+    { id: 22, code: 'loss_of_energy', name_vi: 'Hao tổn năng lượng', name_en: 'Waste of energy', everyday_label: 'Tổn hao sinh lực, tiền bạc, nhiên liệu hoặc chi phí vận hành' },
+    { id: 25, code: 'loss_of_time', name_vi: 'Hao tổn thời gian', name_en: 'Waste of time', everyday_label: 'Lãng phí thời gian, thời lượng chờ đợi hoặc độ trễ' },
+    { id: 27, code: 'reliability', name_vi: 'Độ tin cậy', name_en: 'Reliability', everyday_label: 'Mức độ uy tín, tính chuẩn xác hoặc độ tin cậy của cam kết' },
   ],
-  meta: { total: 4 },
+  meta: { total: 8 },
 }
 
 const MOCK_LOOKUP_OFF_DIAGONAL: TrizLookupResponse = {
-  improving_parameter: { id: 17, code: 'temperature', name_vi: 'Nhiệt độ', name_en: 'Temperature' },
-  worsening_parameter: { id: 14, code: 'strength', name_vi: 'Độ bền / Độ cứng', name_en: 'Strength' },
+  improving_parameter: { id: 17, code: 'temperature', name_vi: 'Nhiệt độ', name_en: 'Temperature', everyday_label: 'Mức độ nhiệt' },
+  worsening_parameter: { id: 14, code: 'strength', name_vi: 'Độ bền / Độ cứng', name_en: 'Strength', everyday_label: 'Độ bền chắc' },
   is_diagonal: false,
   principles: [
     {
@@ -74,6 +78,10 @@ const MOCK_LOOKUP_OFF_DIAGONAL: TrizLookupResponse = {
       description: 'Thay đổi trạng thái vật lý, nồng độ hoặc độ dẻo.',
       explanation: 'Thay đổi thông số nhiệt độ giúp giảm ứng suất phá hủy vật liệu.',
       examples: ['Sử dụng vật liệu nhớ hình', 'Thay đổi pha lỏng sang rắn'],
+      everyday_title: 'Thay đổi tính chất (Chuyển đổi thông số)',
+      daily_application: 'Điều chỉnh linh hoạt cách thức, tần suất hoặc cường độ hoạt động.',
+      daily_examples: ['Chuyển từ học 2 tiếng liên tục sang học 25 phút nghỉ 5 phút.'],
+      action_prompt: 'Thông số hoặc thói quen nào có thể chuyển đổi linh hoạt hơn?',
     },
     {
       id: 10,
@@ -83,6 +91,7 @@ const MOCK_LOOKUP_OFF_DIAGONAL: TrizLookupResponse = {
       description: 'Thực hiện tác động trước khi cần thiết.',
       explanation: 'Gia nhiệt trước để giảm sốc nhiệt.',
       examples: ['Ủ nhiệt trước khi hàn'],
+      // Không có everyday metadata để test fallback
     },
   ],
   principles_count: 2,
@@ -298,5 +307,130 @@ describe('Track 1.3 — TrizMatrixLookup Component Tests', () => {
     await waitFor(() => {
       expect(screen.getByText(/Nguyên tắc Chuyển đổi thông số/i)).toBeInTheDocument()
     })
+  })
+
+  it('8. TrizMatrixLookup tự động resolve legacy aliases loss_of_money -> 22 và duration_action -> 25', async () => {
+    ;(apiClient.getTrizParameters as jest.Mock).mockResolvedValueOnce(MOCK_PARAMETERS_RESPONSE)
+    ;(apiClient.lookupTrizMatrix as jest.Mock).mockResolvedValueOnce(MOCK_LOOKUP_OFF_DIAGONAL)
+    const queryClient = createTestQueryClient()
+
+    render(
+      <QueryClientProvider client={queryClient}>
+        <TrizMatrixLookup
+          improvingParameter="loss_of_money"
+          worseningParameter="duration_action"
+        />
+      </QueryClientProvider>
+    )
+
+    await waitFor(() => {
+      expect(apiClient.lookupTrizMatrix).toHaveBeenCalledWith({
+        improving: 22,
+        worsening: 25,
+      })
+    })
+  })
+
+  it('9. Dropdown parameter hiển thị everyday_label khi có', async () => {
+    ;(apiClient.getTrizParameters as jest.Mock).mockResolvedValueOnce(MOCK_PARAMETERS_RESPONSE)
+    const queryClient = createTestQueryClient()
+
+    render(
+      <QueryClientProvider client={queryClient}>
+        <TrizMatrixLookup />
+      </QueryClientProvider>
+    )
+
+    await waitFor(() => {
+      // Option của parameter 14 phải chứa everyday_label
+      expect(screen.getAllByText(/Độ bền chắc, khả năng chịu lực/i)[0]).toBeInTheDocument()
+      expect(screen.getAllByText(/Hao tổn năng lượng/i)[0]).toBeInTheDocument()
+    })
+  })
+
+  it('10. Hiển thị đầy đủ 4 trường Everyday Metadata của principle và fallback đúng khi thiếu', async () => {
+    ;(apiClient.getTrizParameters as jest.Mock).mockResolvedValueOnce(MOCK_PARAMETERS_RESPONSE)
+    ;(apiClient.lookupTrizMatrix as jest.Mock).mockResolvedValueOnce(MOCK_LOOKUP_OFF_DIAGONAL)
+    const queryClient = createTestQueryClient()
+
+    render(
+      <QueryClientProvider client={queryClient}>
+        <TrizMatrixLookup
+          improvingParameter="temperature"
+          worseningParameter="strength"
+        />
+      </QueryClientProvider>
+    )
+
+    await waitFor(() => {
+      // everyday_title
+      expect(screen.getByText('Thay đổi tính chất (Chuyển đổi thông số)')).toBeInTheDocument()
+      // daily_application
+      expect(screen.getByText(/Điều chỉnh linh hoạt cách thức, tần suất hoặc cường độ/i)).toBeInTheDocument()
+      // daily_examples
+      expect(screen.getByText(/Chuyển từ học 2 tiếng liên tục sang học 25 phút/i)).toBeInTheDocument()
+      // action_prompt
+      expect(screen.getByText(/Thông số hoặc thói quen nào có thể chuyển đổi linh hoạt hơn/i)).toBeInTheDocument()
+      // Nguyên tắc kỹ thuật gốc vẫn hiển thị
+      expect(screen.getByText('Nguyên tắc Chuyển đổi thông số')).toBeInTheDocument()
+      // Nguyên tắc #10 không có metadata -> fallback bình thường
+      expect(screen.getByText('Nguyên tắc Tác động sơ bộ')).toBeInTheDocument()
+    })
+  })
+
+  it('11. Accordion toggle everyday metadata có accessible name và aria-expanded', async () => {
+    ;(apiClient.getTrizParameters as jest.Mock).mockResolvedValueOnce(MOCK_PARAMETERS_RESPONSE)
+    ;(apiClient.lookupTrizMatrix as jest.Mock).mockResolvedValueOnce(MOCK_LOOKUP_OFF_DIAGONAL)
+    const queryClient = createTestQueryClient()
+
+    render(
+      <QueryClientProvider client={queryClient}>
+        <TrizMatrixLookup
+          improvingParameter="temperature"
+          worseningParameter="strength"
+        />
+      </QueryClientProvider>
+    )
+
+    await waitFor(() => {
+      const toggleBtns = screen.getAllByRole('button', { name: /chi tiết đời sống|hướng dẫn đời thường|ví dụ & câu hỏi/i })
+      expect(toggleBtns.length).toBeGreaterThan(0)
+      const btn = toggleBtns[0]
+      expect(btn).toHaveAttribute('aria-expanded')
+      const isExp = btn.getAttribute('aria-expanded') === 'true'
+      fireEvent.click(btn)
+      expect(btn).toHaveAttribute('aria-expanded', String(!isExp))
+    })
+  })
+
+  it('12. Bấm áp dụng nguyên tắc chỉ gọi callback onSelectPrinciple, không tự gọi API mutation', async () => {
+    ;(apiClient.getTrizParameters as jest.Mock).mockResolvedValueOnce(MOCK_PARAMETERS_RESPONSE)
+    ;(apiClient.lookupTrizMatrix as jest.Mock).mockResolvedValueOnce(MOCK_LOOKUP_OFF_DIAGONAL)
+    const onSelectMock = jest.fn()
+    const queryClient = createTestQueryClient()
+
+    render(
+      <QueryClientProvider client={queryClient}>
+        <TrizMatrixLookup
+          improvingParameter="temperature"
+          worseningParameter="strength"
+          onSelectPrinciple={onSelectMock}
+        />
+      </QueryClientProvider>
+    )
+
+    await waitFor(() => {
+      expect(screen.getByText(/Thay đổi tính chất/i)).toBeInTheDocument()
+    })
+
+    const applyBtns = screen.getAllByRole('button', { name: /áp dụng thành giải pháp|áp dụng nguyên tắc/i })
+    fireEvent.click(applyBtns[0])
+
+    expect(onSelectMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        id: 35,
+        principle_id: 35,
+      })
+    )
   })
 })
