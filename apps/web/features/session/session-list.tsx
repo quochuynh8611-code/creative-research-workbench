@@ -53,6 +53,7 @@ const DOMAIN_OPTIONS: { value: DomainType; label: string }[] = [
 export function SessionList() {
   const [activeTab, setActiveTab] = useState<'active' | 'archived'>('active')
   const [search, setSearch] = useState('')
+  const [filterDomain, setFilterDomain] = useState<string>('all')
   const [isCreating, setIsCreating] = useState(false)
   const [formTitle, setFormTitle] = useState('')
   const [formDescription, setFormDescription] = useState('')
@@ -66,7 +67,12 @@ export function SessionList() {
 
   const queryClient = useQueryClient()
 
-  // 1. Read Path Query (Filtered by Active vs Archived)
+  const queryParams = {
+    ...(activeTab === 'archived' ? { status: 'archived' } : {}),
+    ...(filterDomain !== 'all' ? { domain: filterDomain } : {}),
+  }
+
+  // 1. Read Path Query (Filtered by Active vs Archived and Domain)
   const {
     data,
     isLoading,
@@ -74,8 +80,8 @@ export function SessionList() {
     error,
     refetch,
   } = useQuery({
-    queryKey: ['sessions', activeTab],
-    queryFn: () => listSessions(activeTab === 'archived' ? { status: 'archived' } : undefined),
+    queryKey: ['sessions', activeTab, filterDomain],
+    queryFn: () => listSessions(Object.keys(queryParams).length > 0 ? queryParams : undefined),
   })
 
   // 2. Create Path Mutation
@@ -646,16 +652,39 @@ export function SessionList() {
         </div>
       )}
 
-      {/* Search Input */}
-      <div className="relative">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-        <input
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          placeholder="Tìm session theo tên..."
-          disabled={isLoading || isError}
-          className="w-full pl-9 pr-4 py-2 border border-input rounded-md text-sm bg-background focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-50"
-        />
+      {/* Search & Domain Filter Toolbar */}
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+          <input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Tìm session theo tên..."
+            disabled={isLoading || isError}
+            className="w-full pl-9 pr-4 py-2 border border-input rounded-md text-sm bg-background focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-50"
+          />
+        </div>
+
+        <div className="w-full sm:w-56">
+          <label htmlFor="filter-domain" className="sr-only">
+            Lọc theo lĩnh vực
+          </label>
+          <select
+            id="filter-domain"
+            aria-label="Lọc theo lĩnh vực"
+            value={filterDomain}
+            onChange={(e) => setFilterDomain(e.target.value)}
+            disabled={isLoading || isError}
+            className="w-full px-3 py-2 border border-input rounded-md text-sm bg-background focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-50"
+          >
+            <option value="all">Tất cả lĩnh vực</option>
+            {DOMAIN_OPTIONS.map((opt) => (
+              <option key={opt.value} value={opt.value}>
+                {opt.label}
+              </option>
+            ))}
+          </select>
+        </div>
       </div>
 
       {/* 1. Loading State */}
