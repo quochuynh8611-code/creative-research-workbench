@@ -2,66 +2,41 @@
 Unit Test Suite for TRIZ40 Staging Canonical Candidate Validation & Final Reproducibility Check.
 Verifies contract rules, manifest integrity, separate provenance tiers, normalization audit trail,
 reproducible extraction byte-for-byte, and mutually exclusive divergence categories.
+
+Moved to backend/research_tests/triz_staging/ to separate research audit from production testpaths.
+Configured via TRIZ_STAGING_DIR and TRIZ_SCAFFOLD_PATH environment variables.
 """
-import os
-import json
+from __future__ import annotations
+
 import hashlib
-import pytest
+import importlib.util
+import os
+import pathlib
 import shutil
-
-STAGING_DIR = "/Users/mr.chem/.gemini/antigravity-ide/brain/833269e0-ec09-4865-b40d-7d9eaceb82e6/scratch/quarantine/triz40"
-STAGING_JSON_PATH = os.path.join(STAGING_DIR, "triz_matrix_39x39_canonical_candidate.json")
-FIXTURE_PATH = os.path.join(STAGING_DIR, "cell_regression_fixtures.json")
-MANIFEST_PATH = os.path.join(STAGING_DIR, "artifact_manifest.json")
-RAW_HTML_PATH = os.path.join(STAGING_DIR, "triz40_raw_matrix_snapshot.html")
-EXTRACTION_SCRIPT_PATH = os.path.join(STAGING_DIR, "extract_triz40_matrix.py")
-SCAFFOLD_BAK_PATH = "/Users/mr.chem/Documents/Lap-trinh/creative-research-workbench/backend/src/app/data/triz_matrix_39x39.json.bak"
-SCAFFOLD_JSON_PATH = SCAFFOLD_BAK_PATH if os.path.exists(SCAFFOLD_BAK_PATH) else "/Users/mr.chem/Documents/Lap-trinh/creative-research-workbench/backend/src/app/data/triz_matrix_39x39.json"
+from typing import Any
+import pytest
 
 
-@pytest.fixture(scope="module")
-def staging_data():
-    assert os.path.exists(STAGING_JSON_PATH)
-    with open(STAGING_JSON_PATH, "r", encoding="utf-8") as f:
-        return json.load(f)
-
-
-@pytest.fixture(scope="module")
-def manifest_data():
-    assert os.path.exists(MANIFEST_PATH)
-    with open(MANIFEST_PATH, "r", encoding="utf-8") as f:
-        return json.load(f)
-
-
-@pytest.fixture(scope="module")
-def regression_fixtures():
-    assert os.path.exists(FIXTURE_PATH)
-    with open(FIXTURE_PATH, "r", encoding="utf-8") as f:
-        return json.load(f)
-
-
-@pytest.fixture(scope="module")
-def scaffold_data():
-    if not os.path.exists(SCAFFOLD_BAK_PATH):
-        pytest.skip("Scaffold .bak file not present for staging divergence comparison")
-    with open(SCAFFOLD_BAK_PATH, "r", encoding="utf-8") as f:
-        return json.load(f)
-
-
-def _compute_sha256(file_path: str) -> str:
+def _compute_sha256(file_path: str | pathlib.Path) -> str:
     with open(file_path, "rb") as f:
         return hashlib.sha256(f.read()).hexdigest()
 
 
-def test_manifest_integrity_and_stability(manifest_data):
+def test_manifest_integrity_and_stability(
+    manifest_data: dict[str, Any],
+    raw_html_path: pathlib.Path,
+    staging_json_path: pathlib.Path,
+    fixture_path: pathlib.Path,
+    extraction_script_path: pathlib.Path,
+):
     """Verifies that artifact_manifest.json accurately reflects all disk artifact checksums."""
     assert manifest_data["manifest_version"] == "1.0.0"
     assert manifest_data["dataset_version"] == "triz40-web-snapshot-2026-09-30"
 
-    raw_sha = _compute_sha256(RAW_HTML_PATH)
-    norm_sha = _compute_sha256(STAGING_JSON_PATH)
-    fix_sha = _compute_sha256(FIXTURE_PATH)
-    script_sha = _compute_sha256(EXTRACTION_SCRIPT_PATH)
+    raw_sha = _compute_sha256(raw_html_path)
+    norm_sha = _compute_sha256(staging_json_path)
+    fix_sha = _compute_sha256(fixture_path)
+    script_sha = _compute_sha256(extraction_script_path)
 
     assert manifest_data["raw_snapshot"]["sha256"] == raw_sha
     assert manifest_data["normalized_json"]["sha256"] == norm_sha
@@ -69,25 +44,35 @@ def test_manifest_integrity_and_stability(manifest_data):
     assert manifest_data["extraction_script"]["sha256"] == script_sha
 
 
-def test_reproducible_extraction_byte_for_byte(tmp_path):
+def test_reproducible_extraction_byte_for_byte(
+    tmp_path: pathlib.Path,
+    raw_html_path: pathlib.Path,
+    extraction_script_path: pathlib.Path,
+    staging_json_path: pathlib.Path,
+    scaffold_path: pathlib.Path,
+    scaffold_data: dict[str, Any],
+):
     """Runs extraction in an isolated temporary directory and verifies byte-for-byte SHA256 match."""
-    import sys
-    sys.path.insert(0, STAGING_DIR)
-    from extract_triz40_matrix import extract_triz40_dataset
+    spec = importlib.util.spec_from_file_location("extract_triz40_matrix", str(extraction_script_path))
+    if spec is None or spec.loader is None:
+        raise RuntimeError(f"Cannot load module spec from {extraction_script_path}")
+    extractor_mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(extractor_mod)
+    extract_triz40_dataset = extractor_mod.extract_triz40_dataset
 
     # Copy raw snapshot and run extraction in fresh temp dir
     temp_raw = tmp_path / "triz40_raw_matrix_snapshot.html"
-    shutil.copy2(RAW_HTML_PATH, temp_raw)
+    shutil.copy2(raw_html_path, temp_raw)
 
-    out_temp_json_path = extract_triz40_dataset(str(tmp_path), SCAFFOLD_JSON_PATH)
-    
-    expected_sha = _compute_sha256(STAGING_JSON_PATH)
+    out_temp_json_path = extract_triz40_dataset(str(tmp_path), str(scaffold_path))
+
+    expected_sha = _compute_sha256(staging_json_path)
     fresh_sha = _compute_sha256(out_temp_json_path)
 
     assert fresh_sha == expected_sha, "Fresh extraction must produce identical SHA-256 byte-for-byte"
 
 
-def test_candidate_no_self_referential_checksum(staging_data):
+def test_candidate_no_self_referential_checksum(staging_data: dict[str, Any]):
     """Ensures candidate JSON does NOT contain circular/self-referential checksum inside its body."""
     prov = staging_data.get("provenance", {})
     matrix_prov = prov.get("matrix_provenance", {})
@@ -99,7 +84,7 @@ def test_candidate_no_self_referential_checksum(staging_data):
     assert staging_data.get("status") == "STAGING_CANONICAL_CANDIDATE"
 
 
-def test_separated_provenance_tiers(staging_data):
+def test_separated_provenance_tiers(staging_data: dict[str, Any]):
     """Verifies provenance is strictly separated into matrix vs parameters vs principles."""
     prov = staging_data.get("provenance", {})
     assert "matrix_provenance" in prov
@@ -118,7 +103,7 @@ def test_separated_provenance_tiers(staging_data):
     assert princ_prov["provenance_status"] == "BENCHMARK_STANDARD_DEFINITIONS"
 
 
-def test_normalization_rules_and_audit_trail(staging_data):
+def test_normalization_rules_and_audit_trail(staging_data: dict[str, Any]):
     """Verifies that source markers '*' and '-' have explicit normalization rules."""
     norm_rules = staging_data.get("normalization_rules", {})
     assert "diagonal_marker" in norm_rules
@@ -132,7 +117,7 @@ def test_normalization_rules_and_audit_trail(staging_data):
     assert norm_rules["empty_cell_marker"]["target_value"] == []
 
 
-def test_parameters_and_principles_completeness(staging_data):
+def test_parameters_and_principles_completeness(staging_data: dict[str, Any]):
     """Verifies 39 parameters and 40 principles exist."""
     params = staging_data.get("parameters", {})
     principles = staging_data.get("principles", {})
@@ -144,7 +129,7 @@ def test_parameters_and_principles_completeness(staging_data):
         assert str(i) in principles
 
 
-def test_coordinate_space_and_counts(staging_data):
+def test_coordinate_space_and_counts(staging_data: dict[str, Any]):
     """Verifies complete 1521 coordinate space and cell breakdowns."""
     matrix = staging_data.get("matrix", {})
     assert len(matrix) == 1521
@@ -181,7 +166,10 @@ def test_coordinate_space_and_counts(staging_data):
     assert len(all_principle_ids) == 40
 
 
-def test_divergence_categories_are_mutually_exclusive(staging_data, scaffold_data):
+def test_divergence_categories_are_mutually_exclusive(
+    staging_data: dict[str, Any],
+    scaffold_data: dict[str, Any],
+):
     """Verifies that all 5 divergence classification categories partition the matrix with zero overlap."""
     cand_matrix = staging_data["matrix"]
     scaff_matrix = scaffold_data["matrix"]
@@ -214,7 +202,7 @@ def test_divergence_categories_are_mutually_exclusive(staging_data, scaffold_dat
             elif len(s) > 0 and len(c_val) > 0 and s != c_val:
                 cat_both_pop_differ.append(k)
                 matches += 1
-            
+
             assert matches == 1, f"Coordinate {k} must belong to exactly one mutual category"
 
     assert len(cat_diag_identical) == 39
@@ -224,7 +212,10 @@ def test_divergence_categories_are_mutually_exclusive(staging_data, scaffold_dat
     assert len(cat_both_pop_differ) == 1248
 
 
-def test_divergence_categories_sum_to_total_coordinates(staging_data, scaffold_data):
+def test_divergence_categories_sum_to_total_coordinates(
+    staging_data: dict[str, Any],
+    scaffold_data: dict[str, Any],
+):
     """Verifies that the sum of all divergence categories equals exactly total coordinates (1,521)."""
     cand_matrix = staging_data["matrix"]
     scaff_matrix = scaffold_data["matrix"]
@@ -261,7 +252,7 @@ def test_divergence_categories_sum_to_total_coordinates(staging_data, scaffold_d
     assert divergent_cells == 1482
 
 
-def test_matrix_asymmetry(staging_data):
+def test_matrix_asymmetry(staging_data: dict[str, Any]):
     """Verifies matrix asymmetry is preserved."""
     matrix = staging_data["matrix"]
     asymmetric_count = 0
@@ -276,7 +267,10 @@ def test_matrix_asymmetry(staging_data):
     assert (asymmetric_count / total_pairs) * 100 > 60.0
 
 
-def test_regression_fixtures_with_raw_markers(staging_data, regression_fixtures):
+def test_regression_fixtures_with_raw_markers(
+    staging_data: dict[str, Any],
+    regression_fixtures: list[dict[str, Any]],
+):
     """Verifies 24 sample fixtures with raw source markers."""
     matrix = staging_data["matrix"]
     assert len(regression_fixtures) >= 20
