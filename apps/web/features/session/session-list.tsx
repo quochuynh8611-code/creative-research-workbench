@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect, useMemo } from 'react'
 import Link from 'next/link'
 import {
   Plus,
@@ -62,8 +62,15 @@ export function SessionList() {
   const [validationError, setValidationError] = useState<string | null>(null)
   const [confirmArchiveId, setConfirmArchiveId] = useState<string | null>(null)
   const [isTemplateModalOpen, setIsTemplateModalOpen] = useState(false)
+  const [templateDomainFilter, setTemplateDomainFilter] = useState<string>('all')
   const [importNotification, setImportNotification] = useState<{ type: 'success' | 'error'; message: string } | null>(null)
   const fileInputRef = useRef<HTMLInputElement | null>(null)
+
+  useEffect(() => {
+    if (isTemplateModalOpen) {
+      setTemplateDomainFilter('all')
+    }
+  }, [isTemplateModalOpen])
 
   const queryClient = useQueryClient()
 
@@ -116,6 +123,47 @@ export function SessionList() {
     queryFn: getSessionTemplates,
     enabled: isTemplateModalOpen,
   })
+
+  const templateDomainOptions = useMemo(() => {
+    const uniqueDomains = new Set<string>()
+    templates.forEach((t) => {
+      if (t.domain && typeof t.domain === 'string') {
+        uniqueDomains.add(t.domain)
+      }
+    })
+
+    const targetOrder = ['life', 'business', 'culture', 'society']
+
+    const ordered: string[] = []
+    targetOrder.forEach((d) => {
+      if (uniqueDomains.has(d)) {
+        ordered.push(d)
+      }
+    })
+
+    templates.forEach((t) => {
+      if (
+        t.domain &&
+        typeof t.domain === 'string' &&
+        !targetOrder.includes(t.domain) &&
+        !ordered.includes(t.domain)
+      ) {
+        ordered.push(t.domain)
+      }
+    })
+
+    return ordered.map((d) => ({
+      value: d,
+      label: DOMAIN_LABELS[d as DomainType] || d,
+    }))
+  }, [templates])
+
+  const filteredTemplates = useMemo(() => {
+    if (templateDomainFilter === 'all') {
+      return templates
+    }
+    return templates.filter((tpl) => tpl.domain === templateDomainFilter)
+  }, [templates, templateDomainFilter])
 
   // 6. Import Mutation (Phase 9.3)
   const importMutation = useMutation({
@@ -588,9 +636,30 @@ export function SessionList() {
               </button>
             </div>
 
-            <p className="text-sm text-muted-foreground">
-              Chọn mẫu bài toán phù hợp với lĩnh vực của bạn để khởi tạo cấu trúc mâu thuẫn và đề xuất phương pháp TRIZ tự động:
-            </p>
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <p className="text-sm text-muted-foreground flex-1">
+                Chọn mẫu bài toán phù hợp với lĩnh vực của bạn để khởi tạo cấu trúc mâu thuẫn và đề xuất phương pháp TRIZ tự động:
+              </p>
+              <div className="flex items-center gap-2 shrink-0">
+                <label htmlFor="template-domain-filter" className="text-xs text-muted-foreground whitespace-nowrap">
+                  Lọc mẫu theo lĩnh vực
+                </label>
+                <select
+                  id="template-domain-filter"
+                  aria-label="Lọc mẫu theo lĩnh vực"
+                  value={templateDomainFilter}
+                  onChange={(e) => setTemplateDomainFilter(e.target.value)}
+                  className="px-2.5 py-1.5 rounded-lg border border-border bg-background text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+                >
+                  <option value="all">Tất cả lĩnh vực</option>
+                  {templateDomainOptions.map((opt) => (
+                    <option key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
 
             {isLoadingTemplates && (
               <div className="flex flex-col items-center justify-center py-10 text-muted-foreground space-y-2">
@@ -605,8 +674,14 @@ export function SessionList() {
               </p>
             )}
 
+            {!isLoadingTemplates && templates.length > 0 && filteredTemplates.length === 0 && (
+              <p className="text-sm text-center py-8 text-muted-foreground">
+                Không có mẫu nghiên cứu thuộc lĩnh vực đã chọn.
+              </p>
+            )}
+
             <div className="grid gap-3">
-              {templates.map((tpl) => (
+              {filteredTemplates.map((tpl) => (
                 <div
                   key={tpl.id}
                   className="border border-border/80 hover:border-primary/50 bg-background hover:bg-muted/30 p-4 rounded-lg transition-all flex flex-col justify-between gap-3"

@@ -1,6 +1,6 @@
 /** @jest-environment jsdom */
 import React from 'react'
-import { render, screen, waitFor, fireEvent } from '@testing-library/react'
+import { render, screen, waitFor, fireEvent, act } from '@testing-library/react'
 import '@testing-library/jest-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { SessionList } from '../session-list'
@@ -48,12 +48,11 @@ function createTestQueryClient() {
 
 function renderWithClient(ui: React.ReactElement, customQueryClient?: QueryClient) {
   const queryClient = customQueryClient ?? createTestQueryClient()
+  const Wrapper = ({ children }: { children: React.ReactNode }) => (
+    <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+  )
   return {
-    ...render(
-      <QueryClientProvider client={queryClient}>
-        {ui}
-      </QueryClientProvider>
-    ),
+    ...render(ui, { wrapper: Wrapper }),
     queryClient,
   }
 }
@@ -775,6 +774,492 @@ describe('SessionList Lifecycle & Safe Deletion (Phase 5.9)', () => {
       expect(screen.getByText('Văn hóa', { selector: 'span' })).toBeInTheDocument()
       expect(screen.getByText('quantum-humanities', { selector: 'span' })).toBeInTheDocument()
       expect(screen.getByText('Nghiên cứu', { selector: 'span' })).toBeInTheDocument()
+    })
+  })
+
+  describe('Modal Domain Templates Filter', () => {
+    const MOCK_12_DOMAIN_TEMPLATES: SessionTemplate[] = [
+      {
+        id: 'engineering_composite_arm',
+        title: 'Tối ưu hóa Trọng lượng & Độ bền Cơ học',
+        domain: 'technical',
+        description: 'Mẫu cơ khí TRIZ',
+        tags: ['engineering', 'triz'],
+        workflow_state: 'structuring',
+      },
+      {
+        id: 'business_delivery_speed_cost',
+        title: 'Tối ưu Tốc độ Giao hàng & Chi phí Vận hành',
+        domain: 'business',
+        description: 'Mẫu logistics',
+        tags: ['business', 'logistics'],
+        workflow_state: 'structuring',
+      },
+      {
+        id: 'software_latency_security',
+        title: 'Tăng cường Bảo mật Đa tầng & Giảm Độ trễ API',
+        domain: 'software',
+        description: 'Mẫu bảo mật API',
+        tags: ['software', 'security'],
+        workflow_state: 'structuring',
+      },
+      {
+        id: 'personal_morning_routine_energy',
+        title: 'Cân bằng Thói quen Sáng sớm & Năng lượng Làm việc',
+        domain: 'personal',
+        description: 'Mẫu thói quen',
+        tags: ['personal', 'habits'],
+        workflow_state: 'structuring',
+      },
+      {
+        id: 'personal_healthy_meal_time_cost',
+        title: 'Bữa ăn Gia đình Đủ Dinh dưỡng & Thời gian Tiết kiệm',
+        domain: 'personal',
+        description: 'Mẫu dinh dưỡng gia đình',
+        tags: ['personal', 'family'],
+        workflow_state: 'structuring',
+      },
+      {
+        id: 'personal_small_space_organization',
+        title: 'Tối ưu Góc Làm việc & Không gian Sống Nhỏ',
+        domain: 'personal',
+        description: 'Mẫu không gian làm việc',
+        tags: ['personal', 'organization'],
+        workflow_state: 'structuring',
+      },
+      {
+        id: 'education_child_screen_autonomy',
+        title: 'Giúp Trẻ Tự giác Học tập & Giảm Thời gian Màn hình',
+        domain: 'education',
+        description: 'Mẫu giáo dục tự giác',
+        tags: ['education', 'parenting'],
+        workflow_state: 'structuring',
+      },
+      {
+        id: 'business_packaging_protection_cost',
+        title: 'Đóng gói Sản phẩm Chống sốc, Thẩm mỹ & Tối ưu Chi phí',
+        domain: 'business',
+        description: 'Mẫu bao bì bảo vệ',
+        tags: ['business', 'packaging'],
+        workflow_state: 'structuring',
+      },
+      {
+        id: 'research_knowledge_overload',
+        title: 'Quản trị Tri thức Cá nhân & Nghiên cứu Chuyên sâu',
+        domain: 'research',
+        description: 'Mẫu quản trị tri thức',
+        tags: ['research', 'pkm'],
+        workflow_state: 'structuring',
+      },
+      {
+        id: 'life_daily_habit_energy_management',
+        title: 'Cân Bằng Nhịp Sống & Tái Tạo Năng Lượng Mỗi Ngày',
+        domain: 'life',
+        description: 'Mẫu cân bằng năng lượng',
+        tags: ['life', 'wellness'],
+        workflow_state: 'structuring',
+      },
+      {
+        id: 'culture_heritage_preservation_tourism',
+        title: 'Bảo Tồn Di Sản Văn Hóa & Phát Triển Trải Nghiệm Du Khách',
+        domain: 'culture',
+        description: 'Mẫu bảo tồn di sản',
+        tags: ['culture', 'heritage'],
+        workflow_state: 'structuring',
+      },
+      {
+        id: 'society_community_waste_sorting_compliance',
+        title: 'Thúc Đẩy Phân Loại Rác Cộng Đồng & Giảm Thời Gian Vận Hành',
+        domain: 'society',
+        description: 'Mẫu phân loại rác cộng đồng',
+        tags: ['society', 'community'],
+        workflow_state: 'structuring',
+      },
+    ]
+
+    it('23. Mở modal template hiển thị dropdown "Lọc mẫu theo lĩnh vực", default "Tất cả lĩnh vực", và 12 templates', async () => {
+      mockedListSessions.mockResolvedValue({
+        data: MOCK_ACTIVE_SESSIONS,
+        meta: { total: 1 },
+      })
+      mockedGetSessionTemplates.mockResolvedValue(MOCK_12_DOMAIN_TEMPLATES)
+
+      renderWithClient(<SessionList />)
+
+      await waitFor(() => {
+        expect(screen.getByText('Session Hoạt Động')).toBeInTheDocument()
+      })
+
+      fireEvent.click(screen.getByRole('button', { name: /mẫu nghiên cứu/i }))
+
+      await waitFor(() => {
+        expect(screen.getByText('Mẫu Nghiên cứu Định sẵn (Domain Templates)')).toBeInTheDocument()
+        expect(screen.getByText('Tối ưu hóa Trọng lượng & Độ bền Cơ học')).toBeInTheDocument()
+      })
+
+      const modalFilter = screen.getByLabelText(/lọc mẫu theo lĩnh vực/i) as HTMLSelectElement
+      expect(modalFilter).toBeInTheDocument()
+      expect(modalFilter.value).toBe('all')
+
+      // Options reflect unique domains: target domains first (life, business, culture, society), then remaining in order of appearance
+      const options = Array.from(modalFilter.querySelectorAll('option')).map((opt) => ({
+        value: opt.value,
+        label: opt.textContent?.trim(),
+      }))
+
+      expect(options).toEqual([
+        { value: 'all', label: 'Tất cả lĩnh vực' },
+        { value: 'life', label: 'Đời sống' },
+        { value: 'business', label: 'Kinh tế / Kinh doanh' },
+        { value: 'culture', label: 'Văn hóa' },
+        { value: 'society', label: 'Xã hội' },
+        { value: 'technical', label: 'Kỹ thuật' },
+        { value: 'software', label: 'Phần mềm' },
+        { value: 'personal', label: 'Cá nhân' },
+        { value: 'education', label: 'Giáo dục' },
+        { value: 'research', label: 'Nghiên cứu' },
+      ])
+
+      // All 12 templates are rendered initially
+      expect(screen.getByText('Tối ưu hóa Trọng lượng & Độ bền Cơ học')).toBeInTheDocument()
+      expect(screen.getByText('Cân Bằng Nhịp Sống & Tái Tạo Năng Lượng Mỗi Ngày')).toBeInTheDocument()
+      expect(screen.getByText('Bảo Tồn Di Sản Văn Hóa & Phát Triển Trải Nghiệm Du Khách')).toBeInTheDocument()
+      expect(screen.getByText('Thúc Đẩy Phân Loại Rác Cộng Đồng & Giảm Thời Gian Vận Hành')).toBeInTheDocument()
+    })
+
+    it('24. Lọc chính xác theo từng domain mục tiêu: life, business, culture, society giữ nguyên thứ tự', async () => {
+      mockedListSessions.mockResolvedValue({
+        data: MOCK_ACTIVE_SESSIONS,
+        meta: { total: 1 },
+      })
+      mockedGetSessionTemplates.mockResolvedValue(MOCK_12_DOMAIN_TEMPLATES)
+
+      renderWithClient(<SessionList />)
+
+      await waitFor(() => {
+        expect(screen.getByText('Session Hoạt Động')).toBeInTheDocument()
+      })
+
+      fireEvent.click(screen.getByRole('button', { name: /mẫu nghiên cứu/i }))
+
+      await waitFor(() => {
+        expect(screen.getByText('Mẫu Nghiên cứu Định sẵn (Domain Templates)')).toBeInTheDocument()
+        expect(screen.getByText('Tối ưu hóa Trọng lượng & Độ bền Cơ học')).toBeInTheDocument()
+      })
+
+      const modalFilter = screen.getByLabelText(/lọc mẫu theo lĩnh vực/i)
+
+      // 1. Lọc 'life'
+      fireEvent.change(modalFilter, { target: { value: 'life' } })
+      expect(screen.getByText('Cân Bằng Nhịp Sống & Tái Tạo Năng Lượng Mỗi Ngày')).toBeInTheDocument()
+      expect(screen.queryByText('Tối ưu hóa Trọng lượng & Độ bền Cơ học')).not.toBeInTheDocument()
+      expect(screen.queryByText('Bảo Tồn Di Sản Văn Hóa & Phát Triển Trải Nghiệm Du Khách')).not.toBeInTheDocument()
+
+      // 2. Lọc 'business' -> hiển thị cả 2 templates business theo đúng thứ tự
+      fireEvent.change(modalFilter, { target: { value: 'business' } })
+      expect(screen.getByText('Tối ưu Tốc độ Giao hàng & Chi phí Vận hành')).toBeInTheDocument()
+      expect(screen.getByText('Đóng gói Sản phẩm Chống sốc, Thẩm mỹ & Tối ưu Chi phí')).toBeInTheDocument()
+      expect(screen.queryByText('Cân Bằng Nhịp Sống & Tái Tạo Năng Lượng Mỗi Ngày')).not.toBeInTheDocument()
+
+      // 3. Lọc 'culture'
+      fireEvent.change(modalFilter, { target: { value: 'culture' } })
+      expect(screen.getByText('Bảo Tồn Di Sản Văn Hóa & Phát Triển Trải Nghiệm Du Khách')).toBeInTheDocument()
+      expect(screen.queryByText('Tối ưu Tốc độ Giao hàng & Chi phí Vận hành')).not.toBeInTheDocument()
+
+      // 4. Lọc 'society'
+      fireEvent.change(modalFilter, { target: { value: 'society' } })
+      expect(screen.getByText('Thúc Đẩy Phân Loại Rác Cộng Đồng & Giảm Thời Gian Vận Hành')).toBeInTheDocument()
+      expect(screen.queryByText('Bảo Tồn Di Sản Văn Hóa & Phát Triển Trải Nghiệm Du Khách')).not.toBeInTheDocument()
+    })
+
+    it('25. Chọn lại "Tất cả lĩnh vực" hiển thị lại đầy đủ 12 template ban đầu', async () => {
+      mockedListSessions.mockResolvedValue({
+        data: MOCK_ACTIVE_SESSIONS,
+        meta: { total: 1 },
+      })
+      mockedGetSessionTemplates.mockResolvedValue(MOCK_12_DOMAIN_TEMPLATES)
+
+      renderWithClient(<SessionList />)
+
+      await waitFor(() => {
+        expect(screen.getByText('Session Hoạt Động')).toBeInTheDocument()
+      })
+
+      fireEvent.click(screen.getByRole('button', { name: /mẫu nghiên cứu/i }))
+
+      await waitFor(() => {
+        expect(screen.getByText('Mẫu Nghiên cứu Định sẵn (Domain Templates)')).toBeInTheDocument()
+        expect(screen.getByText('Tối ưu hóa Trọng lượng & Độ bền Cơ học')).toBeInTheDocument()
+      })
+
+      const modalFilter = screen.getByLabelText(/lọc mẫu theo lĩnh vực/i)
+
+      // Lọc life
+      fireEvent.change(modalFilter, { target: { value: 'life' } })
+      expect(screen.queryByText('Tối ưu hóa Trọng lượng & Độ bền Cơ học')).not.toBeInTheDocument()
+
+      // Reset về 'all'
+      fireEvent.change(modalFilter, { target: { value: 'all' } })
+      expect(screen.getByText('Tối ưu hóa Trọng lượng & Độ bền Cơ học')).toBeInTheDocument()
+      expect(screen.getByText('Cân Bằng Nhịp Sống & Tái Tạo Năng Lượng Mỗi Ngày')).toBeInTheDocument()
+      expect(screen.getByText('Thúc Đẩy Phân Loại Rác Cộng Đồng & Giảm Thời Gian Vận Hành')).toBeInTheDocument()
+    })
+
+    it('26. Đóng modal và mở lại sẽ tự động reset bộ lọc template về "Tất cả lĩnh vực"', async () => {
+      mockedListSessions.mockResolvedValue({
+        data: MOCK_ACTIVE_SESSIONS,
+        meta: { total: 1 },
+      })
+      mockedGetSessionTemplates.mockResolvedValue(MOCK_12_DOMAIN_TEMPLATES)
+
+      renderWithClient(<SessionList />)
+
+      await waitFor(() => {
+        expect(screen.getByText('Session Hoạt Động')).toBeInTheDocument()
+      })
+
+      // Mở modal lần 1
+      fireEvent.click(screen.getByRole('button', { name: /mẫu nghiên cứu/i }))
+      await waitFor(() => {
+        expect(screen.getByText('Mẫu Nghiên cứu Định sẵn (Domain Templates)')).toBeInTheDocument()
+        expect(screen.getByText('Tối ưu hóa Trọng lượng & Độ bền Cơ học')).toBeInTheDocument()
+      })
+
+      const modalFilter = screen.getByLabelText(/lọc mẫu theo lĩnh vực/i) as HTMLSelectElement
+      fireEvent.change(modalFilter, { target: { value: 'culture' } })
+      expect(modalFilter.value).toBe('culture')
+
+      // Đóng modal
+      const closeBtn = screen.getByRole('button', { name: '' }) // icon close button in modal header
+      fireEvent.click(closeBtn)
+
+      await waitFor(() => {
+        expect(screen.queryByText('Mẫu Nghiên cứu Định sẵn (Domain Templates)')).not.toBeInTheDocument()
+      })
+
+      // Mở lại modal lần 2
+      fireEvent.click(screen.getByRole('button', { name: /mẫu nghiên cứu/i }))
+      await waitFor(() => {
+        expect(screen.getByText('Mẫu Nghiên cứu Định sẵn (Domain Templates)')).toBeInTheDocument()
+        expect(screen.getByText('Tối ưu hóa Trọng lượng & Độ bền Cơ học')).toBeInTheDocument()
+      })
+
+      const modalFilterReopened = screen.getByLabelText(/lọc mẫu theo lĩnh vực/i) as HTMLSelectElement
+      expect(modalFilterReopened.value).toBe('all')
+      expect(screen.getByText('Tối ưu hóa Trọng lượng & Độ bền Cơ học')).toBeInTheDocument()
+      expect(screen.getByText('Bảo Tồn Di Sản Văn Hóa & Phát Triển Trải Nghiệm Du Khách')).toBeInTheDocument()
+    })
+
+    it('27. Bộ lọc template hoàn toàn độc lập với bộ lọc session và không phát sinh API request', async () => {
+      mockedListSessions.mockResolvedValue({
+        data: MOCK_ACTIVE_SESSIONS,
+        meta: { total: 1 },
+      })
+      mockedGetSessionTemplates.mockResolvedValue(MOCK_12_DOMAIN_TEMPLATES)
+
+      renderWithClient(<SessionList />)
+
+      await waitFor(() => {
+        expect(screen.getByText('Research Sessions')).toBeInTheDocument()
+      })
+
+      const sessionListFilter = screen.getByLabelText(/^lọc theo lĩnh vực$/i) as HTMLSelectElement
+      fireEvent.change(sessionListFilter, { target: { value: 'business' } })
+
+      await waitFor(() => {
+        expect(mockedListSessions).toHaveBeenCalledWith({ domain: 'business' })
+      })
+
+      const callCountBeforeModal = mockedListSessions.mock.calls.length
+
+      // Khi modal chưa mở, getSessionTemplates chưa được gọi
+      expect(mockedGetSessionTemplates).not.toHaveBeenCalled()
+
+      // Mở modal
+      fireEvent.click(screen.getByRole('button', { name: /mẫu nghiên cứu/i }))
+      await waitFor(() => {
+        expect(screen.getByText('Mẫu Nghiên cứu Định sẵn (Domain Templates)')).toBeInTheDocument()
+        expect(screen.getByText('Cân Bằng Nhịp Sống & Tái Tạo Năng Lượng Mỗi Ngày')).toBeInTheDocument()
+      })
+
+      expect(mockedGetSessionTemplates).toHaveBeenCalledTimes(1)
+      const templateCallCount = mockedGetSessionTemplates.mock.calls.length
+
+      // Đổi template filter sang 'life'
+      const modalFilter = screen.getByLabelText(/lọc mẫu theo lĩnh vực/i)
+      fireEvent.change(modalFilter, { target: { value: 'life' } })
+
+      // Bộ lọc session ngoài trang chính vẫn giữ nguyên 'business'
+      expect(sessionListFilter.value).toBe('business')
+
+      // Không phát sinh thêm bất kỳ call nào tới mockedListSessions hay getSessionTemplates, không gọi createSessionFromTemplate
+      expect(mockedListSessions.mock.calls.length).toBe(callCountBeforeModal)
+      expect(mockedGetSessionTemplates.mock.calls.length).toBe(templateCallCount)
+      expect(mockedCreateSessionFromTemplate).not.toHaveBeenCalled()
+    })
+
+    it('28. Lọc legacy (personal, software) và unknown domain chính xác, không alias sang life và không gom nhóm Khác', async () => {
+      const MOCK_CUSTOM_TEMPLATES: SessionTemplate[] = [
+        {
+          id: 'personal_tpl_1',
+          title: 'Mẫu Thói Quen Cá Nhân',
+          domain: 'personal',
+          description: 'Mô tả',
+          tags: ['personal'],
+          workflow_state: 'structuring',
+        },
+        {
+          id: 'software_tpl_1',
+          title: 'Mẫu Kiến Trúc Phần Mềm',
+          domain: 'software',
+          description: 'Mô tả',
+          tags: ['software'],
+          workflow_state: 'structuring',
+        },
+        {
+          id: 'custom_exp_tpl',
+          title: 'Mẫu Lĩnh Vực Thử Nghiệm',
+          domain: 'custom_experimental',
+          description: 'Mô tả',
+          tags: ['custom'],
+          workflow_state: 'structuring',
+        },
+      ]
+
+      mockedListSessions.mockResolvedValue({
+        data: MOCK_ACTIVE_SESSIONS,
+        meta: { total: 1 },
+      })
+      mockedGetSessionTemplates.mockResolvedValue(MOCK_CUSTOM_TEMPLATES)
+
+      renderWithClient(<SessionList />)
+
+      await waitFor(() => {
+        expect(screen.getByText('Session Hoạt Động')).toBeInTheDocument()
+      })
+
+      fireEvent.click(screen.getByRole('button', { name: /mẫu nghiên cứu/i }))
+      await waitFor(() => {
+        expect(screen.getByText('Mẫu Nghiên cứu Định sẵn (Domain Templates)')).toBeInTheDocument()
+        expect(screen.getByText('Mẫu Thói Quen Cá Nhân')).toBeInTheDocument()
+      })
+
+      const modalFilter = screen.getByLabelText(/lọc mẫu theo lĩnh vực/i) as HTMLSelectElement
+      const options = Array.from(modalFilter.querySelectorAll('option')).map((opt) => ({
+        value: opt.value,
+        label: opt.textContent?.trim(),
+      }))
+
+      // Không có life, business, culture, society vì catalog không có; có personal, software, custom_experimental theo thứ tự xuất hiện lần đầu
+      expect(options).toEqual([
+        { value: 'all', label: 'Tất cả lĩnh vực' },
+        { value: 'personal', label: 'Cá nhân' },
+        { value: 'software', label: 'Phần mềm' },
+        { value: 'custom_experimental', label: 'custom_experimental' },
+      ])
+
+      // Lọc custom_experimental
+      fireEvent.change(modalFilter, { target: { value: 'custom_experimental' } })
+      expect(screen.getByText('Mẫu Lĩnh Vực Thử Nghiệm')).toBeInTheDocument()
+      expect(screen.queryByText('Mẫu Thói Quen Cá Nhân')).not.toBeInTheDocument()
+      expect(screen.queryByText('Mẫu Kiến Trúc Phần Mềm')).not.toBeInTheDocument()
+    })
+
+    it('29. Khi domain đã chọn không còn kết quả trong catalog, hiển thị thông báo "Không có mẫu nghiên cứu thuộc lĩnh vực đã chọn."', async () => {
+      mockedListSessions.mockResolvedValue({
+        data: MOCK_ACTIVE_SESSIONS,
+        meta: { total: 1 },
+      })
+      // Catalog chỉ có 1 template technical và 1 template business
+      const initialTemplates: SessionTemplate[] = [
+        {
+          id: 'engineering_composite_arm',
+          title: 'Tối ưu hóa Trọng lượng & Độ bền Cơ học',
+          domain: 'technical',
+          description: 'Mẫu cơ khí TRIZ',
+          tags: ['engineering'],
+          workflow_state: 'structuring',
+        },
+      ]
+      mockedGetSessionTemplates.mockResolvedValue(initialTemplates)
+
+      const { queryClient } = renderWithClient(<SessionList />)
+
+      await waitFor(() => {
+        expect(screen.getByText('Session Hoạt Động')).toBeInTheDocument()
+      })
+
+      fireEvent.click(screen.getByRole('button', { name: /mẫu nghiên cứu/i }))
+      await waitFor(() => {
+        expect(screen.getByText('Mẫu Nghiên cứu Định sẵn (Domain Templates)')).toBeInTheDocument()
+        expect(screen.getByText('Tối ưu hóa Trọng lượng & Độ bền Cơ học')).toBeInTheDocument()
+      })
+
+      const modalFilter = screen.getByLabelText(/lọc mẫu theo lĩnh vực/i)
+      fireEvent.change(modalFilter, { target: { value: 'technical' } })
+      expect(screen.getByText('Tối ưu hóa Trọng lượng & Độ bền Cơ học')).toBeInTheDocument()
+
+      // Giả lập catalog cập nhật trong query cache (setQueryData) khiến domain technical không còn template
+      act(() => {
+        queryClient.setQueryData(['session-templates'], [
+          {
+            id: 'business_delivery_speed_cost',
+            title: 'Tối ưu Tốc độ Giao hàng & Chi phí Vận hành',
+            domain: 'business',
+            description: 'Mẫu logistics',
+            tags: ['business'],
+            workflow_state: 'structuring',
+          },
+        ])
+      })
+
+      await waitFor(() => {
+        expect(screen.getByText('Không có mẫu nghiên cứu thuộc lĩnh vực đã chọn.')).toBeInTheDocument()
+        expect(screen.queryByText('Không tìm thấy mẫu nghiên cứu nào.')).not.toBeInTheDocument()
+      })
+    })
+
+    it('30. Áp dụng template khi đang trong chế độ lọc gọi đúng template_id và không đổi navigation', async () => {
+      mockedListSessions.mockResolvedValue({
+        data: MOCK_ACTIVE_SESSIONS,
+        meta: { total: 1 },
+      })
+      mockedGetSessionTemplates.mockResolvedValue(MOCK_12_DOMAIN_TEMPLATES)
+      mockedCreateSessionFromTemplate.mockResolvedValue({
+        id: 'new-culture-session',
+        title: 'Bảo Tồn Di Sản Văn Hóa & Phát Triển Trải Nghiệm Du Khách',
+        domain: 'culture',
+        status: 'active',
+        workflow_state: 'structuring',
+        tags: ['culture', 'heritage'],
+        created_at: '2026-10-02T12:00:00Z',
+        updated_at: '2026-10-02T12:00:00Z',
+      })
+
+      renderWithClient(<SessionList />)
+
+      await waitFor(() => {
+        expect(screen.getByText('Session Hoạt Động')).toBeInTheDocument()
+      })
+
+      fireEvent.click(screen.getByRole('button', { name: /mẫu nghiên cứu/i }))
+      await waitFor(() => {
+        expect(screen.getByText('Mẫu Nghiên cứu Định sẵn (Domain Templates)')).toBeInTheDocument()
+        expect(screen.getByText('Tối ưu hóa Trọng lượng & Độ bền Cơ học')).toBeInTheDocument()
+      })
+
+      const modalFilter = screen.getByLabelText(/lọc mẫu theo lĩnh vực/i)
+      fireEvent.change(modalFilter, { target: { value: 'culture' } })
+
+      const applyBtn = screen.getByRole('button', { name: /áp dụng mẫu này/i })
+      fireEvent.click(applyBtn)
+
+      await waitFor(() => {
+        expect(mockedCreateSessionFromTemplate).toHaveBeenCalledWith({
+          template_id: 'culture_heritage_preservation_tourism',
+        })
+        expect(screen.queryByText('Mẫu Nghiên cứu Định sẵn (Domain Templates)')).not.toBeInTheDocument()
+      })
     })
   })
 })

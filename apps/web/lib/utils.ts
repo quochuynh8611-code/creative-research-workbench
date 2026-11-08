@@ -21,6 +21,7 @@ export const DOMAIN_LABELS: Record<string, string> = {
   culture: 'Văn hóa',
   society: 'Xã hội',
   technical: 'Kỹ thuật',
+  software: 'Phần mềm',
   education: 'Giáo dục',
   personal: 'Cá nhân',
   research: 'Nghiên cứu',

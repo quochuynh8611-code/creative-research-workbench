@@ -18,6 +18,13 @@ describe('DOMAIN_LABELS mapping and fallback', () => {
     expect(DOMAIN_LABELS['education']).toBe('Giáo dục')
   })
 
+  it('maps software domain to "Phần mềm" while keeping personal as "Cá nhân" and preserving unknown domain fallback', () => {
+    expect(DOMAIN_LABELS['software']).toBe('Phần mềm')
+    expect(DOMAIN_LABELS['personal']).toBe('Cá nhân')
+    const unknownDomain = 'custom_unknown_domain'
+    expect(DOMAIN_LABELS[unknownDomain] ?? unknownDomain).toBe('custom_unknown_domain')
+  })
+
   it('falls back to raw domain string when domain is undefined or unknown', () => {
     const unknownDomain = 'unknown-domain-xyz'
     const renderedLabel = DOMAIN_LABELS[unknownDomain] ?? unknownDomain
