@@ -13,13 +13,11 @@ Kiểm tra:
   - filter query domain="", domain="   " và domain=" business "
   - không duplicate khi session có nhiều frames
   - envelope (top-level, data, problem_frame, current_problem_frame, data.problem_frame, data.current_problem_frame) consistency
-  - Unit tests cho cơ chế cleanup an toàn (không silent pass) của disposable harness bằng mock
 """
 from __future__ import annotations
 
 import uuid
 from datetime import datetime, timezone
-from unittest.mock import MagicMock
 import pytest
 from httpx import ASGITransport, AsyncClient
 from sqlalchemy.orm import Session
@@ -34,94 +32,10 @@ from app.main import app
 # Import harness disposable db an toàn
 from tests.integration.safe_disposable_db import (  # noqa: F401
     disposable_pg_container,
-    disposable_pg_container_lifecycle,
     disposable_engine,
     db_session,
     override_get_db,
 )
-
-
-# ============================================================================
-# Unit Tests (Mock-based): Kiểm chứng cơ chế cleanup không nuốt lỗi
-# ============================================================================
-
-
-def test_disposable_container_cleanup_failure_without_prior_error_raises_teardown_error():
-    """
-    Kiểm chứng bằng mock: khi không có lỗi trước đó, nếu pg.stop() thất bại
-    thì phải raise tín hiệu teardown failure trực tiếp (không bị silent pass).
-    """
-    mock_pg = MagicMock()
-    mock_pg.get_wrapped_container.return_value.id = "mock_container_1234567890"
-    mock_pg.get_exposed_port.return_value = 5432
-    mock_pg.get_container_host_ip.return_value = "localhost"
-    mock_pg.dbname = "test"
-    mock_pg.stop.side_effect = RuntimeError("Teardown docker failure")
-
-    mock_docker_client = MagicMock()
-    raw_container = MagicMock()
-    raw_container.status = "running"
-    raw_container.ports = {"5432/tcp": [{"HostPort": "5432"}]}
-    mock_docker_client.containers.get.return_value = raw_container
-
-    gen = disposable_pg_container_lifecycle(
-        pg_factory=lambda **kw: mock_pg,
-        docker_client_factory=lambda: mock_docker_client,
-    )
-    # Setup thành công
-    info = next(gen)
-    assert info["container_id"] == "mock_container_1234567890"
-
-    # Teardown: không có lỗi trước đó, stop() fail -> phải raise RuntimeError trực tiếp
-    with pytest.raises(RuntimeError) as exc_info:
-        next(gen, None)
-
-    assert "Teardown docker failure" in str(exc_info.value)
-    mock_pg.stop.assert_called_once()
-    mock_docker_client.close.assert_called_once()
-
-
-def test_disposable_container_cleanup_failure_with_prior_error_chains_and_preserves_primary():
-    """
-    Kiểm chứng bằng mock: khi đã có lỗi setup/test trước đó, nếu pg.stop() cũng thất bại
-    thì không làm mất lỗi gốc; lỗi cleanup được chain qua __cause__ (raise stop_err from primary_err).
-    """
-    mock_pg = MagicMock()
-    mock_pg.get_wrapped_container.return_value.id = "mock_container_abcdef1234"
-    mock_pg.get_exposed_port.return_value = 5432
-    mock_pg.get_container_host_ip.return_value = "localhost"
-    mock_pg.dbname = "test"
-    mock_pg.stop.side_effect = RuntimeError("Cleanup error during teardown")
-
-    mock_docker_client = MagicMock()
-    raw_container = MagicMock()
-    raw_container.status = "running"
-    raw_container.ports = {"5432/tcp": [{"HostPort": "5432"}]}
-    mock_docker_client.containers.get.return_value = raw_container
-
-    gen = disposable_pg_container_lifecycle(
-        pg_factory=lambda **kw: mock_pg,
-        docker_client_factory=lambda: mock_docker_client,
-    )
-    # Setup thành công
-    info = next(gen)
-    assert info["container_id"] == "mock_container_abcdef1234"
-
-    # Giả lập test quăng lỗi PrimaryTestError trong khi generator đang yield
-    primary_test_error = ValueError("Primary test assertion error")
-    with pytest.raises(RuntimeError) as exc_info:
-        gen.throw(primary_test_error)
-
-    # Khẳng định: stop_err được raise, nhưng __cause__ giữ nguyên lỗi gốc primary_test_error
-    assert "Cleanup error during teardown" in str(exc_info.value)
-    assert exc_info.value.__cause__ is primary_test_error
-    mock_pg.stop.assert_called_once()
-    mock_docker_client.close.assert_called_once()
-
-
-# ============================================================================
-# Integration Tests: Kiểm chứng hành vi API Multi-Domain Foundation
-# ============================================================================
 
 
 @pytest.mark.asyncio

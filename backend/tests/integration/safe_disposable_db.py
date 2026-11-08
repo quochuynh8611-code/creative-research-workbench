@@ -9,6 +9,9 @@ Contract:
   - Ensures clean engine disposal and container stop/removal under try/finally.
   - No silent cleanup: teardown failures are signaled; if a prior error occurred,
     the cleanup error is chained without masking the primary failure.
+  - Lifecycle protection: cleans up if a container was created (_container is not None)
+    even when start() fails mid-way; does not touch other containers.
+  - Controlled logging: container ID and error type only, no secrets or raw exception body.
   - Does NOT read ambient TEST_DATABASE_URL or .env.
 """
 from __future__ import annotations
@@ -31,6 +34,22 @@ logger = logging.getLogger(__name__)
 _OVERRIDE_SENTINEL = object()
 
 
+def _has_container(pg: Any) -> bool:
+    """Kiểm tra đối tượng pg của testcontainers đã gắn với Docker container hay chưa."""
+    return getattr(pg, "_container", None) is not None
+
+
+def _get_container_id_safe(pg: Any) -> str:
+    """Trích xuất container ID an toàn từ pg._container nếu có."""
+    try:
+        wrapped = getattr(pg, "_container", None)
+        if wrapped is not None and getattr(wrapped, "id", None):
+            return str(wrapped.id)
+    except Exception:
+        pass
+    return "unknown"
+
+
 def disposable_pg_container_lifecycle(
     pg_factory: Any = PostgresContainer,
     docker_client_factory: Any = docker.from_env,
@@ -38,24 +57,23 @@ def disposable_pg_container_lifecycle(
     """
     Quản lý vòng đời disposable Postgres container.
     - Không nuốt lỗi (không silent pass).
-    - Teardown lỗi khi không có lỗi trước đó -> raise lỗi teardown.
-    - Đã có lỗi setup/test -> log lỗi teardown và raise stop_err from primary_err.
-    - Không log credentials hay connection URL.
-    - Chỉ stop chính xác container được tạo.
+    - Bảo vệ cả trường hợp start() lỗi sau khi container đã được tạo (_container is not None).
+    - Không dùng riêng pg_started làm điều kiện cleanup.
+    - Teardown lỗi khi không có lỗi trước đó -> raise lỗi teardown trực tiếp.
+    - Đã có lỗi setup/test -> log kiểm soát và raise stop_err from primary_err.
+    - Không log credential/connection URL hoặc raw exception body có thể chứa secret.
+    - Chỉ cleanup tài nguyên thuộc instance pg vừa tạo, không truy tìm/xóa container theo image hay tên chung.
     """
     pg = pg_factory(image="ankane/pgvector:latest")
-    pg_started = False
     container_id = "unknown"
     try:
         pg.start()
-        pg_started = True
-        # 1. Thu thập thông tin container từ docker daemon
-        container_id = str(pg.get_wrapped_container().id)
+        container_id = _get_container_id_safe(pg)
         mapped_port = int(pg.get_exposed_port(5432))
         host = pg.get_container_host_ip()
         dbname = pg.dbname
 
-        # 2. Xác minh trực tiếp với Docker Daemon và đóng client sau khi kiểm tra
+        # Xác minh trực tiếp với Docker Daemon và đóng client sau khi kiểm tra
         docker_client = docker_client_factory()
         try:
             raw_container = docker_client.containers.get(container_id)
@@ -77,19 +95,21 @@ def disposable_pg_container_lifecycle(
             "dbname": dbname,
         }
     except BaseException as primary_err:
-        if pg_started:
+        if _has_container(pg):
+            cid = _get_container_id_safe(pg)
             try:
                 pg.stop()
             except Exception as stop_err:
+                err_type = type(stop_err).__name__
                 logger.error(
-                    "Teardown failure on container %s: %s",
-                    container_id[:12],
-                    stop_err,
+                    "Teardown failure: failed to stop container %s (error_type=%s)",
+                    cid[:12],
+                    err_type,
                 )
                 raise stop_err from primary_err
         raise
     else:
-        if pg_started:
+        if _has_container(pg):
             pg.stop()
 
 
