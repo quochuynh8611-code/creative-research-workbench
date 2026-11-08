@@ -12,12 +12,14 @@ Kiểm tra:
   - filter domain kết hợp limit, total (kiểm tra chính xác meta.total, không dùng >=), q, status, archived
   - filter query domain="", domain="   " và domain=" business "
   - không duplicate khi session có nhiều frames
-  - envelope (top-level, data, problem_frame, current_problem_frame) consistency
+  - envelope (top-level, data, problem_frame, current_problem_frame, data.problem_frame, data.current_problem_frame) consistency
+  - Unit tests cho cơ chế cleanup an toàn (không silent pass) của disposable harness bằng mock
 """
 from __future__ import annotations
 
 import uuid
 from datetime import datetime, timezone
+from unittest.mock import MagicMock
 import pytest
 from httpx import ASGITransport, AsyncClient
 from sqlalchemy.orm import Session
@@ -32,10 +34,94 @@ from app.main import app
 # Import harness disposable db an toàn
 from tests.integration.safe_disposable_db import (  # noqa: F401
     disposable_pg_container,
+    disposable_pg_container_lifecycle,
     disposable_engine,
     db_session,
     override_get_db,
 )
+
+
+# ============================================================================
+# Unit Tests (Mock-based): Kiểm chứng cơ chế cleanup không nuốt lỗi
+# ============================================================================
+
+
+def test_disposable_container_cleanup_failure_without_prior_error_raises_teardown_error():
+    """
+    Kiểm chứng bằng mock: khi không có lỗi trước đó, nếu pg.stop() thất bại
+    thì phải raise tín hiệu teardown failure trực tiếp (không bị silent pass).
+    """
+    mock_pg = MagicMock()
+    mock_pg.get_wrapped_container.return_value.id = "mock_container_1234567890"
+    mock_pg.get_exposed_port.return_value = 5432
+    mock_pg.get_container_host_ip.return_value = "localhost"
+    mock_pg.dbname = "test"
+    mock_pg.stop.side_effect = RuntimeError("Teardown docker failure")
+
+    mock_docker_client = MagicMock()
+    raw_container = MagicMock()
+    raw_container.status = "running"
+    raw_container.ports = {"5432/tcp": [{"HostPort": "5432"}]}
+    mock_docker_client.containers.get.return_value = raw_container
+
+    gen = disposable_pg_container_lifecycle(
+        pg_factory=lambda **kw: mock_pg,
+        docker_client_factory=lambda: mock_docker_client,
+    )
+    # Setup thành công
+    info = next(gen)
+    assert info["container_id"] == "mock_container_1234567890"
+
+    # Teardown: không có lỗi trước đó, stop() fail -> phải raise RuntimeError trực tiếp
+    with pytest.raises(RuntimeError) as exc_info:
+        next(gen, None)
+
+    assert "Teardown docker failure" in str(exc_info.value)
+    mock_pg.stop.assert_called_once()
+    mock_docker_client.close.assert_called_once()
+
+
+def test_disposable_container_cleanup_failure_with_prior_error_chains_and_preserves_primary():
+    """
+    Kiểm chứng bằng mock: khi đã có lỗi setup/test trước đó, nếu pg.stop() cũng thất bại
+    thì không làm mất lỗi gốc; lỗi cleanup được chain qua __cause__ (raise stop_err from primary_err).
+    """
+    mock_pg = MagicMock()
+    mock_pg.get_wrapped_container.return_value.id = "mock_container_abcdef1234"
+    mock_pg.get_exposed_port.return_value = 5432
+    mock_pg.get_container_host_ip.return_value = "localhost"
+    mock_pg.dbname = "test"
+    mock_pg.stop.side_effect = RuntimeError("Cleanup error during teardown")
+
+    mock_docker_client = MagicMock()
+    raw_container = MagicMock()
+    raw_container.status = "running"
+    raw_container.ports = {"5432/tcp": [{"HostPort": "5432"}]}
+    mock_docker_client.containers.get.return_value = raw_container
+
+    gen = disposable_pg_container_lifecycle(
+        pg_factory=lambda **kw: mock_pg,
+        docker_client_factory=lambda: mock_docker_client,
+    )
+    # Setup thành công
+    info = next(gen)
+    assert info["container_id"] == "mock_container_abcdef1234"
+
+    # Giả lập test quăng lỗi PrimaryTestError trong khi generator đang yield
+    primary_test_error = ValueError("Primary test assertion error")
+    with pytest.raises(RuntimeError) as exc_info:
+        gen.throw(primary_test_error)
+
+    # Khẳng định: stop_err được raise, nhưng __cause__ giữ nguyên lỗi gốc primary_test_error
+    assert "Cleanup error during teardown" in str(exc_info.value)
+    assert exc_info.value.__cause__ is primary_test_error
+    mock_pg.stop.assert_called_once()
+    mock_docker_client.close.assert_called_once()
+
+
+# ============================================================================
+# Integration Tests: Kiểm chứng hành vi API Multi-Domain Foundation
+# ============================================================================
 
 
 @pytest.mark.asyncio
@@ -43,7 +129,9 @@ async def test_latest_culture_over_historical_technical(db_session: Session):
     """
     1. Historical frame có domain 'technical', latest frame có domain 'culture'.
     -> GET /sessions/{id} và GET /sessions phải trả 'culture'.
-    Kiểm tra đủ 4 vị trí: top-level, data, problem_frame, current_problem_frame.
+    Kiểm tra đủ 6 vị trí:
+      - top-level: domain, problem_frame.domain, current_problem_frame.domain
+      - data: data.domain, data.problem_frame.domain, data.current_problem_frame.domain
     """
     session = ResearchSession(title="S1 Culture Latest", status=SessionStatus.active)
     db_session.add(session)
@@ -67,7 +155,7 @@ async def test_latest_culture_over_historical_technical(db_session: Session):
     db_session.commit()
 
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
-        # Detail check (4 locations)
+        # Detail check (6 locations)
         res_detail = await client.get(f"/api/v1/sessions/{session.id}")
         assert res_detail.status_code == 200
         detail_json = res_detail.json()
@@ -75,6 +163,8 @@ async def test_latest_culture_over_historical_technical(db_session: Session):
         assert detail_json["data"]["domain"] == "culture"
         assert detail_json["problem_frame"]["domain"] == "culture"
         assert detail_json["current_problem_frame"]["domain"] == "culture"
+        assert detail_json["data"]["problem_frame"]["domain"] == "culture"
+        assert detail_json["data"]["current_problem_frame"]["domain"] == "culture"
 
         # List check
         res_list = await client.get("/api/v1/sessions")
@@ -88,7 +178,7 @@ async def test_latest_culture_over_historical_technical(db_session: Session):
 async def test_historical_culture_latest_business(db_session: Session):
     """
     2. Historical culture, latest business.
-    -> API trả 'business' trên cả top-level/data và 2 frame payload.
+    -> API trả 'business' trên cả top-level/data và 2 frame payload (cả ở data.problem_frame/current_problem_frame).
     -> positive filter (domain=business) phải nhận, negative filter (domain=culture) phải loại.
     """
     session = ResearchSession(title="S Business Latest", status=SessionStatus.active)
@@ -111,7 +201,7 @@ async def test_historical_culture_latest_business(db_session: Session):
     db_session.commit()
 
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
-        # Detail check (4 locations)
+        # Detail check (6 locations)
         res = await client.get(f"/api/v1/sessions/{session.id}")
         assert res.status_code == 200
         detail_json = res.json()
@@ -119,6 +209,8 @@ async def test_historical_culture_latest_business(db_session: Session):
         assert detail_json["data"]["domain"] == "business"
         assert detail_json["problem_frame"]["domain"] == "business"
         assert detail_json["current_problem_frame"]["domain"] == "business"
+        assert detail_json["data"]["problem_frame"]["domain"] == "business"
+        assert detail_json["data"]["current_problem_frame"]["domain"] == "business"
 
         # Positive filter: domain=business phải nhận
         res_bus = await client.get("/api/v1/sessions?domain=business")
@@ -137,7 +229,7 @@ async def test_historical_culture_latest_business(db_session: Session):
 async def test_tie_breaker_created_at_identical(db_session: Session):
     """
     3. Tie-breaker: created_at giống hệt nhau, phân định theo id DESC.
-    Kiểm tra detail (4 locations), list item domain, positive và negative filter.
+    Kiểm tra detail (6 locations), list item domain, positive và negative filter.
     """
     session = ResearchSession(title="Tie Breaker Session", status=SessionStatus.active)
     db_session.add(session)
@@ -173,6 +265,8 @@ async def test_tie_breaker_created_at_identical(db_session: Session):
         assert detail_json["data"]["domain"] == "culture"
         assert detail_json["problem_frame"]["domain"] == "culture"
         assert detail_json["current_problem_frame"]["domain"] == "culture"
+        assert detail_json["data"]["problem_frame"]["domain"] == "culture"
+        assert detail_json["data"]["current_problem_frame"]["domain"] == "culture"
 
         # List item domain check
         res_all = await client.get("/api/v1/sessions")
@@ -196,7 +290,7 @@ async def test_tie_breaker_created_at_identical(db_session: Session):
 @pytest.mark.asyncio
 async def test_fallback_no_frame(db_session: Session):
     """
-    4. Session không có frame -> domain là 'research', frame payloads là null.
+    4. Session không có frame -> domain là 'research', frame payloads là null ở cả top-level và data.
     """
     session = ResearchSession(title="No Frame Session", status=SessionStatus.active)
     db_session.add(session)
@@ -210,6 +304,8 @@ async def test_fallback_no_frame(db_session: Session):
         assert data["data"]["domain"] == "research"
         assert data["problem_frame"] is None
         assert data["current_problem_frame"] is None
+        assert data["data"]["problem_frame"] is None
+        assert data["data"]["current_problem_frame"] is None
 
 
 @pytest.mark.asyncio
@@ -220,7 +316,7 @@ async def test_latest_empty_or_whitespace_does_not_fallback_to_historical(
     """
     5. Parameterize: Frame cũ có domain 'personal', frame mới có domain là None, '' hoặc '   '.
     -> Phải trả 'research', tuyệt đối không fallback về 'personal'.
-    Kiểm tra top-level/data và cả hai frame payload.
+    Kiểm tra top-level, data và cả hai frame payload (kể cả data.problem_frame / data.current_problem_frame).
     """
     session = ResearchSession(title=f"Empty Latest Frame {empty_val!r}", status=SessionStatus.active)
     db_session.add(session)
@@ -249,6 +345,8 @@ async def test_latest_empty_or_whitespace_does_not_fallback_to_historical(
         assert data["data"]["domain"] == "research"
         assert data["problem_frame"]["domain"] == "research"
         assert data["current_problem_frame"]["domain"] == "research"
+        assert data["data"]["problem_frame"]["domain"] == "research"
+        assert data["data"]["current_problem_frame"]["domain"] == "research"
 
 
 @pytest.mark.asyncio
@@ -279,7 +377,7 @@ async def test_latest_domain_personal(db_session: Session):
     db_session.commit()
 
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
-        # Detail check (4 positions)
+        # Detail check (6 positions)
         res_detail = await client.get(f"/api/v1/sessions/{session.id}")
         assert res_detail.status_code == 200
         detail_json = res_detail.json()
@@ -287,6 +385,8 @@ async def test_latest_domain_personal(db_session: Session):
         assert detail_json["data"]["domain"] == "personal"
         assert detail_json["problem_frame"]["domain"] == "personal"
         assert detail_json["current_problem_frame"]["domain"] == "personal"
+        assert detail_json["data"]["problem_frame"]["domain"] == "personal"
+        assert detail_json["data"]["current_problem_frame"]["domain"] == "personal"
 
         # List check
         res_list = await client.get("/api/v1/sessions")
@@ -334,6 +434,8 @@ async def test_normalization_space_trimmed(db_session: Session):
         assert detail_json["data"]["domain"] == "business"
         assert detail_json["problem_frame"]["domain"] == "business"
         assert detail_json["current_problem_frame"]["domain"] == "business"
+        assert detail_json["data"]["problem_frame"]["domain"] == "business"
+        assert detail_json["data"]["current_problem_frame"]["domain"] == "business"
 
         res_list = await client.get("/api/v1/sessions?domain=business")
         assert res_list.status_code == 200
@@ -367,6 +469,8 @@ async def test_legacy_domain_preserved_exact_casing(db_session: Session):
         assert detail_json["data"]["domain"] == "Mechanical_Engineering"
         assert detail_json["problem_frame"]["domain"] == "Mechanical_Engineering"
         assert detail_json["current_problem_frame"]["domain"] == "Mechanical_Engineering"
+        assert detail_json["data"]["problem_frame"]["domain"] == "Mechanical_Engineering"
+        assert detail_json["data"]["current_problem_frame"]["domain"] == "Mechanical_Engineering"
 
 
 @pytest.mark.asyncio

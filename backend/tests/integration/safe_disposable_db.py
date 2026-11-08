@@ -7,6 +7,8 @@ Contract:
   - Fails closed if verification fails.
   - Redacts sensitive credentials.
   - Ensures clean engine disposal and container stop/removal under try/finally.
+  - No silent cleanup: teardown failures are signaled; if a prior error occurred,
+    the cleanup error is chained without masking the primary failure.
   - Does NOT read ambient TEST_DATABASE_URL or .env.
 """
 from __future__ import annotations
@@ -29,20 +31,32 @@ logger = logging.getLogger(__name__)
 _OVERRIDE_SENTINEL = object()
 
 
-@pytest.fixture(scope="session")
-def disposable_pg_container():
-    """Tạo mới 1 disposable Postgres container riêng biệt cho lần chạy test với try/finally bảo vệ."""
-    pg = PostgresContainer(image="ankane/pgvector:latest")
+def disposable_pg_container_lifecycle(
+    pg_factory: Any = PostgresContainer,
+    docker_client_factory: Any = docker.from_env,
+) -> Generator[dict[str, Any], None, None]:
+    """
+    Quản lý vòng đời disposable Postgres container.
+    - Không nuốt lỗi (không silent pass).
+    - Teardown lỗi khi không có lỗi trước đó -> raise lỗi teardown.
+    - Đã có lỗi setup/test -> log lỗi teardown và raise stop_err from primary_err.
+    - Không log credentials hay connection URL.
+    - Chỉ stop chính xác container được tạo.
+    """
+    pg = pg_factory(image="ankane/pgvector:latest")
+    pg_started = False
+    container_id = "unknown"
     try:
         pg.start()
+        pg_started = True
         # 1. Thu thập thông tin container từ docker daemon
-        container_id = pg.get_wrapped_container().id
+        container_id = str(pg.get_wrapped_container().id)
         mapped_port = int(pg.get_exposed_port(5432))
         host = pg.get_container_host_ip()
         dbname = pg.dbname
 
         # 2. Xác minh trực tiếp với Docker Daemon và đóng client sau khi kiểm tra
-        docker_client = docker.from_env()
+        docker_client = docker_client_factory()
         try:
             raw_container = docker_client.containers.get(container_id)
             assert raw_container.status == "running", f"Container {container_id[:12]} is not running!"
@@ -62,11 +76,27 @@ def disposable_pg_container():
             "port": mapped_port,
             "dbname": dbname,
         }
-    finally:
-        try:
+    except BaseException as primary_err:
+        if pg_started:
+            try:
+                pg.stop()
+            except Exception as stop_err:
+                logger.error(
+                    "Teardown failure on container %s: %s",
+                    container_id[:12],
+                    stop_err,
+                )
+                raise stop_err from primary_err
+        raise
+    else:
+        if pg_started:
             pg.stop()
-        except Exception:
-            pass
+
+
+@pytest.fixture(scope="session")
+def disposable_pg_container():
+    """Tạo mới 1 disposable Postgres container riêng biệt cho lần chạy test."""
+    yield from disposable_pg_container_lifecycle()
 
 
 @pytest.fixture(scope="session")
