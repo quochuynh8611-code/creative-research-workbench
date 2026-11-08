@@ -205,6 +205,7 @@ class ResearchSession(Base):
     )
     title: Mapped[str] = mapped_column(String(512), nullable=False)
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
+    domain: Mapped[str | None] = mapped_column(String(256), nullable=True)
     status: Mapped[SessionStatus] = mapped_column(
         Enum(SessionStatus), nullable=False, default=SessionStatus.active
     )

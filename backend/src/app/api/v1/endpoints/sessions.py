@@ -97,7 +97,7 @@ def get_ai_report_service() -> AIReportService:
 class SessionCreate(BaseModel):
     title: str = Field(..., min_length=1)
     description: str | None = None
-    domain: str = "research"
+    domain: Optional[str] = None
     tags: list[str] = []
 
     @field_validator("title")
@@ -106,6 +106,14 @@ class SessionCreate(BaseModel):
         if not v or not v.strip():
             raise ValueError("title must not be empty or whitespace only")
         return v.strip()
+
+    @field_validator("domain")
+    @classmethod
+    def validate_domain_whitespace(cls, v: Optional[str]) -> Optional[str]:
+        if v is not None:
+            clean = v.strip(" ")
+            return clean if clean else None
+        return None
 
 
 class SessionResponse(BaseModel):
@@ -261,6 +269,7 @@ async def create_session(
         session_record = ResearchSession(
             title=body.title,
             description=body.description,
+            domain=body.domain,
             status=SessionStatus.active,
             workflow_state="idle",
         )
@@ -280,11 +289,13 @@ async def create_session(
             else created_iso
         )
 
+        effective_domain = session_record.domain if session_record.domain else "research"
+
         session_payload = {
             "id": str(session_record.id),
             "title": session_record.title,
             "description": session_record.description,
-            "domain": body.domain,
+            "domain": effective_domain,
             "status": (
                 session_record.status.value
                 if hasattr(session_record.status, "value")
@@ -297,10 +308,11 @@ async def create_session(
         }
     else:
         # Fallback khi không có DB connection (dùng cho smoke/health check)
+        effective_domain = body.domain if body.domain else "research"
         session_payload = {
             "id": f"ses_{uuid.uuid4().hex[:8]}",
             "title": body.title,
-            "domain": body.domain,
+            "domain": effective_domain,
             "status": "draft",
             "tags": body.tags,
             "current_problem_frame_id": None,
@@ -339,10 +351,16 @@ async def list_sessions(
         .subquery()
     )
 
-    # 2. Expression tính toán effective_domain: trim U+0020, nullif rỗng -> fallback 'research'
+    # 2. Expression tính toán effective_domain:
+    # Ưu tiên 1: latest frame domain (trim U+0020, nullif rỗng)
+    # Ưu tiên 2: persisted ResearchSession.domain (trim U+0020, nullif rỗng)
+    # Ưu tiên 3: fallback 'research'
+    clean_frame_domain = func.nullif(func.trim(latest_frame_subq.c.latest_frame_domain, " "), "")
+    clean_session_domain = func.nullif(func.trim(ResearchSession.domain, " "), "")
     effective_domain_expr = func.coalesce(
-        func.nullif(func.trim(latest_frame_subq.c.latest_frame_domain, " "), ""),
-        "research"
+        clean_frame_domain,
+        clean_session_domain,
+        "research",
     )
 
     query = (
@@ -441,9 +459,24 @@ async def import_session(
     created_iso = new_session.created_at.isoformat() if new_session.created_at else now_iso
     updated_iso = new_session.updated_at.isoformat() if new_session.updated_at else created_iso
 
-    domain_val = "technical"
+    frame_domain = None
     if new_session.problem_frames and len(new_session.problem_frames) > 0:
-        domain_val = new_session.problem_frames[0].domain or "technical"
+        latest_frame = sorted(
+            new_session.problem_frames,
+            key=lambda f: (f.created_at, f.id),
+            reverse=True,
+        )[0]
+        if latest_frame.domain:
+            c = latest_frame.domain.strip(" ")
+            if c:
+                frame_domain = c
+
+    clean_sess_domain = (
+        new_session.domain.strip(" ")
+        if (new_session.domain is not None and isinstance(new_session.domain, str))
+        else None
+    )
+    domain_val = frame_domain or clean_sess_domain or "research"
 
     session_payload = {
         "id": str(new_session.id),
@@ -510,11 +543,20 @@ async def create_session_from_template(
 
     final_title = (body.custom_title or body.title or template["title"]).strip()
 
+    raw_template_domain = template.get("domain")
+    clean_template_domain = (
+        raw_template_domain.strip(" ")
+        if (raw_template_domain is not None and isinstance(raw_template_domain, str))
+        else None
+    )
+    if clean_template_domain == "":
+        clean_template_domain = None
+
     snapshot_from_tpl = {
         "session": {
             "title": final_title,
             "description": template.get("description"),
-            "domain": template.get("domain", "technical"),
+            "domain": clean_template_domain,
             "workflow_state": template.get("workflow_state", "structuring"),
             "tags": template.get("tags", []),
         },
@@ -527,9 +569,24 @@ async def create_session_from_template(
     created_iso = new_session.created_at.isoformat() if new_session.created_at else now_iso
     updated_iso = new_session.updated_at.isoformat() if new_session.updated_at else created_iso
 
-    domain_val = template.get("domain", "technical")
+    frame_domain = None
     if new_session.problem_frames and len(new_session.problem_frames) > 0:
-        domain_val = new_session.problem_frames[0].domain or domain_val
+        latest_frame = sorted(
+            new_session.problem_frames,
+            key=lambda f: (f.created_at, f.id),
+            reverse=True,
+        )[0]
+        if latest_frame.domain:
+            c = latest_frame.domain.strip(" ")
+            if c:
+                frame_domain = c
+
+    clean_sess_domain = (
+        new_session.domain.strip(" ")
+        if (new_session.domain is not None and isinstance(new_session.domain, str))
+        else None
+    )
+    domain_val = frame_domain or clean_sess_domain or "research"
 
     session_payload = {
         "id": str(new_session.id),
@@ -675,11 +732,20 @@ async def get_session(
     )
 
     frame_payload = None
-    effective_domain = "research"
-    if frame:
-        clean_frame_domain = frame.domain.strip(" ") if frame.domain is not None else ""
-        effective_domain = clean_frame_domain if clean_frame_domain else "research"
+    clean_frame_domain = frame.domain.strip(" ") if (frame and frame.domain is not None) else ""
+    clean_session_domain = (
+        record.domain.strip(" ")
+        if (record.domain is not None and isinstance(record.domain, str))
+        else ""
+    )
+    if clean_frame_domain:
+        effective_domain = clean_frame_domain
+    elif clean_session_domain:
+        effective_domain = clean_session_domain
+    else:
+        effective_domain = "research"
 
+    if frame:
         frame_payload = {
             "id": str(frame.id),
             "session_id": str(frame.session_id),

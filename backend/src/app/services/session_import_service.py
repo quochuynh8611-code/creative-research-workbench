@@ -153,7 +153,15 @@ def import_session_from_json(
     else:
         description = None
 
-    raw_domain = session_data.get("domain") or "technical"
+    raw_domain = session_data.get("domain")
+    clean_domain = (
+        raw_domain.strip(" ")
+        if (raw_domain is not None and isinstance(raw_domain, str))
+        else None
+    )
+    if clean_domain == "":
+        clean_domain = None
+
     raw_workflow_state = session_data.get("workflow_state") or "intake"
     tags = session_data.get("tags") if isinstance(session_data.get("tags"), list) else None
 
@@ -206,6 +214,7 @@ def import_session_from_json(
             id=uuid.uuid4(),
             title=title.strip(),
             description=description,
+            domain=clean_domain,
             status=SessionStatus.active,
             workflow_state=raw_workflow_state,
         )
