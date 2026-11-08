@@ -16,8 +16,11 @@ export function formatDate(dateStr: string): string {
 }
 
 export const DOMAIN_LABELS: Record<string, string> = {
+  life: 'Đời sống',
+  business: 'Kinh tế / Kinh doanh',
+  culture: 'Văn hóa',
+  society: 'Xã hội',
   technical: 'Kỹ thuật',
-  business: 'Kinh doanh',
   education: 'Giáo dục',
   personal: 'Cá nhân',
   research: 'Nghiên cứu',

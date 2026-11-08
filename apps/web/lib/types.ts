@@ -1,7 +1,9 @@
 // Shared TypeScript types mirroring the backend domain models
 // Source of Truth: docs/DOMAIN_SCHEMA.md, docs/API_CONTRACTS.md, backend endpoints
 
-export type DomainType = 'technical' | 'business' | 'education' | 'personal' | 'research'
+export type TargetDomainType = 'life' | 'business' | 'culture' | 'society'
+export type LegacyDomainType = 'technical' | 'education' | 'personal' | 'research'
+export type DomainType = TargetDomainType | LegacyDomainType
 export type SessionStatus = 'active' | 'paused' | 'completed' | 'archived' | 'draft'
 export type WorkflowStage =
   | 'idle'

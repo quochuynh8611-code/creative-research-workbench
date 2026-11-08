@@ -248,7 +248,7 @@ describe('SessionList Create Path', () => {
     expect(mockedCreateSession.mock.calls[0][0]).toEqual({
       title: 'Hệ thống pin mặt trời perovskite',
       description: 'Nâng cao hiệu suất chuyển đổi quang năng',
-      domain: 'technical',
+      domain: 'life',
       tags: ['solar', 'energy'],
     })
 
@@ -256,6 +256,33 @@ describe('SessionList Create Path', () => {
     await waitFor(() => {
       expect(screen.queryByLabelText(/tiêu đề/i)).not.toBeInTheDocument()
     })
+  })
+
+  it('7b. Form tạo session chỉ hiển thị 4 domain mục tiêu với default là life', async () => {
+    renderWithClient(<SessionList />)
+
+    await waitFor(() => {
+      expect(screen.getByText('Research Sessions')).toBeInTheDocument()
+    })
+
+    // Open form
+    fireEvent.click(screen.getByRole('button', { name: /tạo session mới/i }))
+
+    const domainSelect = screen.getByLabelText(/lĩnh vực/i) as HTMLSelectElement
+    expect(domainSelect).toBeInTheDocument()
+    expect(domainSelect.value).toBe('life')
+
+    const options = Array.from(domainSelect.querySelectorAll('option')).map((opt) => ({
+      value: opt.value,
+      label: opt.textContent?.trim(),
+    }))
+
+    expect(options).toEqual([
+      { value: 'life', label: 'Đời sống' },
+      { value: 'business', label: 'Kinh tế / Kinh doanh' },
+      { value: 'culture', label: 'Văn hóa' },
+      { value: 'society', label: 'Xã hội' },
+    ])
   })
 
   it('8. Hiển thị thông báo lỗi khi createSession thất bại và giữ form mở', async () => {

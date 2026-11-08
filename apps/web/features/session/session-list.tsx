@@ -44,11 +44,10 @@ const STATUS_COLORS: Record<string, string> = {
 }
 
 const DOMAIN_OPTIONS: { value: DomainType; label: string }[] = [
-  { value: 'technical', label: 'Kỹ thuật' },
-  { value: 'business', label: 'Kinh doanh' },
-  { value: 'education', label: 'Giáo dục' },
-  { value: 'personal', label: 'Cá nhân' },
-  { value: 'research', label: 'Nghiên cứu' },
+  { value: 'life', label: 'Đời sống' },
+  { value: 'business', label: 'Kinh tế / Kinh doanh' },
+  { value: 'culture', label: 'Văn hóa' },
+  { value: 'society', label: 'Xã hội' },
 ]
 
 export function SessionList() {
@@ -57,7 +56,7 @@ export function SessionList() {
   const [isCreating, setIsCreating] = useState(false)
   const [formTitle, setFormTitle] = useState('')
   const [formDescription, setFormDescription] = useState('')
-  const [formDomain, setFormDomain] = useState<DomainType>('technical')
+  const [formDomain, setFormDomain] = useState<DomainType>('life')
   const [formTags, setFormTags] = useState('')
   const [validationError, setValidationError] = useState<string | null>(null)
   const [confirmArchiveId, setConfirmArchiveId] = useState<string | null>(null)
