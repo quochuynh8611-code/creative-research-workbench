@@ -1,0 +1,483 @@
+{
+  "principles": {
+    "1": {
+      "everyday_title": "Chia nhỏ việc lớn (Phân đoạn)",
+      "daily_application": "Chia nhỏ mục tiêu, dự án hoặc thói quen phức tạp thành các bước nhỏ 5–15 phút dễ bắt đầu ngay.",
+      "daily_examples": [
+        "Chia bài đọc 40 trang sách thành 4 phần 10 trang đọc rải rác trong ngày.",
+        "Chia việc dọn dẹp toàn bộ ngôi nhà thành dọn từng góc phòng mỗi ngày trong tuần."
+      ],
+      "action_prompt": "Việc nào đang làm bạn choáng ngợp và có thể chia nhỏ thành bước 5 phút để bắt đầu ngay?"
+    },
+    "2": {
+      "everyday_title": "Tách bỏ phiền toái (Tách rời)",
+      "daily_application": "Tách riêng yếu tố gây xao nhãng, độc hại hoặc phiền toái ra khỏi môi trường học tập, làm việc và sinh hoạt.",
+      "daily_examples": [
+        "Để điện thoại ở phòng khác khi cần tập trung học tập hoặc làm việc sâu.",
+        "Tách riêng phần thảo luận ý kiến trái chiều ra buổi họp khác để tránh làm gián đoạn tiến độ chung."
+      ],
+      "action_prompt": "Yếu tố nào đang làm giảm hiệu suất hoặc gây căng thẳng nhiều nhất mà bạn có thể loại bỏ hoặc cách ly?"
+    },
+    "3": {
+      "everyday_title": "May đo theo ngữ cảnh (Chất lượng cục bộ)",
+      "daily_application": "Thay đổi cách tiếp cận hoặc công cụ tùy theo từng hoàn cảnh, đối tượng hoặc thời điểm cụ thể thay vì áp dụng một cách rập khuôn.",
+      "daily_examples": [
+        "Bố trí góc làm việc buổi sáng gần cửa sổ nhiều ánh sáng tự nhiên, buổi tối dùng đèn vàng ấm thư giãn.",
+        "Tùy biến cách giải thích bài học theo sở thích riêng của từng đứa trẻ thay vì giảng chung một bài văn mẫu."
+      ],
+      "action_prompt": "Bộ phận hoặc thời điểm nào trong ngày cần một cách đối xử đặc biệt thay vì áp dụng công thức chung?"
+    },
+    "4": {
+      "everyday_title": "Tạo nét riêng độc đáo (Bất đối xứng)",
+      "daily_application": "Phá vỡ tính đều đặn, cân bằng giả tạo để tạo điểm nhấn khác biệt, phù hợp với công năng thực tế hoặc tạo lợi thế cạnh tranh.",
+      "daily_examples": [
+        "Tạo thời gian biểu lệch: dành 3 ngày tập trung cao độ làm dự án khó, 2 ngày nhẹ nhàng cho hành chính.",
+        "Bàn làm việc thiết kế một bên hẹp để đi lại thoáng và một bên mở rộng chứa màn hình kép."
+      ],
+      "action_prompt": "Chỗ nào đang quá cân đối hoặc đồng đều mà nếu làm lệch đi sẽ tăng tính tiện dụng hoặc thu hút hơn?"
+    },
+    "5": {
+      "everyday_title": "Ghép đôi tiện ích (Kết hợp)",
+      "daily_application": "Gộp các thói quen, công việc hoặc tài nguyên tương đồng để làm cùng một lúc nhằm tiết kiệm thời gian và công sức.",
+      "daily_examples": [
+        "Vừa đi bộ tập thể dục vừa nghe podcast học ngoại ngữ hoặc sách nói kinh doanh.",
+        "Nấu cơm gia đình kết hợp hấp rau củ cùng lúc trên tầng hấp của nồi cơm điện."
+      ],
+      "action_prompt": "Hai việc nào thường ngày có thể gộp lại để thực hiện cùng một lúc mà không làm giảm chất lượng?"
+    },
+    "6": {
+      "everyday_title": "Một công đôi việc (Vạn năng)",
+      "daily_application": "Một vật dụng, kỹ năng hoặc quy trình đảm nhận nhiều vai trò khác nhau, giảm nhu cầu sắm thêm đồ đạc hoặc thao tác phức tạp.",
+      "daily_examples": [
+        "Dùng bàn ăn gia đình vừa là nơi dùng bữa vừa là bàn học nhóm cuối tuần của các con.",
+        "Học kỹ năng viết lách giúp vừa làm báo cáo công việc vừa viết bài chia sẻ chuyên môn trên mạng xã hội."
+      ],
+      "action_prompt": "Vật dụng hoặc kỹ năng nào sẵn có có thể gánh thêm nhiệm vụ để bạn không phải đầu tư thêm?"
+    },
+    "7": {
+      "everyday_title": "Xếp lồng gọn gàng (Chứa trong)",
+      "daily_application": "Đặt vật này bên trong vật khác hoặc lồng ghép quy trình nhỏ vào quy trình lớn để tiết kiệm không gian và tối ưu dòng chảy.",
+      "daily_examples": [
+        "Xếp các hộp đựng thực phẩm kích cỡ khác nhau lồng vào nhau khi cất trong ngăn tủ bếp.",
+        "Lồng ghép việc kiểm tra lại danh sách việc cần làm vào bước chuẩn bị túi xách trước khi ra khỏi nhà."
+      ],
+      "action_prompt": "Có quy trình hay đồ vật nào có thể đặt lồng vào bên trong một thứ khác để tiết kiệm diện tích và bước làm?"
+    },
+    "8": {
+      "everyday_title": "Mượn lực nâng đỡ (Phản trọng lượng)",
+      "daily_application": "Tận dụng ngoại lực, sự hỗ trợ từ người khác, công cụ tự động hoặc động lực sẵn có để gánh bớt áp lực cá nhân.",
+      "daily_examples": [
+        "Tham gia nhóm học tập cùng tiến để các thành viên nhắc nhở và tạo động lực giữ kỷ luật cho nhau.",
+        "Dùng giá đỡ công thái học nâng máy tính lên cao để cơ thể tự động ngồi thẳng lưng không tốn sức gồng."
+      ],
+      "action_prompt": "Bạn có thể mượn công cụ, đồng đội hoặc môi trường nào để giảm tải gánh nặng công việc hiện tại?"
+    },
+    "9": {
+      "everyday_title": "Hãm đà phòng trước (Gây ứng suất sơ bộ)",
+      "daily_application": "Tạo ra một lực cản hoặc hành động ngược hướng từ trước để vô hiệu hóa rủi ro hoặc tác động tiêu cực sắp xảy ra.",
+      "daily_examples": [
+        "Uống một ly nước ấm và ăn nhẹ hạt dinh dưỡng trước khi đi tiệc để tránh uống quá chén hoặc ăn quá no.",
+        "Tạo ngân sách chi tiêu giới hạn trên thẻ phụ để ngăn thói quen mua sắm ngẫu hứng khi lướt mạng."
+      ],
+      "action_prompt": "Bạn có thể chuẩn bị sẵn phản lực hoặc biện pháp hãm nào trước khi đối mặt với cám dỗ hoặc áp lực?"
+    },
+    "10": {
+      "everyday_title": "Chuẩn bị sẵn sàng (Tác động sơ bộ)",
+      "daily_application": "Sắp xếp, chuẩn bị trước công cụ, nguyên liệu hoặc thông tin từ đêm hôm trước để hôm sau hành động trơn tru không trì hoãn.",
+      "daily_examples": [
+        "Sơ chế sẵn rau củ và ướp gia vị vào tối Chủ nhật để các bữa tối trong tuần nấu chỉ mất 15 phút.",
+        "Soạn sẵn quần áo, tài liệu và sạc pin thiết bị ngay trước khi đi ngủ để sáng mai thức dậy bắt đầu ngày mới nhẹ nhàng."
+      ],
+      "action_prompt": "Hành động nào có thể làm từ hôm nay để công việc ngày mai diễn ra hoàn toàn êm đẹp?"
+    },
+    "11": {
+      "everyday_title": "Đệm lót an toàn (Dự phòng trước)",
+      "daily_application": "Tạo phương án dự phòng, phao cứu sinh hoặc đệm thời gian để khi có sự cố bất ngờ vẫn không bị vỡ kế hoạch.",
+      "daily_examples": [
+        "Luôn dành ra 15 phút đệm giữa các cuộc họp hoặc cuộc hẹn để bù trừ nếu bị kẹt xe hoặc thảo luận kéo dài.",
+        "Lưu bản sao bài thuyết trình trên USB và đám mây để phòng trường hợp máy tính cá nhân gặp trục trặc."
+      ],
+      "action_prompt": "Điểm rủi ro dễ gãy đổ nhất ở đâu và bạn đã có tấm đệm dự phòng nào cho nó chưa?"
+    },
+    "12": {
+      "everyday_title": "Cùng mặt phẳng tiện lợi (Đẳng thế)",
+      "daily_application": "Bố trí công việc hoặc vật dụng trên cùng một cấp độ hoặc luồng thao tác để không phải lên xuống, chuyển đổi trạng thái tốn sức.",
+      "daily_examples": [
+        "Để các tài liệu của dự án đang làm trên cùng một màn hình hoặc cùng một thư mục thay vì chia nhỏ phân tán.",
+        "Bố trí máy giặt, giỏ quần áo và giàn phơi trên cùng ban công để không phải bưng bê lên xuống cầu thang."
+      ],
+      "action_prompt": "Những vật dụng hay bước làm nào có thể đưa về cùng một mặt bằng để loại bỏ thao tác di chuyển thừa?"
+    },
+    "13": {
+      "everyday_title": "Đảo ngược góc nhìn (Làm ngược lại)",
+      "daily_application": "Đảo ngược thứ tự quen thuộc, đảo chiều hành động hoặc lật ngược vấn đề để tìm ra giải pháp bất ngờ và thanh thoát.",
+      "daily_examples": [
+        "Thay vì cố gắng nhồi nhét thêm việc vào lịch, hãy lập danh sách 'những việc kiên quyết không làm' (Not-To-Do List).",
+        "Thay vì bắt đầu viết từ mở bài, hãy viết phần kết luận và các ý chính trước rồi mới bổ sung mở đầu."
+      ],
+      "action_prompt": "Nếu làm hoàn toàn trái ngược với thói quen thông thường thì điều gì thú vị sẽ xảy ra?"
+    },
+    "14": {
+      "everyday_title": "Bo tròn mềm mại (Cầu hóa)",
+      "daily_application": "Chuyển từ các đường nét góc cạnh, cứng nhắc sang dạng cong, mềm dẻo, linh hoạt để giảm va đập và tạo sự thoải mái.",
+      "daily_examples": [
+        "Bọc góc bàn nhọn bằng mút cao su mềm để trẻ nhỏ trong nhà chạy nhảy không bị va đập chấn thương.",
+        "Chuyển lời phê bình gay gắt thành câu hỏi gợi mở mềm mỏng để người nghe dễ tiếp thu mà không tự vệ."
+      ],
+      "action_prompt": "Quy tắc hoặc góc tiếp xúc nào đang quá cứng nhắc và cần được bo tròn mềm mại hơn?"
+    },
+    "15": {
+      "everyday_title": "Linh hoạt biến chuyển (Linh hoạt hóa)",
+      "daily_application": "Tạo khả năng thích ứng linh hoạt, tháo lắp dễ dàng hoặc thay đổi hình thái tùy theo nhu cầu và không gian thực tế.",
+      "daily_examples": [
+        "Dùng bàn làm việc có thể nâng hạ độ cao để luân phiên giữa làm việc ngồi và đứng trong ngày.",
+        "Lập kế hoạch tuần dạng module mở, cho phép hoán đổi vị trí các buổi học khi có sự kiện đột xuất."
+      ],
+      "action_prompt": "Quy trình hay vật dụng nào có thể làm cho cơ động, dễ xoay chuyển hơn thay vì cố định một chỗ?"
+    },
+    "16": {
+      "everyday_title": "Làm lố hoặc làm vừa đủ (Tác động một phần hoặc quá mức)",
+      "daily_application": "Nếu không thể đạt được độ chính xác 100%, hãy chủ động làm vượt một chút rồi tỉa tót, hoặc làm vừa đủ ngưỡng chấp nhận được.",
+      "daily_examples": [
+        "Nấu cơm gia đình nấu dư thêm một chút để làm cơm chiên bữa sáng hôm sau thay vì sợ thiếu.",
+        "Viết bản nháp đầu tiên thả ga không phán xét, sau đó mới biên tập và cắt tỉa câu chữ cho gọn gàng."
+      ],
+      "action_prompt": "Có việc gì thay vì đo đếm từng li từng tí, bạn có thể làm dư một chút rồi chỉnh sửa sau sẽ nhanh hơn nhiều?"
+    },
+    "17": {
+      "everyday_title": "Mở thêm chiều mới (Chuyển sang chiều khác)",
+      "daily_application": "Khai thác thêm chiều dọc (không gian trên cao), chiều sâu thời gian hoặc góc độ tiếp cận mới khi mặt phẳng hiện tại bị quá tải.",
+      "daily_examples": [
+        "Lắp thêm kệ treo tường trên cao để sách và tài liệu, giải phóng toàn bộ mặt sàn cho phòng nhỏ.",
+        "Xếp quần áo theo chiều đứng vào ngăn kéo thay vì xếp chồng ngang, giúp nhìn thấy và lấy đồ dễ dàng mà không làm xáo trộn."
+      ],
+      "action_prompt": "Bạn có thể tận dụng không gian thẳng đứng hoặc một khía cạnh hoàn toàn mới nào chưa được khai thác?"
+    },
+    "18": {
+      "everyday_title": "Nhịp rung đánh thức (Dao động cơ học)",
+      "daily_application": "Dùng sự rung động, âm thanh rộn ràng hoặc dao động nhịp nhàng để tăng cường sự tỉnh táo, làm sạch hoặc khuấy động dòng chảy.",
+      "daily_examples": [
+        "Dùng bàn chải điện sóng rung siêu âm giúp làm sạch răng miệng kỹ lưỡng mà không làm tổn thương nướu.",
+        "Đặt báo thức rung nhẹ trên đồng hồ thông minh để thức dậy đúng giờ mà không làm phiền người nằm bên cạnh."
+      ],
+      "action_prompt": "Có thể dùng nhịp rung, âm thanh hoặc sự dao động nhẹ nào để việc thực thi trở nên dễ dàng và thư thái hơn?"
+    },
+    "19": {
+      "everyday_title": "Nhịp nhàng theo đợt (Tác động chu kỳ)",
+      "daily_application": "Thay đổi từ tác động liên tục gây mệt mỏi sang các đợt làm việc ngắt quãng, theo nhịp điệu sinh học tự nhiên.",
+      "daily_examples": [
+        "Áp dụng phương pháp Pomodoro: 25 phút tập trung cao độ, 5 phút nghỉ ngơi ngắn để duy trì năng lượng suốt ngày.",
+        "Gửi bản tin cập nhật định kỳ mỗi sáng thứ Hai thay vì gửi rải rác từng email vụn vặt gây phiền nhiễu."
+      ],
+      "action_prompt": "Công việc nào đang làm liên tục gây quá tải mà nếu chia thành các nhịp ngắt quãng sẽ hiệu quả hơn?"
+    },
+    "20": {
+      "everyday_title": "Giữ đà liên tục (Liên tục tác động có ích)",
+      "daily_application": "Duy trì hoạt động liên tục không để khoảng thời gian chết, tận dụng tối đa công suất và giữ nhịp quán tính tích cực.",
+      "daily_examples": [
+        "Dùng máy lọc không khí hoặc robot hút bụi hẹn giờ chạy đều đặn mỗi ngày để nhà luôn sạch mà không phải tổng vệ sinh mệt mỏi.",
+        "Tập thói quen đọc 5 trang sách mỗi ngày không ngắt quãng ngày nào để duy trì đà tích lũy tri thức."
+      ],
+      "action_prompt": "Khoảng thời gian trống nào có thể được lấp đầy bằng một tác động hữu ích tự động liên tục?"
+    },
+    "21": {
+      "everyday_title": "Tăng tốc vượt rào (Vượt nhanh)",
+      "daily_application": "Thực hiện việc khó chịu hoặc nguy cơ cao với tốc độ cực nhanh trong thời gian ngắn để giảm thiểu cảm giác đau đớn, e ngại.",
+      "daily_examples": [
+        "Bật nước lạnh tắm dứt khoát trong 30 giây để kích thích tuần hoàn thay vì đứng ngập ngừng sợ rét.",
+        "Xử lý ngay các email từ chối hoặc cuộc gọi đòi nợ khó chịu trong 10 phút đầu giờ làm việc để cả ngày nhẹ nhõm."
+      ],
+      "action_prompt": "Việc nào bạn đang chần chừ sợ hãi mà nếu làm thật nhanh trong 2 phút sẽ thoát khỏi gánh nặng tâm lý?"
+    },
+    "22": {
+      "everyday_title": "Biến khó thành khôn (Biến hại thành lợi)",
+      "daily_application": "Tận dụng chính sai sót, trở ngại, thất bại hoặc nguồn năng lượng tiêu cực để biến thành cơ hội học tập và đòn bẩy phát triển.",
+      "daily_examples": [
+        "Gặp sự cố kẹt xe thì tận dụng thời gian ngồi trên xe buýt để nghe bài giảng phát triển bản thân.",
+        "Lấy vỏ rau củ thừa và bã cà phê trong nhà bếp để ủ làm phân bón hữu cơ trồng rau sạch tại ban công."
+      ],
+      "action_prompt": "Yếu tố tiêu cực hoặc sự cố vừa qua có thể dạy cho bạn bài học gì hoặc tận dụng được vào việc gì hữu ích?"
+    },
+    "23": {
+      "everyday_title": "Gương soi phản hồi (Phản hồi)",
+      "daily_application": "Thiết lập cơ chế đo lường, theo dõi và phản hồi ngay lập tức để kịp thời điều chỉnh hành vi và kế hoạch trước khi quá muộn.",
+      "daily_examples": [
+        "Dùng vòng đeo tay sức khỏe rung báo nhắc nhở khi bạn đã ngồi yên một chỗ quá 60 phút.",
+        "Hỏi ý kiến các thành viên gia đình sau mỗi bữa ăn thử nghiệm món mới để ghi chú khẩu vị cho lần sau."
+      ],
+      "action_prompt": "Chỉ số nào cần có chuông cảnh báo hoặc phản hồi tức thì để bạn biết mình đang đi đúng hướng?"
+    },
+    "24": {
+      "everyday_title": "Cầu nối trung gian (Trung gian)",
+      "daily_application": "Dùng một vật trung gian, người kết nối hoặc bước đệm tạm thời để thực hiện một hành động khó hoặc kết nối hai bên mâu thuẫn.",
+      "daily_examples": [
+        "Dùng khay đựng tài liệu trung gian 'Cần xử lý trong tuần' trước khi phân loại vào hồ sơ lưu trữ cố định.",
+        "Nhờ người bạn chung đáng tin cậy mở lời hòa giải hiểu lầm giữa hai đồng nghiệp trong nhóm."
+      ],
+      "action_prompt": "Có người trung gian, công cụ đệm hoặc bước chuyển tiếp nào giúp kết nối hai yếu tố đang đối chọi nhau không?"
+    },
+    "25": {
+      "everyday_title": "Tự thân vận động (Tự phục vụ)",
+      "daily_application": "Thiết kế hệ sinh thái để đối tượng tự chăm sóc, tự bổ sung năng lượng hoặc tự sửa chữa mà không cần can thiệp từ bên ngoài.",
+      "daily_examples": [
+        "Đặt chậu cây cảnh tự hút nước ngầm từ đáy bình giúp cây tự sống tốt cả tháng khi chủ nhà đi công tác.",
+        "Rèn cho trẻ thói quen tự chuẩn bị cặp sách và xếp quần áo theo thời khóa biểu dán ở góc học tập."
+      ],
+      "action_prompt": "Làm thế nào để hệ thống, đồ dùng hoặc các thành viên tự vận hành được mà bạn không phải giám sát liên tục?"
+    },
+    "26": {
+      "everyday_title": "Bản sao thay thế (Sao chép)",
+      "daily_application": "Dùng bản chụp ảnh, tài liệu số hóa, mô hình mẫu hoặc bản sao giá rẻ thay vì phải dùng và bảo quản bản gốc đắt tiền.",
+      "daily_examples": [
+        "Chụp ảnh hóa đơn, giấy tờ xe lưu vào album điện thoại để tra cứu ngay thay vì luôn mang theo bản gốc dễ thất lạc.",
+        "Làm bài thực hành trên bản vẽ phác thảo trước khi cắt may trên tấm vải lụa đắt tiền."
+      ],
+      "action_prompt": "Bạn có thể số hóa, chụp lại hoặc làm mô hình thử nghiệm nhỏ nào thay cho việc mạo hiểm trên bản thật?"
+    },
+    "27": {
+      "everyday_title": "Dùng đồ tiện lợi một lần (Thay thế bằng vật rẻ tiền)",
+      "daily_application": "Thay thế vật dụng đắt tiền cần bảo dưỡng phức tạp bằng giải pháp dùng tạm, dễ kiếm hoặc chi phí thấp để tiết kiệm thời gian vệ sinh.",
+      "daily_examples": [
+        "Dùng giấy nến lót nồi chiên không dầu để hứng dầu mỡ thừa, sau khi nướng chỉ cần bỏ giấy là xong không phải chà rửa cực nhọc.",
+        "Dùng giấy ghi chú nhớ dán bảng việc trong tuần, xong việc thì xé bỏ không cần phần mềm quản lý phức tạp."
+      ],
+      "action_prompt": "Vật dụng hoặc thao tác bảo dưỡng nào đang tốn quá nhiều công sức mà có thể thay bằng giải pháp gọn nhẹ hơn?"
+    },
+    "28": {
+      "everyday_title": "Chuyển từ cơ sang số (Thay thế sơ đồ cơ học)",
+      "daily_application": "Thay thế các cơ chế vật lý cồng kềnh bằng cảm biến, tín hiệu quang học, số hóa hoặc tương tác thông minh.",
+      "daily_examples": [
+        "Thay chìa khóa cơ bằng khóa cửa vân tay/mã số giúp đi ra ngoài không lo quên chìa khóa.",
+        "Chuyển toàn bộ sổ ghi chép chi tiêu bằng giấy sang ứng dụng tài chính tự động đồng bộ tài khoản ngân hàng."
+      ],
+      "action_prompt": "Thao tác vật lý thủ công nào bạn có thể chuyển thành cảm biến, điều khiển giọng nói hoặc ứng dụng số hóa?"
+    },
+    "29": {
+      "everyday_title": "Đệm khí dòng chảy (Chất lỏng và khí)",
+      "daily_application": "Dùng áp lực nước, đệm không khí, bọt xốp hoặc dòng đối lưu để tạo sự êm ái, bôi trơn hoặc giải tỏa áp lực đè nén.",
+      "daily_examples": [
+        "Dùng túi chống sốc bơm khí để bảo vệ đồ gốm sứ khi gửi hàng đi xa thay vì nhồi giấy báo nặng nề.",
+        "Dùng tăm nước phun áp lực để vệ sinh kẽ răng thay cho chỉ nha khoa thông thường, êm dịu và sạch sâu hơn."
+      ],
+      "action_prompt": "Có thể dùng dòng nước, đệm khí hoặc luồng không khí nào để giảm ma sát, giảm chấn hoặc làm sạch tốt hơn?"
+    },
+    "30": {
+      "everyday_title": "Màng bọc linh hoạt (Màng dẻo và màng mỏng)",
+      "daily_application": "Dùng màng phim mỏng dẻo dai để ngăn cách, che chắn hoặc bảo vệ bề mặt thay vì dùng cấu trúc cứng nhắc cồng kềnh.",
+      "daily_examples": [
+        "Dùng màng bọc thực phẩm silicon co giãn tái sử dụng bọc kín tô bát thức ăn trong tủ lạnh ngăn lẫn mùi.",
+        "Dán miếng dán cường lực siêu mỏng bảo vệ màn hình điện thoại khỏi trầy xước mà không làm cộm túi áo."
+      ],
+      "action_prompt": "Có lớp màng mỏng hoặc vỏ bọc bảo vệ nào giúp che chắn hiệu quả mà không tốn diện tích không?"
+    },
+    "31": {
+      "everyday_title": "Xốp rỗng thoáng khí (Vật liệu xốp)",
+      "daily_application": "Tạo các lỗ rỗng li ti hoặc dùng kết cấu xốp để giảm trọng lượng, hút ẩm, cách nhiệt hoặc tăng diện tích hấp thu.",
+      "daily_examples": [
+        "Dùng miếng bọt biển melamine để chà sạch vết bẩn ố trên tường mà không cần dùng hóa chất tẩy rửa độc hại.",
+        "Dùng đá bọt hoặc than hoạt tính rỗng xốp đặt trong tủ giày để hút ẩm và khử mùi hôi tự nhiên."
+      ],
+      "action_prompt": "Cấu trúc có thể làm cho xốp, rỗng hoặc thoáng khí hơn để giảm cân nặng và tăng khả năng thấm hút không?"
+    },
+    "32": {
+      "everyday_title": "Đánh dấu bằng màu sắc (Thay đổi màu sắc)",
+      "daily_application": "Dùng màu sắc hoặc độ trong suốt để phân loại trực quan, cảnh báo trạng thái hoặc thay đổi tâm trạng cảm xúc.",
+      "daily_examples": [
+        "Dùng thớt màu đỏ cho thịt sống, thớt xanh cho rau củ quả chín để đảm bảo vệ sinh an toàn thực phẩm.",
+        "Tô màu highlight các việc ưu tiên cao bằng màu cam/đỏ trên lịch để dễ nhận diện trong nháy mắt."
+      ],
+      "action_prompt": "Có thể dùng mã màu nào để nhìn vào là hiểu ngay trạng thái mà không cần đọc chữ giải thích dài dòng?"
+    },
+    "33": {
+      "everyday_title": "Cùng hệ tương đồng (Đồng nhất)",
+      "daily_application": "Dùng các đối tượng có cùng chất liệu, cùng bản chất với nhau để tiếp xúc không gây xung đột, tương thích hoàn hảo.",
+      "daily_examples": [
+        "Dùng thìa muỗng bằng gỗ hoặc silicon để xào nấu trên chảo chống dính, không làm bong tróc lớp men chảo.",
+        "Chọn các thiết bị điện tử trong cùng một hệ sinh thái để chia sẻ tệp tin và sạc chung dây cáp trơn tru."
+      ],
+      "action_prompt": "Có những đồ vật nào nên chọn cùng chất liệu hoặc cùng nguồn gốc để chúng phối hợp nhịp nhàng với nhau?"
+    },
+    "34": {
+      "everyday_title": "Tự tiêu hủy tái sinh (Phân hủy và tái sinh)",
+      "daily_application": "Thiết kế để bộ phận xong nhiệm vụ thì tự biến mất, hòa tan hoặc phục hồi lại trạng thái ban đầu để tái sử dụng.",
+      "daily_examples": [
+        "Dùng viên giặt màng tự tan trong nước, không để lại rác thải bao bì nilon sau mỗi lần giặt.",
+        "Dùng túi rác sinh học làm từ tinh bột ngô tự phân hủy trong lòng đất sau khi thải bỏ ra môi trường."
+      ],
+      "action_prompt": "Yếu tố nào sau khi xong việc có thể tự tan biến hoặc phục hồi mà không cần dọn dẹp, xử lý thêm?"
+    },
+    "35": {
+      "everyday_title": "Đổi trạng thái thông số (Chuyển đổi thông số)",
+      "daily_application": "Thay đổi trạng thái vật lý, nhiệt độ, nồng độ, kết cấu hoặc độ cô đặc để việc xử lý trở nên dễ dàng hơn nhiều.",
+      "daily_examples": [
+        "Đông lạnh chuối chín muồi để làm kem chuối mát lạnh hoặc xay sinh tố sánh mịn mà không cần thêm đá viên.",
+        "Chuyển tài liệu đọc dài thành tệp âm thanh để vừa nghe vừa đi bộ thay vì căng mắt đọc trên màn hình."
+      ],
+      "action_prompt": "Nếu thay đổi dạng thức từ lỏng sang rắn, từ chữ viết sang âm thanh thì có giải quyết được bế tắc hiện tại không?"
+    },
+    "36": {
+      "everyday_title": "Tận dụng bước chuyển pha (Chuyển pha)",
+      "daily_application": "Tận dụng hiện tượng hấp thu hoặc tỏa nhiệt, giãn nở hoặc co ngót khi chuyển đổi giữa rắn, lỏng, khí để tạo hiệu ứng mong muốn.",
+      "daily_examples": [
+        "Dùng túi chườm gel lạnh: gel chuyển từ trạng thái mềm sang dẻo đông lạnh để hạ sốt và giảm sưng cơ nhanh chóng.",
+        "Đun sôi nước để dùng hơi nước nóng xông mặt giãn nở lỗ chân lông hoặc ủi phẳng nếp nhăn quần áo mềm mại."
+      ],
+      "action_prompt": "Có hiện tượng bay hơi, đông đá hay ngưng tụ nào có thể tận dụng để làm việc nhẹ nhàng hơn không?"
+    },
+    "37": {
+      "everyday_title": "Mượn nhiệt nở co (Giãn nở nhiệt)",
+      "daily_application": "Tận dụng đặc tính co ngót khi gặp lạnh và giãn nở khi gặp nóng của vật liệu để tháo lắp hoặc điều chỉnh trạng thái.",
+      "daily_examples": [
+        "Ngâm nắp lọ thủy tinh bị kẹt vào bát nước ấm để nắp kim loại giãn nở giúp vặn mở dễ dàng không đau tay.",
+        "Rót nước sôi vào mép ly thủy tinh bị lồng dính chặt vào nhau để tách rời chúng an toàn không lo bị vỡ."
+      ],
+      "action_prompt": "Có thể dùng một chút nhiệt độ nóng hoặc lạnh để giải quyết sự cố bị kẹt hay khít chặt này không?"
+    },
+    "38": {
+      "everyday_title": "Tăng cường năng lượng sạch (Chất oxy hóa mạnh)",
+      "daily_application": "Làm giàu oxy, tăng cường năng lượng tinh khiết hoặc chất kích hoạt tự nhiên để thúc đẩy quá trình diễn ra mạnh mẽ.",
+      "daily_examples": [
+        "Mở cửa sổ đón luồng gió tươi giàu oxy vào phòng làm việc lúc 2 giờ chiều để xua tan cơn buồn ngủ gà gật.",
+        "Dùng bột baking soda kết hợp giấm để tẩy rửa vết ố mốc khó chịu trong phòng tắm một cách an toàn và thân thiện."
+      ],
+      "action_prompt": "Môi trường có cần thêm không khí tươi mới, ánh sáng mặt trời hoặc năng lượng tích cực để bứt phá không?"
+    },
+    "39": {
+      "everyday_title": "Vùng đệm tĩnh lặng (Môi trường trơ)",
+      "daily_application": "Đặt trong môi trường trung tính, tĩnh lặng, chân không hoặc bọc bảo vệ để không bị tác động ăn mòn bởi các yếu tố bên ngoài.",
+      "daily_examples": [
+        "Hút chân không túi đựng chăn bông quần áo mùa đông để chống ẩm mốc, mối mọt và tiết kiệm 70% không gian tủ.",
+        "Tạo khoảng thời gian 'Do Not Disturb' (Không làm phiền) tắt chuông thông báo mỗi tối để cả nhà trò chuyện thư thái."
+      ],
+      "action_prompt": "Có thể tạo ra khoảng không gian hoặc thời gian được bảo vệ hoàn toàn khỏi sự làm phiền từ bên ngoài không?"
+    },
+    "40": {
+      "everyday_title": "Hợp lực đa thành phần (Vật liệu composite)",
+      "daily_application": "Kết hợp nhiều thành phần có ưu điểm bổ trợ cho nhau để tạo thành một tổng thể mạnh mẽ, khắc phục nhược điểm của từng cái riêng lẻ.",
+      "daily_examples": [
+        "Kết hợp bột yến mạch, các loại hạt và mật ong nướng giòn tạo thành thanh năng lượng vừa ngon miệng vừa no lâu cho bữa sáng.",
+        "Thành lập nhóm làm việc gồm một người giỏi ý tưởng sáng tạo và một người chặt chẽ về chi tiết thực thi để bù trừ hoàn hảo."
+      ],
+      "action_prompt": "Hai hoặc ba thành phần nào khi kết hợp lại sẽ tạo ra sức mạnh vượt trội hơn hẳn từng cái đơn lẻ?"
+    }
+  },
+  "parameters": {
+    "1": {
+      "everyday_label": "Khối lượng đồ đạc, hành lý hoặc vật dụng cần di chuyển"
+    },
+    "2": {
+      "everyday_label": "Khối lượng đồ đạc, bàn ghế hoặc vật cố định tại chỗ"
+    },
+    "3": {
+      "everyday_label": "Độ dài, chiều cao hoặc tầm với của đồ vật cơ động"
+    },
+    "4": {
+      "everyday_label": "Chiều dài, bề ngang hoặc diện tích mặt sàn của vật cố định"
+    },
+    "5": {
+      "everyday_label": "Bề mặt tiếp xúc hoặc diện tích sử dụng của đồ vật di chuyển"
+    },
+    "6": {
+      "everyday_label": "Diện tích mặt bàn, không gian sàn hoặc mặt phẳng cố định"
+    },
+    "7": {
+      "everyday_label": "Độ cồng kềnh, không gian chiếm chỗ của hành lý hoặc xe cộ"
+    },
+    "8": {
+      "everyday_label": "Sức chứa, dung tích của tủ kệ, bình chứa hoặc căn phòng"
+    },
+    "9": {
+      "everyday_label": "Tốc độ hoàn thành công việc, thao tác hoặc tiến độ dự án"
+    },
+    "10": {
+      "everyday_label": "Lực tác động, sức nặng cơ bắp hoặc công sức cần bỏ ra"
+    },
+    "11": {
+      "everyday_label": "Mức độ căng thẳng tinh thần, áp lực tâm lý hoặc nội lực gồng gánh"
+    },
+    "12": {
+      "everyday_label": "Hình dáng bên ngoài, tính thẩm mỹ hoặc kiểu dáng thiết kế"
+    },
+    "13": {
+      "everyday_label": "Độ vững vàng, cân bằng của thói quen, nếp sống hoặc tư thế"
+    },
+    "14": {
+      "everyday_label": "Độ bền chắc, khả năng chịu lực hoặc sức chịu đựng gian khó"
+    },
+    "15": {
+      "everyday_label": "Thời gian sử dụng bền lâu của đồ dùng hoặc thói quen duy trì"
+    },
+    "16": {
+      "everyday_label": "Độ bền bỉ trong môi trường khắc nghiệt hoặc áp lực liên tục"
+    },
+    "17": {
+      "everyday_label": "Nhiệt độ nóng lạnh của thời tiết hoặc thức ăn nước uống"
+    },
+    "18": {
+      "everyday_label": "Độ sáng, ánh sáng tự nhiên hoặc độ lung linh của không gian"
+    },
+    "19": {
+      "everyday_label": "Mức tiêu hao năng lượng cơ thể, sức lực hoặc điện năng"
+    },
+    "20": {
+      "everyday_label": "Công suất làm việc, hiệu năng máy móc hoặc năng suất cá nhân"
+    },
+    "21": {
+      "everyday_label": "Lượng nhiệt tỏa ra hoặc cảm giác ngột ngạt nóng nực"
+    },
+    "22": {
+      "everyday_label": "Chi phí, tiền bạc, sức lực hoặc nguồn lực bị hao phí"
+    },
+    "23": {
+      "everyday_label": "Mất mát nguyên vật liệu, lãng phí thức ăn hoặc đồ dùng hư hao"
+    },
+    "24": {
+      "everyday_label": "Sự thất lạc thông tin, hiểu lầm ý hoặc quên việc cần làm"
+    },
+    "25": {
+      "everyday_label": "Thời gian chết, lãng phí thời gian chờ đợi hoặc độ trễ"
+    },
+    "26": {
+      "everyday_label": "Lượng tài nguyên, số lượng đồ đạc hoặc nhân sự cần thiết"
+    },
+    "27": {
+      "everyday_label": "Độ tin cậy của lời hứa, tính chuẩn xác của kế hoạch hoặc thiết bị"
+    },
+    "28": {
+      "everyday_label": "Độ chính xác của phép đo lường, cân đong định lượng hoặc dữ liệu"
+    },
+    "29": {
+      "everyday_label": "Chất lượng hoàn thiện gia công, tay nghề hoặc độ sắc nét tinh tế"
+    },
+    "30": {
+      "everyday_label": "Các yếu tố tiêu cực bên ngoài tác động vào (tiếng ồn, bụi bẩn, thị phi)"
+    },
+    "31": {
+      "everyday_label": "Tác hại phụ do chính đối tượng hoặc thói quen xấu tự gây ra"
+    },
+    "32": {
+      "everyday_label": "Độ dễ dàng khi tự chế tạo, chuẩn bị nguyên liệu hoặc nấu nướng"
+    },
+    "33": {
+      "everyday_label": "Độ tiện lợi, dễ dùng, dễ thao tác trong cuộc sống hằng ngày"
+    },
+    "34": {
+      "everyday_label": "Độ dễ dàng khi bảo trì, sửa chữa đồ đạc hoặc phục hồi sức khỏe"
+    },
+    "35": {
+      "everyday_label": "Tính linh hoạt, khả năng thích ứng với hoàn cảnh thay đổi"
+    },
+    "36": {
+      "everyday_label": "Độ phức tạp rườm rà của quy trình, tổ chức hoặc thủ tục"
+    },
+    "37": {
+      "everyday_label": "Độ khó khăn khi theo dõi kiểm tra, giám sát tiến độ hoặc đo lường"
+    },
+    "38": {
+      "everyday_label": "Mức độ tự động hóa, tự giác thực hiện mà không cần nhắc nhở"
+    },
+    "39": {
+      "everyday_label": "Năng suất tổng thể, hiệu quả đầu ra của công việc hoặc học tập"
+    }
+  }
+}

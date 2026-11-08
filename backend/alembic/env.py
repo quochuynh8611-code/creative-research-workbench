@@ -15,7 +15,7 @@ config = context.config
 
 # Interpret the config file for Python logging.
 if config.config_file_name is not None:
-    fileConfig(config.config_file_name)
+    fileConfig(config.config_file_name, disable_existing_loggers=False)
 
 target_metadata = Base.metadata
 
@@ -23,18 +23,18 @@ target_metadata = Base.metadata
 def get_url() -> str:
     """
     Lấy Database URL theo thứ tự ưu tiên:
-      1. Biến môi trường DATABASE_URL (nếu được thiết lập trong os.environ và không rỗng/whitespace).
-      2. sqlalchemy.url trong Alembic Config (nếu được caller/test runner truyền rõ ràng và không rỗng).
+      1. sqlalchemy.url trong Alembic Config (nếu được caller/test runner truyền rõ ràng và không rỗng/whitespace).
+      2. Biến môi trường DATABASE_URL (nếu được thiết lập trong os.environ và không rỗng/whitespace).
       3. settings.DATABASE_URL (từ pydantic-settings / file .env).
     Chuẩn hóa driver sang psycopg2 đồng bộ cho Alembic engine.
     """
-    env_url = os.environ.get("DATABASE_URL", "").strip()
     ini_url = (config.get_main_option("sqlalchemy.url") or "").strip()
+    env_url = os.environ.get("DATABASE_URL", "").strip()
 
-    if env_url:
-        url = env_url
-    elif ini_url:
+    if ini_url:
         url = ini_url
+    elif env_url:
+        url = env_url
     elif getattr(settings, "DATABASE_URL", None) and str(settings.DATABASE_URL).strip():
         url = str(settings.DATABASE_URL).strip()
     else:

@@ -4,6 +4,7 @@ import React from 'react'
 import { Lightbulb, CheckCircle2, ArrowRight, Sparkles, HelpCircle, Bookmark } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { RecommendedMethod, NoteDraft } from '@/lib/types'
+import { EverydayMetadataSection } from '@/features/triz/everyday-metadata-section'
 
 interface PrincipleSuggestionsProps {
   methods?: RecommendedMethod[]
@@ -61,18 +62,21 @@ export function PrincipleSuggestions({
               key={`${method.id}-${principleNum}`}
               className="p-5 rounded-2xl border border-border bg-card/60 backdrop-blur-sm space-y-3 hover:border-amber-500/40 hover:shadow-md transition-all flex flex-col justify-between"
             >
-              <div className="space-y-2">
+              <div className="space-y-3">
                 <div className="flex items-start justify-between gap-2">
                   <span className="px-2.5 py-0.5 bg-amber-500/15 text-amber-600 border border-amber-500/30 rounded-full text-xs font-bold shrink-0">
                     #{principleNum}
                   </span>
                 </div>
-                <h3 className="text-base font-bold text-foreground">
-                  {method.title}
-                </h3>
-                <p className="text-xs text-muted-foreground leading-relaxed">
-                  {method.description}
-                </p>
+                <EverydayMetadataSection
+                  principleId={principleNum}
+                  everydayTitle={method.everyday_title}
+                  dailyApplication={method.daily_application}
+                  dailyExamples={method.daily_examples}
+                  actionPrompt={method.action_prompt}
+                  technicalTitle={method.title}
+                  technicalDescription={method.description}
+                />
               </div>
 
               <div className="pt-2 border-t border-border/50 flex flex-wrap items-center justify-end gap-2">

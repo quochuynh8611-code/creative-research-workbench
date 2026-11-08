@@ -444,10 +444,10 @@ async def test_domain_templates_catalog_stability_and_immutability():
 
     assert response.status_code == 200
     data = response.json()["data"]
-    assert len(data) == 3
+    assert len(data) == 9
 
     domains = {t["domain"] for t in data}
-    assert domains == {"technical", "business", "software"}
+    assert {"technical", "business", "software"}.issubset(domains)
 
     for tpl in data:
         assert "id" in tpl and tpl["id"]

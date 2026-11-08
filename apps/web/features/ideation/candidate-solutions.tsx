@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import {
   Lightbulb,
@@ -38,6 +38,7 @@ interface CandidateSolutionsProps {
   initialDraft?: {
     title?: string
     mechanism?: string
+    principle_used?: number | string
   } | null
   onSaveAsNote?: (draft: NoteDraft) => void
 }
@@ -61,6 +62,7 @@ export function CandidateSolutions({
   onSaveAsNote,
 }: CandidateSolutionsProps) {
   const queryClient = useQueryClient()
+  const formRef = useRef<HTMLDivElement>(null)
   const [title, setTitle] = useState(initialDraft?.title || '')
   const [mechanism, setMechanism] = useState(initialDraft?.mechanism || '')
   const [noveltyScore, setNoveltyScore] = useState<number>(0.5)
@@ -76,6 +78,9 @@ export function CandidateSolutions({
       if (initialDraft.title) setTitle(initialDraft.title)
       if (initialDraft.mechanism) setMechanism(initialDraft.mechanism)
       setIsFormOpen(true)
+      if (formRef.current && typeof formRef.current.scrollIntoView === 'function') {
+        formRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' })
+      }
     }
   }, [initialDraft])
 
@@ -197,13 +202,22 @@ export function CandidateSolutions({
       </div>
 
       {/* Creation Form Card */}
-      <div className="bg-card rounded-2xl border border-border p-5 shadow-sm space-y-4">
+      <div ref={formRef} className="bg-card rounded-2xl border border-border p-5 shadow-sm space-y-4">
         <div className="flex items-center justify-between">
           <h3 className="text-sm font-bold text-foreground flex items-center gap-2">
             <Plus className="w-4 h-4 text-primary" />
             <span>Đề xuất giải pháp mới</span>
           </h3>
         </div>
+
+        {initialDraft?.principle_used && (
+          <div className="flex items-center gap-2 p-3 rounded-xl bg-amber-500/10 border border-amber-500/25 text-xs text-amber-700 dark:text-amber-400">
+            <Sparkles className="w-4 h-4 text-amber-500 shrink-0" />
+            <span>
+              Bản nháp được gợi ý từ <strong>Nguyên tắc #{initialDraft.principle_used}</strong>. Bạn hãy điều chỉnh nội dung và bấm &quot;Thêm giải pháp&quot; để lưu.
+            </span>
+          </div>
+        )}
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid grid-cols-1 gap-4">

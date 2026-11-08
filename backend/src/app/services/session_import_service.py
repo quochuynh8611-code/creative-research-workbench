@@ -16,13 +16,89 @@ from app.domain.models import (
     ResearchSession,
     SessionStatus,
     ProblemFrame,
+    Contradiction,
     ContradictionType,
     ResearchNote,
     CandidateSolution,
 )
+from app.services.problem_structuring_service import create_contradiction_record
 
 # Supported template schema versions (Phase 9.4 hardening)
 _SUPPORTED_SNAPSHOT_VERSIONS: frozenset[str] = frozenset({"v1", "v1.0", "1", "1.0"})
+_VALID_CONTRADICTION_TYPES: frozenset[str] = frozenset({"technical", "physical", "none", "unknown"})
+
+
+def _validate_and_parse_explicit_contradictions(
+    raw_contras: Any,
+    has_explicit_key: bool,
+) -> tuple[bool, list[dict[str, Any]]]:
+    """
+    Validate and parse explicit contradictions payload before database mutation (Fail-Closed).
+
+    Returns:
+        tuple[bool, list[dict[str, Any]]]:
+          - (False, []): Key is missing or explicitly null -> trigger backward-compatible derivation.
+          - (True, []): Explicit empty list [] -> respect intention, save 0 records, do NOT derive.
+          - (True, [items]): Valid explicit items -> save exactly as given.
+
+    Raises:
+        ValueError: with precise field location (e.g. contradictions[0].type) if contract is violated.
+    """
+    if not has_explicit_key or raw_contras is None:
+        return False, []
+
+    if not isinstance(raw_contras, list):
+        raise ValueError("Invalid snapshot payload at 'contradictions': expected a list or null.")
+
+    parsed_items: list[dict[str, Any]] = []
+    for idx, item in enumerate(raw_contras):
+        loc = f"contradictions[{idx}]"
+        if not isinstance(item, dict):
+            raise ValueError(f"Invalid snapshot payload at '{loc}': expected an object.")
+
+        # 1. Validate type strictly
+        c_type = item.get("type")
+        if not isinstance(c_type, str) or c_type not in _VALID_CONTRADICTION_TYPES:
+            raise ValueError(
+                f"Invalid contradiction type at '{loc}.type': expected one of "
+                f"{sorted(_VALID_CONTRADICTION_TYPES)}, received {c_type!r}."
+            )
+
+        # 2. Validate statement strictly
+        raw_stmt = item.get("statement")
+        if not isinstance(raw_stmt, str) or not raw_stmt.strip():
+            raise ValueError(
+                f"Invalid contradiction statement at '{loc}.statement': "
+                "statement is required, must be a string, and cannot be blank."
+            )
+        clean_stmt = raw_stmt.strip()
+
+        # 3. Validate suggested_principles strictly
+        principles_val = item.get("suggested_principles")
+        parsed_principles: list[int] | None = None
+        if principles_val is not None:
+            if not isinstance(principles_val, list):
+                raise ValueError(
+                    f"Invalid suggested_principles at '{loc}.suggested_principles': "
+                    "expected a list of integer IDs or null."
+                )
+            parsed_principles = []
+            for p_idx, p in enumerate(principles_val):
+                p_loc = f"{loc}.suggested_principles[{p_idx}]"
+                # Python bool is a subclass of int, so reject bool explicitly
+                if isinstance(p, bool) or not isinstance(p, int) or p < 1 or p > 40:
+                    raise ValueError(
+                        f"Invalid principle ID at '{p_loc}': expected an integer in 1..40, received {p!r}."
+                    )
+                parsed_principles.append(p)
+
+        parsed_items.append({
+            "type": ContradictionType(c_type),
+            "statement": clean_stmt,
+            "suggested_principles": parsed_principles,
+        })
+
+    return True, parsed_items
 
 
 def _compute_payload_checksum(payload: dict) -> str:
@@ -102,6 +178,20 @@ def import_session_from_json(
     if frame_data is not None and not isinstance(frame_data, dict):
         raise ValueError("Invalid snapshot: problem_frame must be an object.")
 
+    has_explicit_contras = False
+    raw_contras = None
+    if "contradictions" in snapshot:
+        raw_contras = snapshot.get("contradictions")
+        has_explicit_contras = True
+    elif isinstance(frame_data, dict) and "contradictions" in frame_data:
+        raw_contras = frame_data.get("contradictions")
+        has_explicit_contras = True
+
+    is_explicit_contras, parsed_contras = _validate_and_parse_explicit_contradictions(
+        raw_contras=raw_contras,
+        has_explicit_key=has_explicit_contras,
+    )
+
     notes_data = snapshot.get("research_notes")
     if notes_data is not None and not isinstance(notes_data, list):
         raise ValueError("Invalid snapshot: research_notes must be a list.")
@@ -136,6 +226,10 @@ def import_session_from_json(
             contra_type_raw = str(frame_data.get("contradiction_type") or "technical").lower()
             if contra_type_raw == "physical":
                 contra_type = ContradictionType.physical
+            elif contra_type_raw == "none":
+                contra_type = ContradictionType.none
+            elif contra_type_raw == "unknown":
+                contra_type = ContradictionType.unknown
             else:
                 contra_type = ContradictionType.technical
 
@@ -154,6 +248,34 @@ def import_session_from_json(
             )
             db.add(problem_frame)
             has_frame = True
+
+            # 2b. Import explicit or derive Contradictions (P1-02 contract hardening)
+            if is_explicit_contras:
+                # Explicit list is respected: if empty ([]), save 0 records and do NOT derive
+                for c_item in parsed_contras:
+                    contra_rec = Contradiction(
+                        problem_frame=problem_frame,
+                        type=c_item["type"],
+                        statement=c_item["statement"],
+                        suggested_principles=c_item["suggested_principles"],
+                    )
+                    db.add(contra_rec)
+            elif contra_type in (ContradictionType.technical, ContradictionType.physical):
+                if contra_type == ContradictionType.technical:
+                    if improving_param or worsening_param:
+                        contra_rec = create_contradiction_record(
+                            contradiction_type=contra_type,
+                            improving_param=improving_param,
+                            worsening_param=worsening_param,
+                        )
+                        contra_rec.problem_frame = problem_frame
+                        db.add(contra_rec)
+                elif contra_type == ContradictionType.physical:
+                    contra_rec = create_contradiction_record(
+                        contradiction_type=contra_type,
+                    )
+                    contra_rec.problem_frame = problem_frame
+                    db.add(contra_rec)
 
         # 3. Import Research Notes if present
         if isinstance(notes_data, list):

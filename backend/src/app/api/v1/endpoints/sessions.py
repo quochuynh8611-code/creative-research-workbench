@@ -818,11 +818,19 @@ async def next_step(
     if target_state:
         try:
             current_state = engine.transition(session_id, target_state=target_state)
+            if db is not None:
+                db.commit()
         except InvalidTransitionError as e:
+            if db is not None:
+                db.rollback()
             raise HTTPException(
                 status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
                 detail=str(e),
             )
+        except Exception:
+            if db is not None:
+                db.rollback()
+            raise
     else:
         current_state = previous_state
 
@@ -841,6 +849,35 @@ async def next_step(
     return {
         **payload,
         "data": payload,
+    }
+
+
+@router.get("/{session_id}/recommendations", status_code=status.HTTP_200_OK)
+async def get_session_recommendations(
+    session_id: uuid.UUID,
+    db: Session | None = Depends(get_db),
+    recommender: MethodRecommender = Depends(get_method_recommender),
+):
+    """
+    Lấy danh sách các nguyên tắc sáng tạo TRIZ được gợi ý cho session dựa trên ProblemFrame hiện có
+    mà không cần kích hoạt chuyển bước FSM (Phase 1B).
+    """
+    if db is not None:
+        session_record = db.query(ResearchSession).filter_by(id=session_id).first()
+        if not session_record:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"ResearchSession with id '{session_id}' not found.",
+            )
+        recommender = MethodRecommender(bind=db)
+
+    recommendations = recommender.recommend_methods(session_id)
+    return {
+        "data": recommendations,
+        "meta": {
+            "total": len(recommendations),
+            "session_id": str(session_id),
+        },
     }
 
 

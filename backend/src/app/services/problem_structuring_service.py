@@ -231,9 +231,13 @@ _PARAM_TO_ID_MAP: dict[str, int] = {
     "power": 21,
     "energy_consumption": 22,
     "loss_of_energy": 22,
+    # loss_of_money ánh xạ tới #22 energy_consumption vì là hao tổn nguồn lực/chi phí.
+    "loss_of_money": 22,
     "loss_of_substance": 23,
     "loss_of_information": 24,
     "loss_of_time": 25,
+    # duration_action ánh xạ tới #25 loss_of_time vì là thời gian thực thi/độ trễ.
+    "duration_action": 25,
     "quantity_of_substance": 26,
     "reliability": 27,
     "measurement_accuracy": 28,
@@ -254,6 +258,42 @@ _PARAM_TO_ID_MAP: dict[str, int] = {
 
 _DEFAULT_TECHNICAL_PRINCIPLES: list[int] = [1, 10, 28, 35]
 _PHYSICAL_PRINCIPLES: list[int] = [1, 2, 3, 4]  # Phân tách trong không gian, thời gian, điều kiện, hệ thống
+
+
+def create_contradiction_record(
+    contradiction_type: ContradictionType,
+    improving_param: str | None = None,
+    worsening_param: str | None = None,
+    statement: str | None = None,
+    suggested_principles: list[int] | None = None,
+) -> Contradiction:
+    """Tạo Contradiction record với danh sách nguyên tắc gợi ý từ Ma trận 39x39 Altshuller."""
+    if contradiction_type == ContradictionType.technical:
+        improving_id = _PARAM_TO_ID_MAP.get(improving_param or "", 0)
+        worsening_id = _PARAM_TO_ID_MAP.get(worsening_param or "", 0)
+
+        principles = (
+            suggested_principles
+            if suggested_principles is not None
+            else _CONTRADICTION_MATRIX_39X39.get((improving_id, worsening_id), [])
+        )
+        stmt = statement or f"Cải thiện '{improving_param}' làm suy giảm '{worsening_param}'."
+    elif contradiction_type == ContradictionType.physical:
+        principles = (
+            suggested_principles
+            if suggested_principles is not None
+            else list(_PHYSICAL_PRINCIPLES)
+        )
+        stmt = statement or "Mâu thuẫn vật lý giữa các trạng thái đối nghịch trong hệ thống."
+    else:
+        principles = suggested_principles or []
+        stmt = statement or "Không xác định mâu thuẫn."
+
+    return Contradiction(
+        type=contradiction_type,
+        statement=stmt,
+        suggested_principles=principles,
+    )
 
 
 class ProblemStructuringService:
@@ -448,20 +488,10 @@ class ProblemStructuringService:
         worsening_param: str | None,
     ) -> Contradiction:
         """Tạo Contradiction record với danh sách nguyên tắc gợi ý từ Ma trận 39x39 Altshuller."""
-        if contradiction_type == ContradictionType.technical:
-            improving_id = _PARAM_TO_ID_MAP.get(improving_param or "", 0)
-            worsening_id = _PARAM_TO_ID_MAP.get(worsening_param or "", 0)
-
-            principles = _CONTRADICTION_MATRIX_39X39.get((improving_id, worsening_id), [])
-            statement = f"Cải thiện '{improving_param}' làm suy giảm '{worsening_param}'."
-        else:
-            principles = _PHYSICAL_PRINCIPLES
-            statement = f"Mâu thuẫn vật lý giữa các trạng thái đối nghịch trong hệ thống."
-
-        return Contradiction(
-            type=contradiction_type,
-            statement=statement,
-            suggested_principles=principles,
+        return create_contradiction_record(
+            contradiction_type=contradiction_type,
+            improving_param=improving_param,
+            worsening_param=worsening_param,
         )
 
     def _save_frame(self, session: Session, frame: ProblemFrame) -> None:

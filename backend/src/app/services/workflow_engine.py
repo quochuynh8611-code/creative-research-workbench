@@ -163,6 +163,8 @@ class WorkflowEngine:
             session_record.workflow_state = target_enum.value
             db.flush()
             db.refresh(session_record)
+            if should_close:
+                db.commit()
             return session_record.workflow_state
         finally:
             if should_close:

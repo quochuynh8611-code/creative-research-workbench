@@ -17,6 +17,7 @@ from app.services.problem_structuring_service import (
     _TRIZ_DATA,
     auto_map_parameters,
 )
+from app.services.everyday_triz_lens import get_everyday_triz_lens
 
 router = APIRouter()
 
@@ -32,19 +33,23 @@ class AutoMapRequest(BaseModel):
 
 def _format_parameter(param_id: int, data: dict[str, Any]) -> dict[str, Any]:
     """Chuẩn hóa dữ liệu một thông số kỹ thuật TRIZ (1..39)."""
-    return {
+    item = {
         "id": data.get("id", param_id),
         "code": data.get("code", f"param_{param_id}"),
         "name_vi": data.get("name_vi", ""),
         "name_en": data.get("name_en", ""),
         "description": data.get("description", ""),
     }
+    lens = get_everyday_triz_lens().get_parameter_lens(param_id)
+    if lens:
+        item["everyday_label"] = lens.get("everyday_label", "")
+    return item
 
 
 def _format_principle(principle_id: int, data: dict[str, Any]) -> dict[str, Any]:
     """Chuẩn hóa dữ liệu một nguyên tắc sáng tạo TRIZ (1..40)."""
     pid = data.get("id", principle_id)
-    return {
+    item = {
         "id": pid,
         "principle_id": data.get("principle_id", pid),
         "name_vi": data.get("name_vi", ""),
@@ -53,6 +58,13 @@ def _format_principle(principle_id: int, data: dict[str, Any]) -> dict[str, Any]
         "explanation": data.get("explanation", ""),
         "examples": data.get("examples", []),
     }
+    lens = get_everyday_triz_lens().get_principle_lens(pid)
+    if lens:
+        item["everyday_title"] = lens.get("everyday_title", "")
+        item["daily_application"] = lens.get("daily_application", "")
+        item["daily_examples"] = lens.get("daily_examples", [])
+        item["action_prompt"] = lens.get("action_prompt", "")
+    return item
 
 
 # ──────────────────────────────────────────────

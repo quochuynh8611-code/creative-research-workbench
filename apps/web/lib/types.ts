@@ -71,6 +71,10 @@ export interface RecommendedMethod {
   principle?: number
   title: string
   description: string
+  everyday_title?: string
+  daily_application?: string
+  daily_examples?: string[]
+  action_prompt?: string
 }
 
 export interface NextStepResponse {
@@ -275,6 +279,7 @@ export interface TrizParameter {
   name_vi: string
   name_en: string
   description?: string
+  everyday_label?: string
 }
 
 export interface TrizParametersResponse {
@@ -290,6 +295,10 @@ export interface TrizPrinciple {
   description: string
   explanation?: string
   examples?: string[]
+  everyday_title?: string
+  daily_application?: string
+  daily_examples?: string[]
+  action_prompt?: string
 }
 
 export interface TrizPrinciplesResponse {

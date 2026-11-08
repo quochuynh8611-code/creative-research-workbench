@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import {
   Grid3X3,
@@ -17,14 +17,20 @@ import {
 import { getTrizParameters, lookupTrizMatrix } from '@/lib/api-client'
 import type { TrizPrinciple, TrizLookupResponse, NoteDraft } from '@/lib/types'
 import { cn } from '@/lib/utils'
+import { resolveParamId } from '@/lib/triz-param-resolver'
+import { EverydayMetadataSection } from '@/features/triz/everyday-metadata-section'
 
 interface TrizMatrixLookupProps {
+  improvingParameter?: string | number | null
+  worseningParameter?: string | number | null
   onSelectPrinciple?: (principle: TrizPrinciple) => void
   onSaveAsNote?: (draft: NoteDraft) => void
   className?: string
 }
 
 export function TrizMatrixLookup({
+  improvingParameter,
+  worseningParameter,
   onSelectPrinciple,
   onSaveAsNote,
   className,
@@ -47,6 +53,23 @@ export function TrizMatrixLookup({
     staleTime: 1000 * 60 * 30, // Dữ liệu chuẩn 39 thông số tĩnh trong 30 phút
   })
 
+  const parameters = paramsData?.data || []
+
+  // Tự động phân giải tham số và chạy lookup khi có improvingParameter và worseningParameter
+  useEffect(() => {
+    if (!parameters || parameters.length === 0) return
+    if (!improvingParameter || !worseningParameter) return
+
+    const impId = resolveParamId(improvingParameter, parameters)
+    const worsId = resolveParamId(worseningParameter, parameters)
+
+    if (impId && worsId) {
+      setImprovingId(impId)
+      setWorseningId(worsId)
+      setActiveLookupQuery({ improving: impId, worsening: worsId })
+    }
+  }, [improvingParameter, worseningParameter, parameters])
+
   // 2. Tra cứu ma trận mâu thuẫn Altshuller 39x39
   const {
     data: lookupResult,
@@ -62,8 +85,6 @@ export function TrizMatrixLookup({
       }),
     enabled: !!activeLookupQuery,
   })
-
-  const parameters = paramsData?.data || []
 
   const handleLookup = () => {
     if (improvingId !== '' && worseningId !== '') {
@@ -115,7 +136,7 @@ export function TrizMatrixLookup({
             <option value="">-- Chọn thông số cần nâng cao --</option>
             {parameters.map((param) => (
               <option key={`imp-${param.id}`} value={param.id}>
-                {`#${param.id}. ${param.name_vi} (${param.name_en})`}
+                {`#${param.id}. ${param.name_vi} (${param.name_en})${param.everyday_label ? ` — ${param.everyday_label}` : ''}`}
               </option>
             ))}
           </select>
@@ -141,7 +162,7 @@ export function TrizMatrixLookup({
             <option value="">-- Chọn thông số bị ảnh hưởng tiêu cực --</option>
             {parameters.map((param) => (
               <option key={`wors-${param.id}`} value={param.id}>
-                {`#${param.id}. ${param.name_vi} (${param.name_en})`}
+                {`#${param.id}. ${param.name_vi} (${param.name_en})${param.everyday_label ? ` — ${param.everyday_label}` : ''}`}
               </option>
             ))}
           </select>
@@ -226,7 +247,7 @@ export function TrizMatrixLookup({
                         key={`principle-${pid}`}
                         className="p-4 rounded-xl border border-border bg-card/80 space-y-2.5 flex flex-col justify-between hover:border-amber-500/40 transition-all shadow-sm"
                       >
-                        <div className="space-y-1.5">
+                        <div className="space-y-2">
                           <div className="flex items-center justify-between">
                             <span className="px-2 py-0.5 rounded-md text-[11px] font-bold bg-amber-500/15 text-amber-600 border border-amber-500/25">
                               #{pid}
@@ -235,17 +256,17 @@ export function TrizMatrixLookup({
                               {principle.name_en}
                             </span>
                           </div>
-                          <h5 className="text-sm font-bold text-foreground">
-                            {principle.name_vi}
-                          </h5>
-                          <p className="text-xs text-muted-foreground leading-relaxed line-clamp-3">
-                            {principle.description}
-                          </p>
-                          {principle.explanation && (
-                            <div className="p-2 rounded bg-muted/40 text-[11px] text-muted-foreground italic border-l-2 border-amber-500/40">
-                              {principle.explanation}
-                            </div>
-                          )}
+
+                          <EverydayMetadataSection
+                            principleId={pid}
+                            everydayTitle={principle.everyday_title}
+                            dailyApplication={principle.daily_application}
+                            dailyExamples={principle.daily_examples}
+                            actionPrompt={principle.action_prompt}
+                            technicalTitle={principle.name_vi}
+                            technicalDescription={principle.description}
+                            explanation={principle.explanation}
+                          />
                         </div>
 
                         <div className="pt-2 border-t border-border/50 flex flex-wrap items-center justify-end gap-2">
@@ -269,9 +290,10 @@ export function TrizMatrixLookup({
                               type="button"
                               onClick={() => onSelectPrinciple(principle)}
                               className="text-[11px] text-primary font-medium hover:underline flex items-center gap-1"
+                              aria-label={`Áp dụng nguyên tắc #${pid}`}
                             >
                               <Lightbulb className="w-3 h-3" />
-                              <span>Đưa vào ý tưởng nghiên cứu</span>
+                              <span>Áp dụng thành giải pháp</span>
                             </button>
                           )}
                         </div>
