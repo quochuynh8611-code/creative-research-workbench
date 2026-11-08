@@ -248,7 +248,7 @@ describe('SessionList Create Path', () => {
     expect(mockedCreateSession.mock.calls[0][0]).toEqual({
       title: 'Hệ thống pin mặt trời perovskite',
       description: 'Nâng cao hiệu suất chuyển đổi quang năng',
-      domain: 'technical',
+      domain: 'life',
       tags: ['solar', 'energy'],
     })
 
@@ -256,6 +256,33 @@ describe('SessionList Create Path', () => {
     await waitFor(() => {
       expect(screen.queryByLabelText(/tiêu đề/i)).not.toBeInTheDocument()
     })
+  })
+
+  it('7b. Form tạo session chỉ hiển thị 4 domain mục tiêu với default là life', async () => {
+    renderWithClient(<SessionList />)
+
+    await waitFor(() => {
+      expect(screen.getByText('Research Sessions')).toBeInTheDocument()
+    })
+
+    // Open form
+    fireEvent.click(screen.getByRole('button', { name: /tạo session mới/i }))
+
+    const domainSelect = screen.getByLabelText(/^lĩnh vực$/i) as HTMLSelectElement
+    expect(domainSelect).toBeInTheDocument()
+    expect(domainSelect.value).toBe('life')
+
+    const options = Array.from(domainSelect.querySelectorAll('option')).map((opt) => ({
+      value: opt.value,
+      label: opt.textContent?.trim(),
+    }))
+
+    expect(options).toEqual([
+      { value: 'life', label: 'Đời sống' },
+      { value: 'business', label: 'Kinh tế / Kinh doanh' },
+      { value: 'culture', label: 'Văn hóa' },
+      { value: 'society', label: 'Xã hội' },
+    ])
   })
 
   it('8. Hiển thị thông báo lỗi khi createSession thất bại và giữ form mở', async () => {
@@ -644,6 +671,110 @@ describe('SessionList Lifecycle & Safe Deletion (Phase 5.9)', () => {
         template_id: 'engineering_composite_arm',
       })
       expect(screen.queryByText('Mẫu Nghiên cứu Định sẵn (Domain Templates)')).not.toBeInTheDocument()
+    })
+  })
+
+  describe('SessionList Domain Filter & Badges', () => {
+    it('20. Hiển thị dropdown bộ lọc Lĩnh vực với option "Tất cả lĩnh vực" và 4 domain mục tiêu', async () => {
+      renderWithClient(<SessionList />)
+
+      await waitFor(() => {
+        expect(screen.getByText('Research Sessions')).toBeInTheDocument()
+      })
+
+      const filterSelect = screen.getByLabelText(/lọc theo lĩnh vực/i) as HTMLSelectElement
+      expect(filterSelect).toBeInTheDocument()
+      expect(filterSelect.value).toBe('all')
+
+      const options = Array.from(filterSelect.querySelectorAll('option')).map((opt) => ({
+        value: opt.value,
+        label: opt.textContent?.trim(),
+      }))
+
+      expect(options).toEqual([
+        { value: 'all', label: 'Tất cả lĩnh vực' },
+        { value: 'life', label: 'Đời sống' },
+        { value: 'business', label: 'Kinh tế / Kinh doanh' },
+        { value: 'culture', label: 'Văn hóa' },
+        { value: 'society', label: 'Xã hội' },
+      ])
+    })
+
+    it('21. Chọn "Văn hóa" gọi listSessions với domain="culture", chọn lại "Tất cả lĩnh vực" gọi không có domain', async () => {
+      renderWithClient(<SessionList />)
+
+      await waitFor(() => {
+        expect(screen.getByText('Research Sessions')).toBeInTheDocument()
+      })
+
+      const filterSelect = screen.getByLabelText(/lọc theo lĩnh vực/i)
+
+      // Chọn "Văn hóa"
+      fireEvent.change(filterSelect, { target: { value: 'culture' } })
+
+      await waitFor(() => {
+        expect(mockedListSessions).toHaveBeenCalledWith({ domain: 'culture' })
+      })
+
+      // Chọn lại "Tất cả lĩnh vực"
+      fireEvent.change(filterSelect, { target: { value: 'all' } })
+
+      await waitFor(() => {
+        expect(mockedListSessions).toHaveBeenLastCalledWith(undefined)
+      })
+    })
+
+    it('22. Badge session hiển thị đúng nhãn cho domain mới và fallback nguyên văn cho domain chưa định nghĩa', async () => {
+      const mockSessionsWithDomains: ResearchSession[] = [
+        {
+          id: 'ses-culture',
+          title: 'Nghiên cứu văn hóa dân gian Nam Bộ',
+          description: 'Khảo sát đờn ca tài tử',
+          domain: 'culture',
+          status: 'active',
+          workflow_state: 'idle',
+          tags: ['folk'],
+          created_at: '2026-03-01T10:00:00Z',
+          updated_at: '2026-03-01T12:00:00Z',
+        },
+        {
+          id: 'ses-unknown',
+          title: 'Nghiên cứu lĩnh vực tương lai',
+          description: 'Lĩnh vực thử nghiệm',
+          domain: 'quantum-humanities',
+          status: 'active',
+          workflow_state: 'idle',
+          tags: ['quantum'],
+          created_at: '2026-03-02T10:00:00Z',
+          updated_at: '2026-03-02T12:00:00Z',
+        },
+        {
+          id: 'ses-research',
+          title: 'Nghiên cứu chưa có problem frame',
+          description: 'Fallback domain research',
+          domain: 'research',
+          status: 'active',
+          workflow_state: 'idle',
+          tags: ['raw'],
+          created_at: '2026-03-03T10:00:00Z',
+          updated_at: '2026-03-03T12:00:00Z',
+        },
+      ]
+
+      mockedListSessions.mockResolvedValue({
+        data: mockSessionsWithDomains,
+        meta: { total: 3 },
+      })
+
+      renderWithClient(<SessionList />)
+
+      await waitFor(() => {
+        expect(screen.getByText('Nghiên cứu văn hóa dân gian Nam Bộ')).toBeInTheDocument()
+      })
+
+      expect(screen.getByText('Văn hóa', { selector: 'span' })).toBeInTheDocument()
+      expect(screen.getByText('quantum-humanities', { selector: 'span' })).toBeInTheDocument()
+      expect(screen.getByText('Nghiên cứu', { selector: 'span' })).toBeInTheDocument()
     })
   })
 })
