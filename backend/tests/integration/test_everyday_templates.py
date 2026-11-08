@@ -22,13 +22,17 @@ EXPECTED_TEMPLATE_IDS = [
     "engineering_composite_arm",
     "business_delivery_speed_cost",
     "software_latency_security",
-    # 6 New everyday templates
+    # 6 Everyday templates
     "personal_morning_routine_energy",
     "personal_healthy_meal_time_cost",
     "personal_small_space_organization",
     "education_child_screen_autonomy",
     "business_packaging_protection_cost",
     "research_knowledge_overload",
+    # 3 Multi-domain templates
+    "life_daily_habit_energy_management",
+    "culture_heritage_preservation_tourism",
+    "society_community_waste_sorting_compliance",
 ]
 
 
@@ -40,15 +44,15 @@ def override_db_dependency(db_session: Session):
 
 
 @pytest.mark.asyncio
-async def test_get_templates_returns_9_templates():
-    """GET /api/v1/sessions/templates phải trả về chính xác 9 templates."""
+async def test_get_templates_returns_12_templates():
+    """GET /api/v1/sessions/templates phải trả về chính xác 12 templates."""
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
         res = await ac.get("/api/v1/sessions/templates")
     assert res.status_code == 200
     data = res.json()
     assert "data" in data
     templates = data["data"]
-    assert len(templates) == 9, f"Kỳ vọng 9 templates, nhận được {len(templates)}"
+    assert len(templates) == 12, f"Kỳ vọng 12 templates, nhận được {len(templates)}"
 
     returned_ids = [t["id"] for t in templates]
     for expected_id in EXPECTED_TEMPLATE_IDS:
@@ -56,9 +60,9 @@ async def test_get_templates_returns_9_templates():
 
 
 def test_all_templates_have_valid_data_contracts():
-    """Tất cả 9 templates phải tuân thủ đúng data contract và tham số có trong _PARAM_TO_ID_MAP."""
+    """Tất cả 12 templates phải tuân thủ đúng data contract và tham số có trong _PARAM_TO_ID_MAP."""
     templates = get_all_templates()
-    assert len(templates) == 9
+    assert len(templates) == 12
 
     for tpl in templates:
         assert tpl["id"] in EXPECTED_TEMPLATE_IDS
