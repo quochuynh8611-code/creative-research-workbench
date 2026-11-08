@@ -6,7 +6,7 @@ from typing import Any, Generator, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Response, status
 from pydantic import BaseModel, Field, field_validator
-from sqlalchemy import create_engine
+from sqlalchemy import and_, create_engine, func
 from sqlalchemy.orm import Session
 
 from app.core.config import settings
@@ -322,11 +322,40 @@ async def list_sessions(
     limit: int = 20,
     db: Session | None = Depends(get_db),
 ):
-    """Liệt kê research sessions từ database."""
+    """Liệt kê research sessions từ database với domain hiệu lực từ ProblemFrame mới nhất."""
     if db is None:
         return {"data": [], "meta": {"total": 0}}
 
-    query = db.query(ResearchSession)
+    # 1. Subquery định danh ProblemFrame mới nhất theo (created_at DESC, id DESC)
+    latest_frame_subq = (
+        db.query(
+            ProblemFrame.session_id.label("sub_session_id"),
+            ProblemFrame.domain.label("latest_frame_domain"),
+            func.row_number().over(
+                partition_by=ProblemFrame.session_id,
+                order_by=[ProblemFrame.created_at.desc(), ProblemFrame.id.desc()]
+            ).label("rn")
+        )
+        .subquery()
+    )
+
+    # 2. Expression tính toán effective_domain: trim U+0020, nullif rỗng -> fallback 'research'
+    effective_domain_expr = func.coalesce(
+        func.nullif(func.trim(latest_frame_subq.c.latest_frame_domain, " "), ""),
+        "research"
+    )
+
+    query = (
+        db.query(ResearchSession, effective_domain_expr.label("effective_domain"))
+        .outerjoin(
+            latest_frame_subq,
+            and_(
+                ResearchSession.id == latest_frame_subq.c.sub_session_id,
+                latest_frame_subq.c.rn == 1
+            )
+        )
+    )
+
     if status:
         query = query.filter(ResearchSession.status == status)
     else:
@@ -336,16 +365,21 @@ async def list_sessions(
     if q:
         query = query.filter(ResearchSession.title.ilike(f"%{q.strip()}%"))
 
+    # Lọc domain: chỉ lọc khi domain sau khi strip(' ') không rỗng
+    clean_domain = domain.strip(" ") if domain is not None else None
+    if clean_domain:
+        query = query.filter(effective_domain_expr == clean_domain)
+
     total_count = query.count()
-    records = query.order_by(ResearchSession.created_at.desc()).limit(limit).all()
+    records = query.order_by(ResearchSession.created_at.desc(), ResearchSession.id.desc()).limit(limit).all()
 
     items = []
-    for r in records:
+    for r, eff_domain in records:
         items.append({
             "id": str(r.id),
             "title": r.title,
             "description": r.description,
-            "domain": domain or "research",
+            "domain": eff_domain,
             "status": r.status.value if hasattr(r.status, "value") else str(r.status),
             "workflow_state": r.workflow_state,
             "created_at": r.created_at.isoformat() if r.created_at else None,
@@ -636,12 +670,16 @@ async def get_session(
     frame = (
         db.query(ProblemFrame)
         .filter_by(session_id=session_id)
-        .order_by(ProblemFrame.created_at.desc())
+        .order_by(ProblemFrame.created_at.desc(), ProblemFrame.id.desc())
         .first()
     )
 
     frame_payload = None
+    effective_domain = "research"
     if frame:
+        clean_frame_domain = frame.domain.strip(" ") if frame.domain is not None else ""
+        effective_domain = clean_frame_domain if clean_frame_domain else "research"
+
         frame_payload = {
             "id": str(frame.id),
             "session_id": str(frame.session_id),
@@ -654,7 +692,7 @@ async def get_session(
             ),
             "improving_parameter": frame.improving_parameter,
             "worsening_parameter": frame.worsening_parameter,
-            "domain": frame.domain or "research",
+            "domain": effective_domain,
             "created_at": frame.created_at.isoformat() if frame.created_at else None,
         }
 
@@ -662,7 +700,7 @@ async def get_session(
         "id": str(record.id),
         "title": record.title,
         "description": record.description,
-        "domain": "research",
+        "domain": effective_domain,
         "status": record.status.value if hasattr(record.status, "value") else str(record.status),
         "workflow_state": record.workflow_state,
         "created_at": record.created_at.isoformat() if record.created_at else None,
