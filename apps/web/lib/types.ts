@@ -2,7 +2,7 @@
 // Source of Truth: docs/DOMAIN_SCHEMA.md, docs/API_CONTRACTS.md, backend endpoints
 
 export type TargetDomainType = 'life' | 'business' | 'culture' | 'society'
-export type LegacyDomainType = 'technical' | 'education' | 'personal' | 'research'
+export type LegacyDomainType = 'technical' | 'education' | 'personal' | 'research' | 'software'
 export type DomainType = TargetDomainType | LegacyDomainType
 export type SessionStatus = 'active' | 'paused' | 'completed' | 'archived' | 'draft'
 export type WorkflowStage =
