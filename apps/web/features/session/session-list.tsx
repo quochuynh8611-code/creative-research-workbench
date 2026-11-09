@@ -118,7 +118,13 @@ export function SessionList() {
   })
 
   // 5. Templates Query (Phase 9.3)
-  const { data: templates = [], isLoading: isLoadingTemplates } = useQuery({
+  const {
+    data: templates = [],
+    isLoading: isLoadingTemplates,
+    isError: isErrorTemplates,
+    isFetching: isFetchingTemplates,
+    refetch: refetchTemplates,
+  } = useQuery({
     queryKey: ['session-templates'],
     queryFn: getSessionTemplates,
     enabled: isTemplateModalOpen,
@@ -254,6 +260,7 @@ export function SessionList() {
 
   const handleOpenForm = () => {
     setIsCreating(true)
+    setFormDomain('life')
     setValidationError(null)
     createMutation.reset()
   }
@@ -262,7 +269,7 @@ export function SessionList() {
     setIsCreating(false)
     setFormTitle('')
     setFormDescription('')
-    setFormDomain('technical')
+    setFormDomain('life')
     setFormTags('')
     setValidationError(null)
     createMutation.reset()
@@ -668,7 +675,25 @@ export function SessionList() {
               </div>
             )}
 
-            {!isLoadingTemplates && templates.length === 0 && (
+            {isErrorTemplates && !isLoadingTemplates && (
+              <div className="flex flex-col sm:flex-row items-center justify-between gap-3 p-3.5 rounded-lg border border-destructive/30 bg-destructive/10 text-destructive text-xs">
+                <div className="flex items-center gap-2">
+                  <AlertCircle className="w-4 h-4 shrink-0" />
+                  <span>Không tải được danh sách mẫu nghiên cứu.</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => refetchTemplates()}
+                  disabled={isFetchingTemplates}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium border border-destructive/40 bg-background text-destructive hover:bg-destructive/10 transition-colors disabled:opacity-50 shrink-0"
+                >
+                  {isFetchingTemplates && <Loader2 className="w-3 h-3 animate-spin" />}
+                  Thử lại
+                </button>
+              </div>
+            )}
+
+            {!isLoadingTemplates && !isErrorTemplates && templates.length === 0 && (
               <p className="text-sm text-center py-8 text-muted-foreground">
                 Không tìm thấy mẫu nghiên cứu nào.
               </p>

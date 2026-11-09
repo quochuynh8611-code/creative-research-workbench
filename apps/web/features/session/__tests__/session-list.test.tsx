@@ -284,6 +284,107 @@ describe('SessionList Create Path', () => {
     ])
   })
 
+  it('7c. Đóng/mở lại form hoặc tạo session thành công thì default domain luôn reset về life', async () => {
+    const newSession: ResearchSession = {
+      id: 'session-104',
+      title: 'Dự án nông sản tuần hoàn',
+      description: 'Mô hình kinh doanh xanh',
+      domain: 'business',
+      status: 'active',
+      workflow_state: 'idle',
+      tags: ['business'],
+      created_at: '2026-03-04T10:00:00Z',
+      updated_at: '2026-03-04T10:00:00Z',
+      problem_frame: null,
+    }
+    mockedCreateSession.mockResolvedValue(newSession)
+
+    renderWithClient(<SessionList />)
+
+    await waitFor(() => {
+      expect(screen.getByText('Research Sessions')).toBeInTheDocument()
+    })
+
+    // 1. Mở form lần đầu -> domain là 'life'
+    fireEvent.click(screen.getByRole('button', { name: /tạo session mới/i }))
+    const domainSelect1 = screen.getByLabelText(/^lĩnh vực$/i) as HTMLSelectElement
+    expect(domainSelect1.value).toBe('life')
+
+    // Thay đổi domain sang 'business'
+    fireEvent.change(domainSelect1, { target: { value: 'business' } })
+    expect(domainSelect1.value).toBe('business')
+
+    // Bấm 'Hủy' để đóng form
+    fireEvent.click(screen.getByRole('button', { name: /hủy/i }))
+    expect(screen.queryByLabelText(/tiêu đề/i)).not.toBeInTheDocument()
+
+    // Mở lại form -> domain phải reset về 'life', KHÔNG được giữ 'business' và KHÔNG bị ngầm định về 'technical'
+    fireEvent.click(screen.getByRole('button', { name: /tạo session mới/i }))
+    const domainSelect2 = screen.getByLabelText(/^lĩnh vực$/i) as HTMLSelectElement
+    expect(domainSelect2.value).toBe('life')
+
+    // Nhập tiêu đề và submit mà không chạm vào domain select
+    fireEvent.change(screen.getByLabelText(/tiêu đề/i), {
+      target: { value: 'Session kiểm tra reset domain sau khi hủy' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: /^tạo session$/i }))
+
+    await waitFor(() => {
+      expect(mockedCreateSession).toHaveBeenCalledTimes(1)
+    })
+    // Payload bắt buộc phải là 'life' (nếu bug tồn tại, payload sẽ là 'technical' do handleCloseForm set technical)
+    expect(mockedCreateSession.mock.calls[0][0]).toEqual(
+      expect.objectContaining({
+        title: 'Session kiểm tra reset domain sau khi hủy',
+        domain: 'life',
+      })
+    )
+
+    // 2. Mở form lần nữa, chọn domain khác ('culture'), submit tạo session thành công
+    fireEvent.click(screen.getByRole('button', { name: /tạo session mới/i }))
+    const domainSelect3 = screen.getByLabelText(/^lĩnh vực$/i) as HTMLSelectElement
+    expect(domainSelect3.value).toBe('life')
+
+    fireEvent.change(screen.getByLabelText(/tiêu đề/i), {
+      target: { value: 'Dự án văn hóa ẩm thực' },
+    })
+    fireEvent.change(domainSelect3, { target: { value: 'culture' } })
+    expect(domainSelect3.value).toBe('culture')
+
+    fireEvent.click(screen.getByRole('button', { name: /^tạo session$/i }))
+
+    await waitFor(() => {
+      expect(mockedCreateSession).toHaveBeenCalledTimes(2)
+      expect(screen.queryByLabelText(/tiêu đề/i)).not.toBeInTheDocument()
+    })
+    expect(mockedCreateSession.mock.calls[1][0]).toEqual(
+      expect.objectContaining({
+        title: 'Dự án văn hóa ẩm thực',
+        domain: 'culture',
+      })
+    )
+
+    // Mở lại form sau khi vừa tạo thành công -> domain phải reset về 'life' và submit phải gửi 'life'
+    fireEvent.click(screen.getByRole('button', { name: /tạo session mới/i }))
+    const domainSelect4 = screen.getByLabelText(/^lĩnh vực$/i) as HTMLSelectElement
+    expect(domainSelect4.value).toBe('life')
+
+    fireEvent.change(screen.getByLabelText(/tiêu đề/i), {
+      target: { value: 'Session kiểm tra reset domain sau khi submit thành công' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: /^tạo session$/i }))
+
+    await waitFor(() => {
+      expect(mockedCreateSession).toHaveBeenCalledTimes(3)
+    })
+    expect(mockedCreateSession.mock.calls[2][0]).toEqual(
+      expect.objectContaining({
+        title: 'Session kiểm tra reset domain sau khi submit thành công',
+        domain: 'life',
+      })
+    )
+  })
+
   it('8. Hiển thị thông báo lỗi khi createSession thất bại và giữ form mở', async () => {
     mockedCreateSession.mockRejectedValue(new Error('Lỗi máy chủ khi tạo session'))
 
@@ -1259,6 +1360,161 @@ describe('SessionList Lifecycle & Safe Deletion (Phase 5.9)', () => {
           template_id: 'culture_heritage_preservation_tourism',
         })
         expect(screen.queryByText('Mẫu Nghiên cứu Định sẵn (Domain Templates)')).not.toBeInTheDocument()
+      })
+    })
+
+    describe('Modal Domain Templates Loading & Error States', () => {
+      it('31. Loading state: hiển thị spinner loading khi đang tải, không hiển thị rỗng hay lỗi', async () => {
+        mockedListSessions.mockResolvedValue({
+          data: MOCK_ACTIVE_SESSIONS,
+          meta: { total: 1 },
+        })
+        // Trả về promise pending
+        mockedGetSessionTemplates.mockImplementation(() => new Promise(() => {}))
+
+        renderWithClient(<SessionList />)
+
+        await waitFor(() => {
+          expect(screen.getByText('Session Hoạt Động')).toBeInTheDocument()
+        })
+
+        fireEvent.click(screen.getByRole('button', { name: /mẫu nghiên cứu/i }))
+
+        // Modal mở ra và đang loading
+        expect(screen.getByText('Mẫu Nghiên cứu Định sẵn (Domain Templates)')).toBeInTheDocument()
+        expect(screen.getByText('Đang tải danh sách mẫu...')).toBeInTheDocument()
+        expect(screen.queryByText('Không tìm thấy mẫu nghiên cứu nào.')).not.toBeInTheDocument()
+        expect(screen.queryByText('Không tải được danh sách mẫu nghiên cứu.')).not.toBeInTheDocument()
+        expect(screen.queryByRole('button', { name: /thử lại/i })).not.toBeInTheDocument()
+      })
+
+      it('32. Initial query failure: hiển thị thông báo lỗi và nút thử lại, không hiển thị catalog rỗng', async () => {
+        mockedListSessions.mockResolvedValue({
+          data: MOCK_ACTIVE_SESSIONS,
+          meta: { total: 1 },
+        })
+        mockedGetSessionTemplates.mockRejectedValue(new Error('Network error'))
+
+        renderWithClient(<SessionList />)
+
+        await waitFor(() => {
+          expect(screen.getByText('Session Hoạt Động')).toBeInTheDocument()
+        })
+
+        fireEvent.click(screen.getByRole('button', { name: /mẫu nghiên cứu/i }))
+
+        await waitFor(() => {
+          expect(screen.getByText('Mẫu Nghiên cứu Định sẵn (Domain Templates)')).toBeInTheDocument()
+          expect(screen.getByText('Không tải được danh sách mẫu nghiên cứu.')).toBeInTheDocument()
+        })
+
+        expect(screen.getByRole('button', { name: /thử lại/i })).toBeInTheDocument()
+        expect(screen.queryByText('Không tìm thấy mẫu nghiên cứu nào.')).not.toBeInTheDocument()
+        expect(screen.queryByText('Đang tải danh sách mẫu...')).not.toBeInTheDocument()
+      })
+
+      it('33. Retry succeeds: bấm "Thử lại" sau khi lỗi sẽ tải lại thành công và hiển thị catalog', async () => {
+        mockedListSessions.mockResolvedValue({
+          data: MOCK_ACTIVE_SESSIONS,
+          meta: { total: 1 },
+        })
+        mockedGetSessionTemplates.mockRejectedValueOnce(new Error('Network error'))
+
+        renderWithClient(<SessionList />)
+
+        await waitFor(() => {
+          expect(screen.getByText('Session Hoạt Động')).toBeInTheDocument()
+        })
+
+        fireEvent.click(screen.getByRole('button', { name: /mẫu nghiên cứu/i }))
+
+        await waitFor(() => {
+          expect(screen.getByText('Không tải được danh sách mẫu nghiên cứu.')).toBeInTheDocument()
+        })
+
+        const retryBtn = screen.getByRole('button', { name: /thử lại/i })
+        expect(retryBtn).toBeInTheDocument()
+
+        // Lần gọi kế tiếp thành công
+        mockedGetSessionTemplates.mockResolvedValueOnce(MOCK_12_DOMAIN_TEMPLATES)
+        fireEvent.click(retryBtn)
+
+        await waitFor(() => {
+          expect(screen.getByText('Tối ưu hóa Trọng lượng & Độ bền Cơ học')).toBeInTheDocument()
+          expect(screen.queryByText('Không tải được danh sách mẫu nghiên cứu.')).not.toBeInTheDocument()
+          expect(screen.queryByText('Không tìm thấy mẫu nghiên cứu nào.')).not.toBeInTheDocument()
+        })
+
+        // Dropdown bộ lọc hiển thị và hoạt động
+        const modalFilter = screen.getByLabelText(/lọc mẫu theo lĩnh vực/i)
+        expect(modalFilter).toBeInTheDocument()
+      })
+
+      it('34. Catalog rỗng thực sự: query thành công trả về [] thì hiển thị "Không tìm thấy mẫu nghiên cứu nào.", không báo lỗi', async () => {
+        mockedListSessions.mockResolvedValue({
+          data: MOCK_ACTIVE_SESSIONS,
+          meta: { total: 1 },
+        })
+        mockedGetSessionTemplates.mockResolvedValue([])
+
+        renderWithClient(<SessionList />)
+
+        await waitFor(() => {
+          expect(screen.getByText('Session Hoạt Động')).toBeInTheDocument()
+        })
+
+        fireEvent.click(screen.getByRole('button', { name: /mẫu nghiên cứu/i }))
+
+        await waitFor(() => {
+          expect(screen.getByText('Mẫu Nghiên cứu Định sẵn (Domain Templates)')).toBeInTheDocument()
+          expect(screen.getByText('Không tìm thấy mẫu nghiên cứu nào.')).toBeInTheDocument()
+        })
+
+        expect(screen.queryByText('Không tải được danh sách mẫu nghiên cứu.')).not.toBeInTheDocument()
+        expect(screen.queryByRole('button', { name: /thử lại/i })).not.toBeInTheDocument()
+      })
+
+      it('35. Background refetch failure với cache: templates cũ vẫn hiển thị, hiển thị lỗi kèm nút thử lại, không thành catalog rỗng', async () => {
+        mockedListSessions.mockResolvedValue({
+          data: MOCK_ACTIVE_SESSIONS,
+          meta: { total: 1 },
+        })
+        mockedGetSessionTemplates.mockResolvedValue(MOCK_12_DOMAIN_TEMPLATES)
+
+        const { queryClient } = renderWithClient(<SessionList />)
+
+        await waitFor(() => {
+          expect(screen.getByText('Session Hoạt Động')).toBeInTheDocument()
+        })
+
+        fireEvent.click(screen.getByRole('button', { name: /mẫu nghiên cứu/i }))
+
+        await waitFor(() => {
+          expect(screen.getByText('Tối ưu hóa Trọng lượng & Độ bền Cơ học')).toBeInTheDocument()
+        })
+
+        // Lần refetch tiếp theo bị lỗi
+        mockedGetSessionTemplates.mockRejectedValue(new Error('Refetch failed'))
+
+        await act(async () => {
+          await queryClient.refetchQueries({ queryKey: ['session-templates'] }).catch(() => {})
+        })
+
+        // Kiểm chứng query state và cache
+        expect(mockedGetSessionTemplates).toHaveBeenCalledTimes(2)
+        expect(queryClient.getQueryData(['session-templates'])).toEqual(MOCK_12_DOMAIN_TEMPLATES)
+        expect(queryClient.getQueryState(['session-templates'])?.status).toBe('error')
+        expect(queryClient.getQueryState(['session-templates'])?.error).toEqual(new Error('Refetch failed'))
+
+        await waitFor(() => {
+          // Templates đã cache vẫn hiển thị
+          expect(screen.getByText('Tối ưu hóa Trọng lượng & Độ bền Cơ học')).toBeInTheDocument()
+          // Thông báo lỗi và nút thử lại xuất hiện
+          expect(screen.getByText('Không tải được danh sách mẫu nghiên cứu.')).toBeInTheDocument()
+          expect(screen.getByRole('button', { name: /thử lại/i })).toBeInTheDocument()
+          // Tuyệt đối không biến thành catalog rỗng
+          expect(screen.queryByText('Không tìm thấy mẫu nghiên cứu nào.')).not.toBeInTheDocument()
+        })
       })
     })
   })
