@@ -20,7 +20,10 @@ from app.domain.models import (
 from app.services.ai_analysis_service import AIAnalysisService
 from app.services.ai_report_service import AIReportService
 from app.services.method_recommender import MethodRecommender
-from app.services.problem_structuring_service import ProblemStructuringService
+from app.services.problem_structuring_service import (
+    ProblemStructuringService,
+    get_separation_strategies_for_contradiction,
+)
 from app.services.session_export_service import (
     export_session_as_json,
     export_session_as_markdown,
@@ -824,21 +827,30 @@ async def create_problem_frame_canonical(
             detail=str(e),
         )
 
-    return {
+    c_type_str = (
+        frame.contradiction_type.value
+        if hasattr(frame.contradiction_type, "value")
+        else str(frame.contradiction_type)
+    )
+
+    response_payload: dict[str, Any] = {
         "id": str(frame.id),
         "session_id": str(frame.session_id),
         "raw_statement": frame.raw_statement,
         "normalized_statement": frame.normalized_statement,
-        "contradiction_type": (
-            frame.contradiction_type.value
-            if hasattr(frame.contradiction_type, "value")
-            else str(frame.contradiction_type)
-        ),
+        "contradiction_type": c_type_str,
         "improving_parameter": frame.improving_parameter,
         "worsening_parameter": frame.worsening_parameter,
         "domain": frame.domain,
         "created_at": frame.created_at.isoformat() if frame.created_at else None,
     }
+
+    if c_type_str.lower() == "physical":
+        strategies = get_separation_strategies_for_contradiction(frame.contradiction_type)
+        if strategies:
+            response_payload["separation_strategies"] = strategies
+
+    return response_payload
 
 
 @router.post("/{session_id}/ai/analyze-problem", status_code=status.HTTP_200_OK)

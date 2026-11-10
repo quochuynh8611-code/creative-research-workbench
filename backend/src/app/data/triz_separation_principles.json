@@ -1,0 +1,35 @@
+{
+  "version": "1.0-separation-canonical",
+  "title": "TRIZ Separation Principles for Physical Contradictions",
+  "description": "Bốn chiến lược phân tách kinh điển trong TRIZ để giải quyết mâu thuẫn vật lý và ánh xạ tới 40 nguyên tắc sáng tạo.",
+  "strategies": [
+    {
+      "id": "space",
+      "name_vi": "Phân tách trong không gian",
+      "name_en": "Separation in Space",
+      "diagnostic_question_vi": "Vấn đề hoặc tính chất đối nghịch này có thể tách biệt tại các vị trí/vùng không gian khác nhau không?",
+      "principle_ids": [1, 2, 3, 4, 7, 13, 17, 24, 26, 30]
+    },
+    {
+      "id": "time",
+      "name_vi": "Phân tách trong thời gian",
+      "name_en": "Separation in Time",
+      "diagnostic_question_vi": "Tính chất đối nghịch này có thể xuất hiện tại các thời điểm hoặc giai đoạn khác nhau không?",
+      "principle_ids": [9, 10, 11, 15, 16, 18, 19, 20, 21, 29, 34, 37]
+    },
+    {
+      "id": "condition",
+      "name_vi": "Phân tách theo điều kiện",
+      "name_en": "Separation upon Condition",
+      "diagnostic_question_vi": "Hệ thống có thể chuyển đổi tính chất khi điều kiện môi trường hoặc trạng thái thay đổi không?",
+      "principle_ids": [28, 31, 32, 35, 36, 38, 39, 40]
+    },
+    {
+      "id": "system_level",
+      "name_vi": "Phân tách giữa hệ thống và các thành phần (mức hệ thống)",
+      "name_en": "Separation between System and its Components",
+      "diagnostic_question_vi": "Tính chất này có thể thuộc về toàn bộ hệ thống trong khi các thành phần riêng lẻ có tính chất ngược lại không?",
+      "principle_ids": [1, 3, 5, 6, 7, 12, 25, 27, 33, 40]
+    }
+  ]
+}
