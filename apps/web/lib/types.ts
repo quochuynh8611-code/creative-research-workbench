@@ -282,6 +282,7 @@ export interface TrizParameter {
   name_en: string
   description?: string
   everyday_label?: string
+  business_label?: string
 }
 
 export interface TrizParametersResponse {
@@ -301,6 +302,10 @@ export interface TrizPrinciple {
   daily_application?: string
   daily_examples?: string[]
   action_prompt?: string
+  business_title?: string
+  business_application?: string
+  business_examples?: string[]
+  business_action_prompt?: string
 }
 
 export interface TrizPrinciplesResponse {

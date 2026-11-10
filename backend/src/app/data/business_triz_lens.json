@@ -1,0 +1,483 @@
+{
+  "parameters": {
+    "1": {
+      "business_label": "Quy mô vốn luân chuyển, dòng tiền lưu động hoặc chi phí vận hành cần di chuyển"
+    },
+    "2": {
+      "business_label": "Tài sản cố định, quy mô vốn đầu tư cơ sở hạ tầng hoặc nguồn lực cố định"
+    },
+    "3": {
+      "business_label": "Thời gian chu kỳ của quy trình động, thời gian giao hàng hoặc vòng đời sản phẩm ngắn hạn"
+    },
+    "4": {
+      "business_label": "Thời hạn hợp đồng dài hạn, thời gian cam kết dịch vụ hoặc quy trình chuẩn cố định"
+    },
+    "5": {
+      "business_label": "Độ bao phủ thị trường linh hoạt, phạm vi tiếp cận khách hàng trên kênh số"
+    },
+    "6": {
+      "business_label": "Diện tích mặt bằng kinh doanh, độ phủ kênh phân phối vật lý cố định"
+    },
+    "7": {
+      "business_label": "Dung lượng giao dịch tức thời, khả năng xử lý đơn hàng trong chiến dịch khuyến mãi"
+    },
+    "8": {
+      "business_label": "Quy mô thị trường tổng thể (TAM), tổng dung lượng khách hàng mục tiêu"
+    },
+    "9": {
+      "business_label": "Tốc độ đưa sản phẩm ra thị trường (Time-to-Market), tốc độ phản hồi khách hàng"
+    },
+    "10": {
+      "business_label": "Áp lực cạnh tranh, đòn bẩy đàm phán thương mại hoặc quyền lực mua sắm"
+    },
+    "11": {
+      "business_label": "Áp lực tài chính, rủi ro đứt gãy dòng tiền hoặc áp lực hoàn thành chỉ tiêu KPI"
+    },
+    "12": {
+      "business_label": "Mô hình kinh doanh, cơ cấu tổ chức doanh nghiệp hoặc định dạng gói sản phẩm"
+    },
+    "13": {
+      "business_label": "Độ ổn định của tổ chức, tỷ lệ giữ chân nhân sự hoặc tính bền vững của chuỗi cung ứng"
+    },
+    "14": {
+      "business_label": "Khả năng chống chịu rủi ro thị trường, sức mạnh tài chính hoặc uy tín thương hiệu"
+    },
+    "15": {
+      "business_label": "Thời gian tồn tại của chiến dịch tiếp thị ngắn hạn, vòng đời khuyến mãi"
+    },
+    "16": {
+      "business_label": "Vòng đời khách hàng dài hạn (Customer Lifetime), độ bền bỉ của quan hệ đối tác"
+    },
+    "17": {
+      "business_label": "Độ nóng của thị trường, mức độ cạnh tranh gay gắt hoặc sự quan tâm của truyền thông"
+    },
+    "18": {
+      "business_label": "Mức độ nhận diện thương hiệu, tính minh bạch thông tin tài chính và quản trị"
+    },
+    "19": {
+      "business_label": "Chi phí tiêu hao cho hoạt động bán hàng lưu động, chi phí chuyển đổi khách hàng (CAC)"
+    },
+    "20": {
+      "business_label": "Chi phí cố định (Fixed Costs), chi phí thuê mặt bằng và vận hành văn phòng"
+    },
+    "21": {
+      "business_label": "Năng lực tài chính tổng thể, quy mô vốn chủ sở hữu hoặc công suất xử lý của hệ thống"
+    },
+    "22": {
+      "business_label": "Thất thoát ngân sách, chi phí chìm hoặc lãng phí nguồn lực tài chính"
+    },
+    "23": {
+      "business_label": "Hao hụt hàng tồn kho, tỷ lệ rò rỉ nguyên vật liệu hoặc suy giảm tài sản doanh nghiệp"
+    },
+    "24": {
+      "business_label": "Mất mát thông tin khách hàng, rò rỉ dữ liệu kinh doanh hoặc bất cân xứng thông tin"
+    },
+    "25": {
+      "business_label": "Thời gian chết trong vận hành, độ trễ ra quyết định hoặc lãng phí thời gian chờ phê duyệt"
+    },
+    "26": {
+      "business_label": "Quy mô đội ngũ nhân sự, số lượng sản phẩm SKU hoặc tài liệu quy trình"
+    },
+    "27": {
+      "business_label": "Độ tin cậy của dịch vụ (SLA), uy tín giao hàng đúng hạn và cam kết chất lượng"
+    },
+    "28": {
+      "business_label": "Độ chính xác của báo cáo tài chính, độ tin cậy của số liệu phân tích thị trường"
+    },
+    "29": {
+      "business_label": "Chất lượng hoàn thiện sản phẩm dịch vụ, mức độ đồng đều của trải nghiệm khách hàng"
+    },
+    "30": {
+      "business_label": "Rủi ro biến động kinh tế vĩ mô, tác động tiêu cực từ đối thủ hoặc thay đổi pháp lý"
+    },
+    "31": {
+      "business_label": "Tác động tiêu cực nội bộ, mâu thuẫn phòng ban hoặc chi phí cơ hội phát sinh"
+    },
+    "32": {
+      "business_label": "Tính dễ dàng triển khai sản phẩm mới, độ thuận tiện khi mở rộng quy mô (Scalability)"
+    },
+    "33": {
+      "business_label": "Tính dễ sử dụng của dịch vụ, độ thân thiện của giao diện người dùng (UX/UI)"
+    },
+    "34": {
+      "business_label": "Tính thuận tiện khi bảo trì hệ thống, khả năng khắc phục sự cố dịch vụ khách hàng"
+    },
+    "35": {
+      "business_label": "Tính linh hoạt thích ứng thị trường, khả năng xoay trục mô hình kinh doanh (Pivot)"
+    },
+    "36": {
+      "business_label": "Độ phức tạp của quy trình quản trị, số tầng nấc phê duyệt trong tổ chức"
+    },
+    "37": {
+      "business_label": "Độ khó kiểm soát hiệu suất nhân viên, mức độ khó khăn khi đo lường mức độ hài lòng khách hàng"
+    },
+    "38": {
+      "business_label": "Mức độ tự động hóa quy trình nghiệp vụ (RPA/CRM), chuyển đổi số vận hành"
+    },
+    "39": {
+      "business_label": "Năng suất lao động trên mỗi nhân viên, hiệu quả sử dụng vốn (ROI/ROAS)"
+    }
+  },
+  "principles": {
+    "1": {
+      "business_title": "Phân khúc thị trường / Chia nhỏ quy trình (Phân đoạn)",
+      "business_application": "Chia nhỏ tệp khách hàng thành các phân khúc ngách hoặc phân tách quy trình vận hành phức tạp thành các bước vi mô độc lập.",
+      "business_examples": [
+        "Phân khúc khách hàng theo giá trị vòng đời (LTV) để cá nhân hóa chiến dịch marketing.",
+        "Chia quy trình on-boarding khách hàng thành 3 bước nhỏ thay vì một form đăng ký dài."
+      ],
+      "business_action_prompt": "Quy trình hoặc phân khúc nào đang quá cồng kềnh có thể chia nhỏ để quản lý linh hoạt hơn?"
+    },
+    "2": {
+      "business_title": "Tách biệt chức năng cốt lõi / Thuê ngoài (Tách rời)",
+      "business_application": "Tách các hoạt động không cốt lõi ra khỏi doanh nghiệp để thuê ngoài (outsourcing) hoặc cô lập rủi ro kinh doanh.",
+      "business_examples": [
+        "Thuê ngoài đơn vị giao hàng chặng cuối (3PL) thay vì tự duy trì đội xe vận chuyển.",
+        "Tách bộ phận kinh doanh rủi ro cao thành một pháp nhân độc lập."
+      ],
+      "business_action_prompt": "Bộ phận hoặc tính năng nào không cốt lõi có thể tách rời để doanh nghiệp tinh gọn hơn?"
+    },
+    "3": {
+      "business_title": "Cá nhân hóa theo khu vực / Thị trường ngách (Chất lượng cục bộ)",
+      "business_application": "Điều chỉnh chính sách giá, sản phẩm hoặc thông điệp marketing phù hợp với đặc thù riêng của từng phân khúc hay khu vực địa lý.",
+      "business_examples": [
+        "Áp dụng chính sách giá động và menu sản phẩm khác nhau tại các chi nhánh theo mức thu nhập địa phương.",
+        "Cung cấp gói hỗ trợ kỹ thuật 24/7 chuyên biệt riêng cho nhóm khách hàng doanh nghiệp VIP."
+      ],
+      "business_action_prompt": "Điểm nào trong sản phẩm cần được may đo riêng cho từng nhóm khách hàng mục tiêu?"
+    },
+    "4": {
+      "business_title": "Tạo sự khác biệt độc bản / Chiến lược phá cách (Bất đối xứng)",
+      "business_application": "Thay đổi tỷ trọng nguồn lực, tạo sự khác biệt phi đối xứng để cạnh tranh với các đối thủ lớn thay vì đối đầu trực diện.",
+      "business_examples": [
+        "Tập trung 80% ngân sách tiếp thị vào một kênh chuyển đổi duy nhất có tỷ lệ ROI cao nhất.",
+        "Thiết kế cấu trúc gói dịch vụ miễn phí tính năng cơ bản nhưng thu phí cao tính năng phân tích nâng cao."
+      ],
+      "business_action_prompt": "Yếu tố nào bạn có thể làm bất đối xứng để tạo lợi thế cạnh tranh áp đảo đối thủ?"
+    },
+    "5": {
+      "business_title": "Sáp nhập, liên minh & Đóng gói combo (Kết hợp)",
+      "business_application": "Kết hợp các sản phẩm bổ trợ vào một gói combo hoặc hợp tác liên minh kinh doanh để chia sẻ chi phí và tệp khách hàng.",
+      "business_examples": [
+        "Đóng gói giải pháp phần mềm CRM kết hợp dịch vụ tổng đài viễn thông thành gói thuê bao duy nhất.",
+        "Hợp tác đồng tiếp thị (co-marketing) giữa nhãn hàng tiêu dùng và chuỗi bán lẻ."
+      ],
+      "business_action_prompt": "Hai sản phẩm hoặc dịch vụ nào có thể gộp chung để tạo giá trị vượt trội cho khách hàng?"
+    },
+    "6": {
+      "business_title": "Đa nhiệm & Nhân sự đa năng (Vạn năng)",
+      "business_application": "Thiết kế sản phẩm đáp ứng nhiều nhu cầu cùng lúc hoặc đào tạo nhân sự đa nhiệm để tối ưu chi phí vận hành tinh gọn.",
+      "business_examples": [
+        "Nền tảng thanh toán tích hợp luôn hóa đơn điện tử và quản lý công nợ khách hàng.",
+        "Đào tạo nhân viên tư vấn khách hàng kiêm nhiệm xử lý hồ sơ kỹ thuật ban đầu."
+      ],
+      "business_action_prompt": "Sản phẩm hoặc vị trí nhân sự nào có thể đảm nhận thêm vai trò thứ hai hiệu quả?"
+    },
+    "7": {
+      "business_title": "Hệ sinh thái lồng ghép / Mô hình Freemium (Chứa trong)",
+      "business_application": "Lồng ghép một dịch vụ vào bên trong một dịch vụ khác hoặc tổ chức doanh nghiệp theo cấu trúc hệ sinh thái mẹ - con.",
+      "business_examples": [
+        "Cung cấp gói tài khoản dùng thử miễn phí bên trong ứng dụng chính, nâng cấp tính năng trả phí theo nhu cầu.",
+        "Tích hợp cổng thanh toán trực tiếp ngay trong giao diện giỏ hàng của đối tác."
+      ],
+      "business_action_prompt": "Bạn có thể lồng ghép dịch vụ phụ nào vào bên trong trải nghiệm sản phẩm chính?"
+    },
+    "8": {
+      "business_title": "Tận dụng đòn bẩy đối tác & Trợ cấp chéo (Phản trọng lượng)",
+      "business_application": "Sử dụng nguồn lực hoặc uy tín của đối tác lớn để giảm bớt gánh nặng chi phí và rủi ro thâm nhập thị trường.",
+      "business_examples": [
+        "Sử dụng mô hình phân phối qua sàn thương mại điện tử để tận dụng lưu lượng truy cập sẵn có.",
+        "Bù lỗ giá máy in bằng lợi nhuận định kỳ từ việc bán mực in (Razor and Blades model)."
+      ],
+      "business_action_prompt": "Nguồn lực hoặc đối tác nào có thể giúp bạn giảm tải chi phí hoặc rủi ro vận hành?"
+    },
+    "9": {
+      "business_title": "Dự liệu rủi ro & Ký quỹ an toàn (Gây ứng suất sơ bộ)",
+      "business_application": "Chuẩn bị sẵn các kịch bản đối phó khủng hoảng hoặc áp dụng điều khoản đặt cọc, thanh toán trước để loại trừ rủi ro bùng nợ.",
+      "business_examples": [
+        "Yêu cầu đặt cọc 50% trước khi bắt đầu triển khai dự án gia công phần mềm.",
+        "Soạn sẵn thông điệp truyền thông xử lý khủng hoảng trước các đợt ra mắt tính năng nhạy cảm."
+      ],
+      "business_action_prompt": "Biện pháp phòng ngừa nào có thể triệt tiêu rủi ro thanh toán hoặc rủi ro vận hành trước khi xảy ra?"
+    },
+    "10": {
+      "business_title": "Chuẩn bị tài nguyên sẵn & Đặt hàng trước (Tác động sơ bộ)",
+      "business_application": "Sắp xếp tài liệu, hợp đồng mẫu hoặc mở chiến dịch đặt hàng trước (Pre-order) để thăm dò nhu cầu thị trường trước khi sản xuất.",
+      "business_examples": [
+        "Chạy chiến dịch Pre-order huy động vốn cộng đồng trước khi đặt xưởng sản xuất hàng loạt.",
+        "Chuẩn bị sẵn toàn bộ kho tài liệu hỗ trợ bán hàng (sales deck, case study, FAQ) trước ngày chạy quảng cáo."
+      ],
+      "business_action_prompt": "Hành động nào có thể thực hiện trước để đẩy nhanh tốc độ chốt đơn khi khách hàng tiếp cận?"
+    },
+    "11": {
+      "business_title": "Bảo hiểm rủi ro & Quỹ dự phòng (Dự phòng trước)",
+      "business_application": "Thiết lập kế hoạch kinh doanh liên tục (BCP), sao lưu dữ liệu và quỹ dự phòng tài chính để đảm bảo khả năng sống sót khi thị trường biến động.",
+      "business_examples": [
+        "Duy trì quỹ dự phòng tiền mặt đủ chi trả chi phí vận hành cố định trong 6 tháng.",
+        "Ký hợp đồng với hai nhà cung cấp nguyên liệu độc lập để phòng ngừa rủi ro đứt gãy chuỗi cung ứng."
+      ],
+      "business_action_prompt": "Phương án dự phòng khẩn cấp nào cần được kích hoạt ngay nếu nguồn doanh thu chính bị gián đoạn?"
+    },
+    "12": {
+      "business_title": "Quy trình một cửa & Giảm ma sát giao dịch (Đẳng thế)",
+      "business_application": "Loại bỏ các rào cản chuyển đổi giữa các phòng ban hoặc tạo trải nghiệm mua hàng liền mạch không cần chuyển trang.",
+      "business_examples": [
+        "Tính năng mua hàng 1-click không cần nhập lại thông tin thẻ thanh toán và địa chỉ.",
+        "Phân quyền cho nhân viên tuyến đầu giải quyết khiếu nại khách hàng dưới 500 nghìn đồng không cần xin phê duyệt quản lý."
+      ],
+      "business_action_prompt": "Ma sát hoặc bước phê duyệt trung gian nào đang làm chậm trải nghiệm mua sắm của khách hàng?"
+    },
+    "13": {
+      "business_title": "Đảo ngược mô hình kinh doanh & Khách hàng tự định giá (Làm ngược lại)",
+      "business_application": "Thay đổi chiều hướng tương tác thông thường, như chuyển từ đẩy hàng (push) sang kéo khách (pull) hoặc mô hình Pay-what-you-want.",
+      "business_examples": [
+        "Chuyển từ bán phần mềm trọn gói sang mô hình SaaS thu phí theo tháng và cho dùng thử miễn phí trước.",
+        "Thu hút khách hàng bằng nội dung hữu ích (Inbound Marketing) thay vì gọi điện mời chào làm phiền (Cold Calling)."
+      ],
+      "business_action_prompt": "Nếu bạn làm ngược lại hoàn toàn so với thông lệ trong ngành, lợi ích bất ngờ nào sẽ xuất hiện?"
+    },
+    "14": {
+      "business_title": "Quy trình lặp tuần hoàn & Chăm sóc khách hàng khép kín (Cầu hóa)",
+      "business_application": "Chuyển từ quy trình tuyến tính sang vòng tròn khép kín (Flywheel) nơi khách hàng cũ trở thành người giới thiệu khách hàng mới.",
+      "business_examples": [
+        "Xây dựng chương trình Referral thưởng hoa hồng cho khách hàng khi giới thiệu bạn bè.",
+        "Áp dụng quy trình Agile Sprint 2 tuần liên tục cải tiến thay vì kế hoạch Waterfall cứng nhắc."
+      ],
+      "business_action_prompt": "Làm thế nào để biến quy trình bán hàng một lần thành vòng lặp mua lại và giới thiệu tự nhiên?"
+    },
+    "15": {
+      "business_title": "Định giá linh hoạt & Cơ cấu tổ chức Agile (Linh hoạt hóa)",
+      "business_application": "Điều chỉnh giá bán theo thuật toán thời gian thực hoặc thiết lập các nhóm dự án liên chức năng có thể giải tán và tái lập linh hoạt.",
+      "business_examples": [
+        "Thuật toán tăng giá cước xe công nghệ trong giờ cao điểm hoặc trời mưa (Surge Pricing).",
+        "Cơ cấu tổ chức theo mô hình Squad/Guild cho phép nhân sự luân chuyển theo từng mục tiêu dự án."
+      ],
+      "business_action_prompt": "Chính sách giá hoặc quy trình nội bộ nào cần được thả nổi để thích ứng nhanh với biến động thị trường?"
+    },
+    "16": {
+      "business_title": "Chiến lược MVP & Khuyến mãi tạo sự khan hiếm (Tác động một phần / quá mức)",
+      "business_application": "Ra mắt phiên bản tối giản (MVP) để kiểm chứng nhu cầu thị trường hoặc tạo chiến dịch khuyến mãi chớp nhoáng (Flash Sale) để kích cầu mạnh.",
+      "business_examples": [
+        "Phát hành bản thử nghiệm giới hạn tính năng chỉ cho 100 khách hàng đầu tiên để thu thập phản hồi.",
+        "Chiến dịch giảm giá sốc 24 giờ tạo tâm lý FOMO để giải phóng hàng tồn kho."
+      ],
+      "business_action_prompt": "Bạn có thể thử nghiệm một phần tính năng nhỏ trước khi đầu tư toàn diện không?"
+    },
+    "17": {
+      "business_title": "Mở rộng kênh Omni-channel & Nền tảng số (Chuyển sang chiều khác)",
+      "business_application": "Chuyển từ kinh doanh đơn kênh sang đa kênh tích hợp (Online-to-Offline) hoặc mở rộng sang thị trường ảo.",
+      "business_examples": [
+        "Cửa hàng bán lẻ truyền thống mở thêm gian hàng livestream trên TikTok Shop và sàn thương mại điện tử.",
+        "Cung cấp gói dịch vụ tư vấn trực tuyến từ xa thay vì chỉ gặp mặt trực tiếp tại văn phòng."
+      ],
+      "business_action_prompt": "Kênh phân phối hoặc không gian số nào bạn chưa khai thác để tiếp cận khách hàng?"
+    },
+    "18": {
+      "business_title": "Truyền thông định kỳ & Thông báo tương tác (Dao động cơ học)",
+      "business_application": "Tạo nhịp điệu tương tác định kỳ với khách hàng qua bản tin (Newsletter), thông báo đẩy (Push notification) hoặc sự kiện hàng tuần.",
+      "business_examples": [
+        "Gửi bản tin chuyên môn cập nhật xu hướng thị trường vào sáng thứ Hai hàng tuần cho khách hàng B2B.",
+        "Chương trình Ngày hội thành viên vào ngày 15 hàng tháng với ưu đãi tích điểm nhân đôi."
+      ],
+      "business_action_prompt": "Nhịp điệu liên lạc định kỳ nào giúp thương hiệu luôn hiện diện trong tâm trí khách hàng mà không gây phiền?"
+    },
+    "19": {
+      "business_title": "Mô hình thuê bao định kỳ & Báo cáo hàng quý (Tác động chu kỳ)",
+      "business_application": "Chuyển từ giao dịch đơn lẻ sang mô hình đăng ký nhận định kỳ (Subscription) hoặc chu kỳ đánh giá OKR định kỳ.",
+      "business_examples": [
+        "Mô hình giao cà phê tươi tận nhà định kỳ mỗi 2 tuần theo gói thuê bao trả trước.",
+        "Định kỳ rà soát hiệu quả danh mục sản phẩm mỗi quý để loại bỏ các SKU kém hiệu quả."
+      ],
+      "business_action_prompt": "Sản phẩm nào có thể chuyển đổi thành mô hình thuê bao thanh toán định kỳ hàng tháng/năm?"
+    },
+    "20": {
+      "business_title": "Dịch vụ khách hàng 24/7 & Doanh thu thụ động (Liên tục tác động có ích)",
+      "business_application": "Loại bỏ thời gian chết của tài sản kinh doanh bằng chatbot hỗ trợ tự động hoặc tự động hóa bán hàng xuyên đêm.",
+      "business_examples": [
+        "Hệ thống Chatbot AI tư vấn và chốt đơn tự động 24/7 cả trong ngày nghỉ lễ.",
+        "Tối ưu tỷ lệ lấp đầy phòng khách sạn hoặc chỗ ngồi máy bay qua thuật toán phân phối tự động."
+      ],
+      "business_action_prompt": "Quy trình nào có thể duy trì hoạt động liên tục ngay cả khi nhân viên đang nghỉ ngơi?"
+    },
+    "21": {
+      "business_title": "Chiến lược Blitzscaling & Chớp thời cơ thị trường (Vượt nhanh)",
+      "business_application": "Đẩy nhanh tốc độ mở rộng quy mô trước khi đối thủ kịp phản ứng hoặc giải quyết khiếu nại khách hàng trong vòng 5 phút.",
+      "business_examples": [
+        "Mở rộng nhanh chóng mạng lưới điểm bán để chiếm lĩnh vị trí đắc địa trước các đối thủ cạnh tranh.",
+        "Cam kết hoàn tiền trong 15 phút nếu khách hàng không hài lòng với dịch vụ ăn uống."
+      ],
+      "business_action_prompt": "Khâu nào cần tăng tốc độ vượt trội để biến nó thành vũ khí cạnh tranh độc tôn?"
+    },
+    "22": {
+      "business_title": "Biến phàn nàn thành cơ hội gắn kết & Khai thác phụ phẩm (Biến hại thành lợi)",
+      "business_application": "Tận dụng phản hồi tiêu cực của khách hàng để nâng cấp sản phẩm hoặc thương mại hóa dữ liệu và phụ phẩm trong quá trình vận hành.",
+      "business_examples": [
+        "Tặng quà tri ân và lắng nghe khách hàng khiếu nại để biến họ thành đại sứ thương hiệu trung thành.",
+        "Bán dữ liệu ẩn danh về xu hướng thị trường thu được từ nền tảng miễn phí cho các công ty nghiên cứu."
+      ],
+      "business_action_prompt": "Điểm đau hoặc rủi ro nào có thể được đảo ngược thành cơ hội tạo ra doanh thu mới?"
+    },
+    "23": {
+      "business_title": "Khảo sát NPS & Chỉ số vận hành thời gian thực (Phản hồi)",
+      "business_application": "Xây dựng vòng lặp thu thập phản hồi khách hàng liên tục (Customer Feedback Loop) và bảng điều khiển KPI thời gian thực.",
+      "business_examples": [
+        "Khảo sát đánh giá 1-click ngay sau khi khách hàng hoàn tất cuộc gọi hỗ trợ kỹ thuật.",
+        "Dashboard hiển thị thời gian thực chỉ số CAC, LTV và tỷ lệ rời bỏ (Churn rate) để ban điều hành kịp thời can thiệp."
+      ],
+      "business_action_prompt": "Dữ liệu phản hồi nào từ khách hàng cần được đo lường ngay lập tức sau mỗi lần giao dịch?"
+    },
+    "24": {
+      "business_title": "Hợp tác đại lý & Nền tảng trung gian (Trung gian)",
+      "business_application": "Sử dụng mạng lưới đối tác liên kết (Affiliate), người ảnh hưởng (KOLs) hoặc công ty môi giới để mở rộng kênh bán.",
+      "business_examples": [
+        "Triển khai chương trình tiếp thị liên kết (Affiliate Marketing) chia sẻ 10% hoa hồng cho người giới thiệu.",
+        "Sử dụng cổng thanh toán trung gian để chấp nhận mọi loại thẻ và ví điện tử mà không cần ký hợp đồng riêng với từng ngân hàng."
+      ],
+      "business_action_prompt": "Bên trung gian nào có sẵn tệp khách hàng tiềm năng mà bạn có thể hợp tác để phân phối sản phẩm?"
+    },
+    "25": {
+      "business_title": "Cổng thông tin tự phục vụ & Khách hàng đồng sáng tạo (Tự phục vụ)",
+      "business_application": "Để khách hàng tự quản lý tài khoản, tự đặt đơn hoặc tham gia đồng thiết kế sản phẩm theo sở thích cá nhân.",
+      "business_examples": [
+        "Trung tâm trợ giúp (Help Center) cho phép khách hàng tự tra cứu giải pháp mà không cần gọi tổng đài.",
+        "Kiosk tự thanh toán tại cửa hàng tiện lợi giúp giảm tải nhân sự thu ngân trong giờ cao điểm."
+      ],
+      "business_action_prompt": "Phần việc nào khách hàng muốn tự tay thao tác để cảm thấy tiện lợi và nhanh chóng hơn?"
+    },
+    "26": {
+      "business_title": "Nhượng quyền thương mại & Bản sao số (Sao chép)",
+      "business_application": "Nhân rộng mô hình kinh doanh đã được chứng minh qua hình thức nhượng quyền (Franchise) hoặc thử nghiệm chiến lược trên môi trường số mô phỏng.",
+      "business_examples": [
+        "Đóng gói quy trình vận hành quán cà phê thành sổ tay nhượng quyền để mở rộng 100 điểm bán trong 1 năm.",
+        "Chạy thử nghiệm chiến dịch quảng cáo trên một nhóm nhỏ trước khi nhân bản ngân sách ra toàn quốc."
+      ],
+      "business_action_prompt": "Quy trình thành công nào có thể được chuẩn hóa để dễ dàng nhân bản sang chi nhánh mới?"
+    },
+    "27": {
+      "business_title": "Vật phẩm khuyến mãi dùng một lần & Bản dùng thử miễn phí (Vật rẻ tiền ngắn hạn)",
+      "business_application": "Sử dụng các tài sản chi phí thấp để tiếp cận khách hàng tiềm năng hoặc thay thế thiết bị mua đứt bằng phương án thuê ngắn hạn.",
+      "business_examples": [
+        "Tặng mẫu thử sản phẩm (Sampling) miễn phí tại các trung tâm thương mại để kích thích dùng thử.",
+        "Sử dụng dịch vụ máy chủ đám mây tính tiền theo giờ thay vì mua máy chủ vật lý tốn kém ban đầu."
+      ],
+      "business_action_prompt": "Tài sản hoặc dịch vụ chi phí cao nào có thể thay thế bằng phương án thuê ngoài hoặc vật phẩm chi phí thấp?"
+    },
+    "28": {
+      "business_title": "Chuyển đổi số & Tự động hóa bằng phần mềm (Thay thế cơ học)",
+      "business_application": "Thay thế giấy tờ và quy trình thủ công bằng phần mềm quản trị đám mây, hợp đồng điện tử và trí tuệ nhân tạo.",
+      "business_examples": [
+        "Thay thế hợp đồng giấy bằng ký kết điện tử (E-signature) giúp rút ngắn thời gian chốt sale từ 3 ngày xuống 5 phút.",
+        "Số hóa phiếu nhập kho bằng mã QR code quét trên điện thoại thông minh."
+      ],
+      "business_action_prompt": "Quy trình thủ công nào bằng giấy tờ hoặc nhập liệu có thể số hóa hoàn toàn bằng phần mềm?"
+    },
+    "29": {
+      "business_title": "Quy trình kinh doanh linh hoạt & Dòng tiền lưu thông (Sử dụng chất lỏng/khí)",
+      "business_application": "Thiết kế dòng tiền và cấu trúc vận hành có độ thanh khoản cao, dễ dàng mở rộng hoặc thu hẹp theo sức ép thị trường.",
+      "business_examples": [
+        "Áp dụng chính sách thanh toán tiền lương linh hoạt theo tiến độ công việc thay vì dồn vào cuối tháng.",
+        "Tối ưu vòng quay vốn lưu động để duy trì dòng tiền mặt dồi dào cho các cơ hội đầu tư chớp nhoáng."
+      ],
+      "business_action_prompt": "Làm thế nào để dòng vốn hoặc thông tin luân chuyển trơn tru không bị tắc nghẽn ở các nút giao?"
+    },
+    "30": {
+      "business_title": "Bảo vệ sở hữu trí tuệ & Rào cản gia nhập (Màng dẻo/mỏng)",
+      "business_application": "Tạo các rào cản pháp lý nhẹ nhàng như thỏa thuận không tiết lộ (NDA), bảo hộ nhãn hiệu hoặc hợp đồng cam kết độc quyền.",
+      "business_examples": [
+        "Đăng ký bảo hộ nhãn hiệu và bằng sáng chế thiết kế độc quyền để ngăn chặn đối thủ sao chép.",
+        "Ký thỏa thuận độc quyền phân phối sản phẩm tại một vùng lãnh thổ xác định."
+      ],
+      "business_action_prompt": "Lớp bảo vệ pháp lý hoặc rào cản nhẹ nào có thể ngăn chặn đối thủ đánh cắp ý tưởng của bạn?"
+    },
+    "31": {
+      "business_title": "Tổ chức mở & Hệ sinh thái mở (Vật liệu xốp)",
+      "business_application": "Tạo các khoảng trống linh hoạt trong lịch làm việc cho sáng tạo (20% time) hoặc mở cổng API để bên thứ ba tích hợp dịch vụ.",
+      "business_examples": [
+        "Mở cổng kết nối Open API để các nhà phát triển ngoài xây dựng ứng dụng trên nền tảng của bạn.",
+        "Dành 15% thời gian làm việc hàng tuần cho nhân viên tự do nghiên cứu sáng kiến cải tiến nội bộ."
+      ],
+      "business_action_prompt": "Điểm nào trong tổ chức có thể mở ra để đón nhận ý tưởng và nguồn lực từ bên ngoài?"
+    },
+    "32": {
+      "business_title": "Tái định vị thương hiệu & Giao diện trực quan (Thay đổi màu sắc)",
+      "business_application": "Thay đổi bộ nhận diện thương hiệu (Rebranding), màu sắc bao bì hoặc trực quan hóa dữ liệu kinh doanh trên dashboard bằng biểu đồ màu.",
+      "business_examples": [
+        "Tái định vị thương hiệu từ truyền thống sang phong cách tối giản công nghệ để thu hút thế hệ Gen Z.",
+        "Sử dụng mã màu Xanh - Vàng - Đỏ trên dashboard để cảnh báo ngay lập tức các dự án trễ tiến độ."
+      ],
+      "business_action_prompt": "Hình ảnh hoặc thông điệp thương hiệu nào cần được làm mới để thay đổi nhận thức của khách hàng?"
+    },
+    "33": {
+      "business_title": "Văn hóa doanh nghiệp đồng nhất & Tiêu chuẩn dịch vụ (Đồng nhất)",
+      "business_application": "Xây dựng các giá trị cốt lõi chung để gắn kết nhân viên hoặc đảm bảo sự đồng bộ giữa thông điệp quảng cáo và trải nghiệm thực tế.",
+      "business_examples": [
+        "Đảm bảo cam kết 'Khách hàng là trọng tâm' được phản ánh nhất quán từ thông điệp CEO đến lời chào của bảo vệ.",
+        "Sử dụng chung một hệ thống thiết kế (Design System) trên tất cả các sản phẩm số của doanh nghiệp."
+      ],
+      "business_action_prompt": "Giá trị cốt lõi nào cần được thấm nhuần đồng đều trên toàn bộ các điểm chạm khách hàng?"
+    },
+    "34": {
+      "business_title": "Chính sách đổi trả linh hoạt & Kinh tế tuần hoàn (Phân hủy và tái sinh)",
+      "business_application": "Thu hồi sản phẩm cũ để tái chế (Trade-in), hỗ trợ khách hàng nâng cấp lên dòng sản phẩm mới với chi phí tiết kiệm.",
+      "business_examples": [
+        "Chương trình thu cũ đổi mới (Trade-in) trợ giá lên đời điện thoại nhằm giữ chân khách hàng trong hệ sinh thái.",
+        "Tái chế bao bì đã qua sử dụng và tích điểm thưởng môi trường cho khách hàng trung thành."
+      ],
+      "business_action_prompt": "Làm thế nào để thu hồi sản phẩm hoặc tài nguyên đã hết khấu hao để tái tạo giá trị mới?"
+    },
+    "35": {
+      "business_title": "Chuyển đổi mô hình kinh doanh & Đa dạng hóa nguồn thu (Chuyển đổi thông số)",
+      "business_application": "Chuyển từ bán sản phẩm vật lý sang bán dịch vụ kết hợp (Servitization) hoặc thay đổi cơ cấu doanh thu theo kết quả thực tế (Performance-based).",
+      "business_examples": [
+        "Chuyển từ bán máy móc công nghiệp sang tính phí dịch vụ bảo dưỡng và vận hành theo giờ hoạt động.",
+        "Áp dụng chính sách phí dịch vụ tiếp thị dựa trên số lượng đơn hàng thành công thực tế (CPA)."
+      ],
+      "business_action_prompt": "Thông số kinh doanh nào (giá cố định, đơn vị tính, thời hạn) có thể thay đổi để tạo đòn bẩy doanh thu?"
+    },
+    "36": {
+      "business_title": "Xoay trục mô hình (Pivot) & Thích ứng với chu kỳ kinh tế (Chuyển pha)",
+      "business_application": "Chuyển đổi trạng thái hoạt động của doanh nghiệp từ giai đoạn 'đốt tiền tăng trưởng' sang giai đoạn 'tối ưu lợi nhuận' khi thị trường thắt chặt tiền tệ.",
+      "business_examples": [
+        "Xoay trục mô hình từ bán lẻ B2C sang cung cấp giải pháp bán buôn B2B trong giai đoạn sức mua tiêu dùng suy yếu.",
+        "Tái cơ cấu chi phí từ tài sản cố định sang chi phí biến đổi linh hoạt khi thị trường biến động."
+      ],
+      "business_action_prompt": "Doanh nghiệp của bạn cần chuyển sang trạng thái vận hành nào để vượt qua chu kỳ suy thoái?"
+    },
+    "37": {
+      "business_title": "Tận dụng hiệu ứng mạng lưới & Lan truyền tự nhiên (Giãn nở nhiệt)",
+      "business_application": "Tạo hiệu ứng lan truyền (Viral loops) nơi mỗi khách hàng mới tự động mang lại thêm người dùng khác cho nền tảng.",
+      "business_examples": [
+        "Chính sách tặng thêm dung lượng lưu trữ cho cả người mời và người được mời khi đăng ký tài khoản.",
+        "Tạo nội dung và công cụ miễn phí có tính lan truyền cao (Free interactive tools) để thu hút hàng triệu lượt truy cập tự nhiên."
+      ],
+      "business_action_prompt": "Yếu tố nào trong sản phẩm có thể kích thích khách hàng tự nguyện chia sẻ lên mạng xã hội?"
+    },
+    "38": {
+      "business_title": "Chất xúc tác tăng trưởng & Sự kiện bùng nổ (Chất oxy hóa mạnh)",
+      "business_application": "Tận dụng các sự kiện lớn của ngành, hợp tác với đại sứ thương hiệu hạng A hoặc các chiến dịch tiếp thị mang tính đột phá cao.",
+      "business_examples": [
+        "Tung chiến dịch quảng bá rầm rộ nhân dịp sự kiện thể thao lớn được cả triệu người theo dõi.",
+        "Tài trợ cho một nhân vật có tầm ảnh hưởng lớn để thay đổi hoàn toàn vị thế nhận diện thương hiệu."
+      ],
+      "business_action_prompt": "Chất xúc tác hoặc đòn bẩy truyền thông nào có thể tạo ra bước nhảy vọt về doanh số trong thời gian ngắn?"
+    },
+    "39": {
+      "business_title": "Vùng an toàn cho đổi mới & Bảo vệ khỏi cạnh tranh (Môi trường trơ)",
+      "business_application": "Thiết lập cơ chế thử nghiệm có kiểm soát (Sandbox) cho các ý tưởng kinh doanh mới để không ảnh hưởng đến hoạt động kinh doanh cốt lõi.",
+      "business_examples": [
+        "Thành lập bộ phận Innovation Lab độc lập với các chỉ tiêu KPI truyền thống để thoải mái thử nghiệm công nghệ mới.",
+        "Áp dụng khung pháp lý Sandbox để thử nghiệm dịch vụ tài chính công nghệ (Fintech) trước khi nhân rộng."
+      ],
+      "business_action_prompt": "Môi trường an toàn nào bạn có thể tạo ra để đội ngũ dám mạo hiểm thử nghiệm ý tưởng mới mà không sợ rủi ro?"
+    },
+    "40": {
+      "business_title": "Đội ngũ liên chức năng & Mô hình kinh doanh lai (Vật liệu Composite)",
+      "business_application": "Kết hợp các thế mạnh đa ngành (công nghệ, tài chính, thiết kế, tâm lý học) để tạo ra sản phẩm lai độc đáo khó sao chép.",
+      "business_examples": [
+        "Sản phẩm công nghệ giáo dục (EdTech) kết hợp hài hòa giữa nội dung sư phạm chuẩn mực và kỹ thuật game hóa (Gamification).",
+        "Mô hình văn phòng chia sẻ kết hợp không gian làm việc chuyên nghiệp với dịch vụ quán cà phê trải nghiệm cao cấp."
+      ],
+      "business_action_prompt": "Sự kết hợp giữa hai năng lực hoàn toàn khác biệt nào sẽ tạo ra giải pháp độc nhất vô nhị trên thị trường?"
+    }
+  }
+}

@@ -20,6 +20,7 @@ from app.services.problem_structuring_service import (
     get_separation_strategies_for_contradiction,
 )
 from app.services.everyday_triz_lens import get_everyday_triz_lens
+from app.services.business_triz_lens import get_business_triz_lens
 
 router = APIRouter()
 
@@ -45,6 +46,9 @@ def _format_parameter(param_id: int, data: dict[str, Any]) -> dict[str, Any]:
     lens = get_everyday_triz_lens().get_parameter_lens(param_id)
     if lens:
         item["everyday_label"] = lens.get("everyday_label", "")
+    b_lens = get_business_triz_lens().get_parameter_lens(param_id)
+    if b_lens:
+        item["business_label"] = b_lens.get("business_label", "")
     return item
 
 
@@ -66,6 +70,12 @@ def _format_principle(principle_id: int, data: dict[str, Any]) -> dict[str, Any]
         item["daily_application"] = lens.get("daily_application", "")
         item["daily_examples"] = lens.get("daily_examples", [])
         item["action_prompt"] = lens.get("action_prompt", "")
+    b_lens = get_business_triz_lens().get_principle_lens(pid)
+    if b_lens:
+        item["business_title"] = b_lens.get("business_title", "")
+        item["business_application"] = b_lens.get("business_application", "")
+        item["business_examples"] = b_lens.get("business_examples", [])
+        item["business_action_prompt"] = b_lens.get("business_action_prompt", "")
     return item
 
 

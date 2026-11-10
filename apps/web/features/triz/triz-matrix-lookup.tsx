@@ -37,6 +37,7 @@ export function TrizMatrixLookup({
 }: TrizMatrixLookupProps) {
   const [improvingId, setImprovingId] = useState<number | ''>('')
   const [worseningId, setWorseningId] = useState<number | ''>('')
+  const [activeLens, setActiveLens] = useState<'engineering' | 'business' | 'everyday'>('engineering')
   const [activeLookupQuery, setActiveLookupQuery] = useState<{
     improving: number
     worsening: number
@@ -97,7 +98,7 @@ export function TrizMatrixLookup({
 
   return (
     <div className={cn('p-6 rounded-2xl border border-border bg-card/60 backdrop-blur-sm shadow-sm space-y-6', className)}>
-      {/* Header */}
+      {/* Header & Lens Control */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-border">
         <div className="flex items-center gap-2.5">
           <div className="p-2 rounded-xl bg-amber-500/10 text-amber-500">
@@ -111,6 +112,49 @@ export function TrizMatrixLookup({
               Chọn thông số kỹ thuật cần cải thiện và thông số bị suy giảm để nhận nguyên tắc sáng tạo phù hợp.
             </p>
           </div>
+        </div>
+
+        {/* 3-Lens Segmented Control */}
+        <div className="flex items-center gap-1 p-1 bg-muted/60 rounded-xl border border-border shrink-0 self-start sm:self-center">
+          <button
+            type="button"
+            aria-pressed={activeLens === 'engineering'}
+            onClick={() => setActiveLens('engineering')}
+            className={cn(
+              'px-3 py-1.5 text-xs font-semibold rounded-lg transition-all',
+              activeLens === 'engineering'
+                ? 'bg-background text-foreground shadow-sm'
+                : 'text-muted-foreground hover:text-foreground'
+            )}
+          >
+            Kỹ thuật
+          </button>
+          <button
+            type="button"
+            aria-pressed={activeLens === 'business'}
+            onClick={() => setActiveLens('business')}
+            className={cn(
+              'px-3 py-1.5 text-xs font-semibold rounded-lg transition-all',
+              activeLens === 'business'
+                ? 'bg-background text-foreground shadow-sm'
+                : 'text-muted-foreground hover:text-foreground'
+            )}
+          >
+            Kinh doanh
+          </button>
+          <button
+            type="button"
+            aria-pressed={activeLens === 'everyday'}
+            onClick={() => setActiveLens('everyday')}
+            className={cn(
+              'px-3 py-1.5 text-xs font-semibold rounded-lg transition-all',
+              activeLens === 'everyday'
+                ? 'bg-background text-foreground shadow-sm'
+                : 'text-muted-foreground hover:text-foreground'
+            )}
+          >
+            Đời sống
+          </button>
         </div>
       </div>
 
@@ -134,11 +178,17 @@ export function TrizMatrixLookup({
             className="w-full px-3 py-2 text-sm rounded-lg border border-input bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-50 transition-colors"
           >
             <option value="">-- Chọn thông số cần nâng cao --</option>
-            {parameters.map((param) => (
-              <option key={`imp-${param.id}`} value={param.id}>
-                {`#${param.id}. ${param.name_vi} (${param.name_en})${param.everyday_label ? ` — ${param.everyday_label}` : ''}`}
-              </option>
-            ))}
+            {parameters.map((param) => {
+              const label =
+                activeLens === 'business'
+                  ? `#${param.id}. ${param.name_vi} (${param.name_en}) — ${param.business_label || 'Đang cập nhật diễn giải kinh doanh...'}`
+                  : `#${param.id}. ${param.name_vi} (${param.name_en})${param.everyday_label ? ` — ${param.everyday_label}` : ''}`
+              return (
+                <option key={`imp-${param.id}`} value={param.id}>
+                  {label}
+                </option>
+              )
+            })}
           </select>
         </div>
 
@@ -160,11 +210,17 @@ export function TrizMatrixLookup({
             className="w-full px-3 py-2 text-sm rounded-lg border border-input bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-50 transition-colors"
           >
             <option value="">-- Chọn thông số bị ảnh hưởng tiêu cực --</option>
-            {parameters.map((param) => (
-              <option key={`wors-${param.id}`} value={param.id}>
-                {`#${param.id}. ${param.name_vi} (${param.name_en})${param.everyday_label ? ` — ${param.everyday_label}` : ''}`}
-              </option>
-            ))}
+            {parameters.map((param) => {
+              const label =
+                activeLens === 'business'
+                  ? `#${param.id}. ${param.name_vi} (${param.name_en}) — ${param.business_label || 'Đang cập nhật diễn giải kinh doanh...'}`
+                  : `#${param.id}. ${param.name_vi} (${param.name_en})${param.everyday_label ? ` — ${param.everyday_label}` : ''}`
+              return (
+                <option key={`wors-${param.id}`} value={param.id}>
+                  {label}
+                </option>
+              )
+            })}
           </select>
         </div>
       </div>
@@ -259,10 +315,26 @@ export function TrizMatrixLookup({
 
                           <EverydayMetadataSection
                             principleId={pid}
-                            everydayTitle={principle.everyday_title}
-                            dailyApplication={principle.daily_application}
-                            dailyExamples={principle.daily_examples}
-                            actionPrompt={principle.action_prompt}
+                            everydayTitle={
+                              activeLens === 'business'
+                                ? (principle.business_title || 'Đang cập nhật diễn giải kinh doanh...')
+                                : principle.everyday_title
+                            }
+                            dailyApplication={
+                              activeLens === 'business'
+                                ? (principle.business_application || null)
+                                : principle.daily_application
+                            }
+                            dailyExamples={
+                              activeLens === 'business'
+                                ? (principle.business_examples || null)
+                                : principle.daily_examples
+                            }
+                            actionPrompt={
+                              activeLens === 'business'
+                                ? (principle.business_action_prompt || null)
+                                : principle.action_prompt
+                            }
                             technicalTitle={principle.name_vi}
                             technicalDescription={principle.description}
                             explanation={principle.explanation}
