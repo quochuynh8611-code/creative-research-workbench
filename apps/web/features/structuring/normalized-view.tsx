@@ -3,6 +3,7 @@
 import React from 'react'
 import { Edit3, CheckCircle, Sparkles, FileText, ArrowRight } from 'lucide-react'
 import { ContradictionBadge } from './contradiction-badge'
+import { SeparationStrategies } from './separation-strategies'
 import type { ProblemFrame } from '@/lib/types'
 
 interface NormalizedViewProps {
@@ -73,6 +74,11 @@ export function NormalizedView({
           worseningParameter={problemFrame.worsening_parameter}
         />
       </div>
+
+      {/* Separation Strategies Card (Physical Contradictions Only) */}
+      {String(problemFrame.contradiction_type || '').toLowerCase() === 'physical' && (
+        <SeparationStrategies />
+      )}
 
       {/* Action Footer */}
       {onProceedToRetrieval && (

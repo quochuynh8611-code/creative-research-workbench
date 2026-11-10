@@ -39,10 +39,127 @@ logger = logging.getLogger(__name__)
 
 _DATA_DIR = pathlib.Path(__file__).parent.parent / "data"
 _MATRIX_JSON_PATH = _DATA_DIR / "triz_matrix_39x39.json"
+_SEPARATION_JSON_PATH = _DATA_DIR / "triz_separation_principles.json"
 
 _TRIZ_DATA: dict[str, Any] = {}
 _CONTRADICTION_MATRIX_39X39: dict[tuple[int, int], list[int]] = {}
 _PARAM_CODE_TO_ID: dict[str, int] = {}
+
+_VALID_STRATEGY_IDS: set[str] = {"space", "time", "condition", "system_level"}
+_SEPARATION_DATA: dict[str, Any] = {}
+_SEPARATION_STRATEGIES_MAP: dict[str, dict[str, Any]] = {}
+
+
+def validate_separation_principles_data(data: dict[str, Any]) -> None:
+    """
+    Xác thực tính toàn vẹn fail-closed của dữ liệu chiến lược phân tách TRIZ.
+    Raise ValueError nếu thiếu key 'strategies', không đủ 4 strategies,
+    trùng ID, ID không hợp lệ, thiếu text tiếng Việt hoặc principle_id ngoài [1..40].
+    """
+    if not isinstance(data, dict):
+        raise ValueError("Dữ liệu separation principles phải là một dictionary JSON hợp lệ.")
+
+    strategies = data.get("strategies")
+    if not isinstance(strategies, list):
+        raise ValueError("Dữ liệu 'strategies' phải là một danh sách hợp lệ.")
+
+    if len(strategies) != 4:
+        raise ValueError(
+            f"Dữ liệu 'strategies' phải có chính xác 4 chiến lược phân tách (tìm thấy: {len(strategies)})."
+        )
+
+    seen_ids: set[str] = set()
+    for strat in strategies:
+        if not isinstance(strat, dict):
+            raise ValueError("Mỗi strategy phải là một dictionary JSON.")
+
+        strat_id = strat.get("id")
+        if not isinstance(strat_id, str) or strat_id not in _VALID_STRATEGY_IDS:
+            raise ValueError(f"Strategy ID không hợp lệ: '{strat_id}'. Phải thuộc {_VALID_STRATEGY_IDS}.")
+
+        if strat_id in seen_ids:
+            raise ValueError(f"Phát hiện strategy ID bị trùng lặp: '{strat_id}'.")
+        seen_ids.add(strat_id)
+
+        name_vi = strat.get("name_vi")
+        if not isinstance(name_vi, str) or not name_vi.strip():
+            raise ValueError(f"Strategy '{strat_id}' thiếu trường 'name_vi' hoặc chuỗi rỗng.")
+
+        diag_q = strat.get("diagnostic_question_vi")
+        if not isinstance(diag_q, str) or not diag_q.strip():
+            raise ValueError(f"Strategy '{strat_id}' thiếu trường 'diagnostic_question_vi' hoặc chuỗi rỗng.")
+
+        principle_ids = strat.get("principle_ids")
+        if not isinstance(principle_ids, list) or len(principle_ids) == 0:
+            raise ValueError(f"Strategy '{strat_id}' thiếu 'principle_ids' hoặc danh sách rỗng.")
+
+        for pid in principle_ids:
+            if not isinstance(pid, int) or pid < 1 or pid > 40:
+                raise ValueError(
+                    f"Principle ID {pid} ngoài phạm vi cho phép (1..40) trong strategy '{strat_id}'."
+                )
+
+
+def _load_separation_principles() -> None:
+    global _SEPARATION_DATA, _SEPARATION_STRATEGIES_MAP
+    if not _SEPARATION_JSON_PATH.exists():
+        logger.warning("TRIZ separation principles file not found at %s", _SEPARATION_JSON_PATH)
+        return
+    try:
+        with open(_SEPARATION_JSON_PATH, "r", encoding="utf-8") as f:
+            data = json.load(f)
+    except (OSError, json.JSONDecodeError) as e:
+        logger.error("Failed to open or parse TRIZ separation principles JSON: %s", e)
+        return
+
+    # validate OUTSIDE the try-except so ValueError propagates fail-closed
+    validate_separation_principles_data(data)
+    _SEPARATION_DATA = data
+    _SEPARATION_STRATEGIES_MAP = {
+        s["id"]: s for s in _SEPARATION_DATA.get("strategies", []) if isinstance(s, dict) and "id" in s
+    }
+
+
+def resolve_separation_principles(strategy_ids: list[str] | None = None) -> list[int]:
+    """
+    Phân giải danh sách nguyên tắc sáng tạo dựa trên các chiến lược phân tách đã chọn.
+    - Nếu không chọn strategy nào (hoặc None/empty): trả về fallback [1, 2, 3, 4].
+    - Nếu chọn một hoặc nhiều: hợp nhất (union) và khử trùng lặp theo thứ tự xuất hiện.
+    """
+    if not strategy_ids:
+        return list(_PHYSICAL_PRINCIPLES)
+
+    seen: set[int] = set()
+    result: list[int] = []
+    for sid in strategy_ids:
+        strat = _SEPARATION_STRATEGIES_MAP.get(sid)
+        if strat and "principle_ids" in strat:
+            for pid in strat["principle_ids"]:
+                if pid not in seen:
+                    seen.add(pid)
+                    result.append(pid)
+
+    return result if result else list(_PHYSICAL_PRINCIPLES)
+
+
+def get_separation_strategies_for_contradiction(
+    contradiction_type: ContradictionType | str | None,
+) -> list[dict[str, Any]] | None:
+    """
+    Trả về danh sách 4 chiến lược phân tách nếu mâu thuẫn là physical;
+    ngược lại (technical, none, unknown) trả về None.
+    """
+    type_val = (
+        contradiction_type.value
+        if hasattr(contradiction_type, "value")
+        else str(contradiction_type or "").lower()
+    )
+    if type_val == "physical":
+        return list(_SEPARATION_DATA.get("strategies", []))
+    return None
+
+
+_load_separation_principles()
 
 
 def validate_triz_matrix_data(data: dict[str, Any]) -> None:

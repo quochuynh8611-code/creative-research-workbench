@@ -12,10 +12,12 @@ from typing import Any
 from fastapi import APIRouter, HTTPException, Query, status
 from pydantic import BaseModel, Field, field_validator
 
+from app.domain.models import ContradictionType
 from app.services.problem_structuring_service import (
     _CONTRADICTION_MATRIX_39X39,
     _TRIZ_DATA,
     auto_map_parameters,
+    get_separation_strategies_for_contradiction,
 )
 from app.services.everyday_triz_lens import get_everyday_triz_lens
 
@@ -167,4 +169,17 @@ async def auto_map_triz_parameters(body: AutoMapRequest) -> dict[str, Any]:
             "total_candidates": len(matches),
             "query_text": body.text,
         },
+    }
+
+
+@router.get("/separation-principles", status_code=status.HTTP_200_OK)
+async def get_triz_separation_principles() -> dict[str, Any]:
+    """
+    Danh mục 4 chiến lược phân tách kinh điển của TRIZ cho mâu thuẫn vật lý.
+    """
+    strategies = get_separation_strategies_for_contradiction(ContradictionType.physical) or []
+    return {
+        "data": strategies,
+        "strategies": strategies,
+        "total": len(strategies),
     }
