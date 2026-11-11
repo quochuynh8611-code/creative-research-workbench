@@ -63,4 +63,38 @@ describe('EverydayMetadataSection — Multi-instance DOM ID Uniqueness & Isolati
     expect(btn1).toHaveAttribute('aria-expanded', 'false')
     expect(btn2).toHaveAttribute('aria-expanded', 'true')
   })
+
+  it('2. Bảo toàn nguyên vẹn principleId kiểu string ("01" và "custom-code") trong aria-label và aria-controls', () => {
+    const { unmount } = render(
+      <EverydayMetadataSection
+        principleId="01"
+        everydayTitle="Nguyên tắc 01"
+        dailyApplication="Ứng dụng 01"
+        technicalTitle="Tech 01"
+        technicalDescription="Desc 01"
+      />
+    )
+
+    const btn01 = screen.getByRole('button', { name: /chi tiết đời sống và câu hỏi gợi mở nguyên tắc #01/i })
+    expect(btn01).toBeInTheDocument()
+    expect(btn01.getAttribute('aria-label')).toContain('#01')
+    expect(btn01.getAttribute('aria-controls')).toContain('01')
+
+    unmount()
+
+    render(
+      <EverydayMetadataSection
+        principleId="custom-code"
+        everydayTitle="Nguyên tắc Custom"
+        dailyApplication="Ứng dụng Custom"
+        technicalTitle="Tech Custom"
+        technicalDescription="Desc Custom"
+      />
+    )
+
+    const btnCustom = screen.getByRole('button', { name: /chi tiết đời sống và câu hỏi gợi mở nguyên tắc #custom-code/i })
+    expect(btnCustom).toBeInTheDocument()
+    expect(btnCustom.getAttribute('aria-label')).toContain('#custom-code')
+    expect(btnCustom.getAttribute('aria-controls')).toContain('custom-code')
+  })
 })
