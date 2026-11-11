@@ -82,7 +82,7 @@ Chỉ có đúng **6 cụm từ cụ thể** dưới đây được đưa vào t
 ### Nguyên tắc phòng vệ ngữ nghĩa (False-Positive Defense)
 - **Tuyệt đối không match từ đơn mơ hồ**: Không đưa các từ đơn lẻ như `"vốn"`, `"thị trường"`, `"khách hàng"`, `"rủi ro"`, `"chuyển đổi"`, `"marketing"` vào từ điển vì nguy cơ gây nhiễu rất cao.
 - **Chống false-positive từ ghép**: Các chuỗi như `"vốn dĩ"`, `"cố vấn"`, `"thị trường ngách"`, `"khách hàng tiềm năng"` không được tự ý match vào các parameter trừ phi chứa chính xác cụm từ được phê duyệt.
-- **Exact phrase matching**: Khớp nguyên cụm từ (case-insensitive) sau khi đã chuẩn hóa khoảng trắng thừa.
+- **Exact phrase matching**: Khớp chuỗi con (substring matching, case-insensitive) sau khi đã cắt khoảng trắng hai đầu (strip); không chuẩn hóa gom khoảng trắng bên trong chuỗi.
 
 ---
 
@@ -102,8 +102,8 @@ Chỉ có đúng **6 cụm từ cụ thể** dưới đây được đưa vào t
 ## 5. Kế hoạch Kiểm thử (Test Strategy)
 
 Bộ test tích hợp tại `backend/tests/integration/test_business_auto_map_api.py` phải bảo đảm:
-1. `test_auto_map_default_lens_is_engineering_legacy`: Không truyền `lens` -> 6 cụm kinh doanh trả về `data: []`.
-2. `test_auto_map_explicit_engineering_lens_legacy`: Truyền `lens="engineering"` -> 6 cụm kinh doanh trả về `data: []`.
+1. `test_auto_map_default_lens_is_engineering_legacy`: Không truyền `lens` -> Giữ nguyên behavior kỹ thuật legacy (các cụm kinh doanh thuần túy không chứa từ khóa kỹ thuật trả về `data: []`).
+2. `test_auto_map_explicit_engineering_lens_legacy`: Truyền `lens="engineering"` -> Giữ nguyên matching kỹ thuật hiện có; 5 cụm kinh doanh không chứa từ khóa kỹ thuật trả về `data: []` (cụm `"tốc độ ra mắt thị trường"` vẫn match parameter 9 theo từ khóa kỹ thuật `"tốc độ"`).
 3. `test_auto_map_business_lens_recognizes_all_6_approved_phrases`: Truyền `lens="business"` cho từng cụm trong 6 cụm -> Khớp đúng Parameter ID tương ứng.
 4. `test_auto_map_business_lens_deduplicates_same_parameter`: Khi câu chứa cả kỹ thuật và kinh doanh cùng 1 param -> Chỉ trả về 1 entry kèm danh sách `matched_keywords` đầy đủ.
 5. `test_auto_map_non_empty_no_match_returns_200_empty_list`: Chuỗi không khớp trả về HTTP 200, `data: []`, `total_candidates: 0`.
