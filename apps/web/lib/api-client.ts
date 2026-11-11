@@ -35,6 +35,8 @@ import type {
   TrizAutoMapResponse,
   TrizLookupQuery,
   TrizLookupResponse,
+  TrizNineWindowsLens,
+  TrizNineWindowsResponse,
   TrizParameterMatch,
   TrizParametersResponse,
   TrizPrinciplesResponse,
@@ -453,5 +455,20 @@ export async function findRelatedSessions(
  */
 export async function getAnalyticsOverview(): Promise<AnalyticsOverviewResponse> {
   const response = await apiClient.get<AnalyticsOverviewResponse>('/api/v1/analytics/overview')
+  return response.data
+}
+
+/**
+ * 33. Lấy ma trận Sơ đồ 9 Màn hình TRIZ (9-Windows / System Operator) theo lăng kính (Batch C2).
+ */
+export async function getTrizNineWindows(
+  lens: TrizNineWindowsLens = 'engineering'
+): Promise<TrizNineWindowsResponse> {
+  const response = await apiClient.get<TrizNineWindowsResponse>(
+    '/api/v1/triz/nine-windows',
+    {
+      params: { lens },
+    }
+  )
   return response.data
 }

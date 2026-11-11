@@ -24,6 +24,12 @@ export default function HomePage() {
                 Sessions
               </Link>
               <Link
+                href="/triz/nine-windows"
+                className="text-muted-foreground hover:text-foreground transition-colors"
+              >
+                9 Cửa sổ
+              </Link>
+              <Link
                 href="/analytics"
                 className="text-muted-foreground hover:text-foreground transition-colors"
               >
