@@ -5,18 +5,20 @@ import { Edit3, CheckCircle, Sparkles, FileText, ArrowRight, ChevronDown, Grid3X
 import { ContradictionBadge } from './contradiction-badge'
 import { SeparationStrategies } from './separation-strategies'
 import { TrizNineWindows } from '@/features/triz/triz-nine-windows'
-import type { ProblemFrame } from '@/lib/types'
+import type { ProblemFrame, NoteDraft } from '@/lib/types'
 
 interface NormalizedViewProps {
   problemFrame: ProblemFrame
   onEditIntake?: () => void
   onProceedToRetrieval?: () => void
+  onSaveAsNote?: (draft: NoteDraft) => void
 }
 
 export function NormalizedView({
   problemFrame,
   onEditIntake,
   onProceedToRetrieval,
+  onSaveAsNote,
 }: NormalizedViewProps) {
   const [isNineWindowsExpanded, setIsNineWindowsExpanded] = useState(false)
   const statement = problemFrame.normalized_statement || problemFrame.raw_statement
@@ -117,7 +119,7 @@ export function NormalizedView({
             id="nine-windows-collapsible-content"
             className="p-6 border-t border-border bg-background/50 space-y-4"
           >
-            <TrizNineWindows />
+            <TrizNineWindows onSaveAsNote={onSaveAsNote} />
           </div>
         )}
       </div>

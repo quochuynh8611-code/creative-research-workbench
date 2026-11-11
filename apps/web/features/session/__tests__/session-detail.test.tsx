@@ -24,6 +24,7 @@ import {
   lookupTrizMatrix,
   findRelatedSessions,
   getSessionRecommendations,
+  getTrizNineWindows,
 } from '@/lib/api-client'
 import type { ProblemFrame, ResearchSession } from '@/lib/types'
 
@@ -47,6 +48,7 @@ jest.mock('@/lib/api-client', () => ({
   getTrizParameters: jest.fn(),
   lookupTrizMatrix: jest.fn(),
   findRelatedSessions: jest.fn(),
+  getTrizNineWindows: jest.fn(),
 }))
 
 const mockedGetSessionRecommendations = getSessionRecommendations as jest.MockedFunction<typeof getSessionRecommendations>
@@ -62,6 +64,7 @@ const mockedExportSessionJson = exportSessionJson as jest.MockedFunction<typeof 
 const mockedGetTrizParameters = getTrizParameters as jest.MockedFunction<typeof getTrizParameters>
 const mockedLookupTrizMatrix = lookupTrizMatrix as jest.MockedFunction<typeof lookupTrizMatrix>
 const mockedFindRelatedSessions = findRelatedSessions as jest.MockedFunction<typeof findRelatedSessions>
+const mockedGetTrizNineWindows = getTrizNineWindows as jest.MockedFunction<typeof getTrizNineWindows>
 
 
 function createTestQueryClient() {
@@ -118,9 +121,98 @@ const MOCK_SESSION_NEW: ResearchSession = {
   problem_frame: null,
 }
 
+const MOCK_NINE_WINDOWS_SESSION_DATA = {
+  lens: 'engineering',
+  lens_title: 'Lăng kính Kỹ thuật & Công nghệ',
+  grid: [
+    {
+      level: 'supersystem',
+      time: 'past',
+      label_vi: 'Hạ tầng kỹ thuật quá khứ',
+      label_en: 'Past Supersystem',
+      prompt_vi: 'Hệ thống hạ tầng trước đây giới hạn công nghệ thế nào?',
+      description_vi: 'Mô tả hạ tầng quá khứ.',
+      examples_vi: ['Đường ray xe lửa khổ hẹp'],
+    },
+    {
+      level: 'supersystem',
+      time: 'present',
+      label_vi: 'Hạ tầng kỹ thuật hiện tại',
+      label_en: 'Present Supersystem',
+      prompt_vi: 'Mạng lưới viễn thông và lưới điện tương tác ra sao?',
+      description_vi: 'Mô tả hạ tầng hiện tại.',
+      examples_vi: ['Mạng 5G'],
+    },
+    {
+      level: 'supersystem',
+      time: 'future',
+      label_vi: 'Hạ tầng kỹ thuật tương lai',
+      label_en: 'Future Supersystem',
+      prompt_vi: 'Điện toán lượng tử và năng lượng phân tán đòi hỏi gì?',
+      description_vi: 'Mô tả hạ tầng tương lai.',
+      examples_vi: ['Lưới điện thông minh microgrid'],
+    },
+    {
+      level: 'system',
+      time: 'past',
+      label_vi: 'Hệ thống kỹ thuật quá khứ',
+      label_en: 'Past System',
+      prompt_vi: 'Thiết kế ban đầu giải quyết mâu thuẫn bằng cơ chế nào?',
+      description_vi: 'Mô tả hệ thống quá khứ.',
+      examples_vi: ['Điện thoại thanh'],
+    },
+    {
+      level: 'system',
+      time: 'present',
+      label_vi: 'Hệ thống kỹ thuật hiện tại',
+      label_en: 'Present System',
+      prompt_vi: 'Sản phẩm hiện tại gặp mâu thuẫn hiệu năng và chi phí nào?',
+      description_vi: 'Mô tả hệ thống hiện tại.',
+      examples_vi: ['Điện thoại thông minh'],
+    },
+    {
+      level: 'system',
+      time: 'future',
+      label_vi: 'Hệ thống kỹ thuật tương lai',
+      label_en: 'Future System',
+      prompt_vi: 'Hệ thống tự hòa tan chức năng vào môi trường như thế nào?',
+      description_vi: 'Mô tả hệ thống tương lai.',
+      examples_vi: ['Giao diện não máy'],
+    },
+    {
+      level: 'subsystem',
+      time: 'past',
+      label_vi: 'Phân hệ linh kiện quá khứ',
+      label_en: 'Past Subsystem',
+      prompt_vi: 'Linh kiện rời rạc trước đây gồm những gì?',
+      description_vi: 'Mô tả phân hệ quá khứ.',
+      examples_vi: ['Bóng đèn chân không'],
+    },
+    {
+      level: 'subsystem',
+      time: 'present',
+      label_vi: 'Phân hệ linh kiện hiện tại',
+      label_en: 'Present Subsystem',
+      prompt_vi: 'Các cảm biến và chip bán dẫn phối hợp ra sao?',
+      description_vi: 'Mô tả phân hệ hiện tại.',
+      examples_vi: ['Chip 3nm'],
+    },
+    {
+      level: 'subsystem',
+      time: 'future',
+      label_vi: 'Phân hệ linh kiện tương lai',
+      label_en: 'Future Subsystem',
+      prompt_vi: 'Vật liệu tự phục hồi sẽ thay thế linh kiện hiện tại ra sao?',
+      description_vi: 'Mô tả phân hệ tương lai.',
+      examples_vi: ['Vật liệu tự liền'],
+    },
+  ],
+}
+
 describe('Phase 5.4 — Problem Intake & Structuring Canvas Tests', () => {
   beforeEach(() => {
     jest.clearAllMocks()
+    mockedGetTrizNineWindows.mockResolvedValue(MOCK_NINE_WINDOWS_SESSION_DATA as any)
     mockedSearchKnowledge.mockResolvedValue({ results: [], latency_ms: 10 })
     mockedListResearchNotes.mockResolvedValue({ data: [], meta: { total: 0 } })
     mockedListCandidateSolutions.mockResolvedValue({ data: [], meta: { total: 0, session_id: 'ses-456' } })
@@ -599,6 +691,73 @@ describe('Phase 5.4 — Problem Intake & Structuring Canvas Tests', () => {
       expect(await screen.findByText('Thêm ghi chú nghiên cứu')).toBeInTheDocument()
       const textarea = screen.getByPlaceholderText(/nhập ghi chú nghiên cứu/i) as HTMLTextAreaElement
       expect(textarea.value).toContain('Hợp kim titan siêu nhẹ')
+    })
+
+    it('chuyển cell từ TRIZ 9-Windows sang Notebook và prefill nội dung', async () => {
+      mockedGetSession.mockResolvedValue(MOCK_SESSION_WITH_FRAME)
+      mockedListResearchNotes.mockResolvedValue({ data: [], meta: { total: 0 } })
+
+      renderWithClient(<SessionDetail sessionId="ses-456" />)
+
+      await waitFor(() => {
+        expect(screen.getByText('Tối ưu độ bền và trọng lượng cánh tay robot')).toBeInTheDocument()
+      })
+
+      // Mở collapsible 9-Windows
+      const toggleButton = screen.getByRole('button', {
+        name: /Mở rộng góc nhìn hệ thống đa chiều \(TRIZ 9-Windows\)|TRIZ 9-Windows/i,
+      })
+      fireEvent.click(toggleButton)
+
+      await waitFor(() => {
+        expect(screen.getAllByRole('article')).toHaveLength(9)
+      })
+
+      // Bấm nút Lưu vào sổ tay của cell đầu tiên
+      const saveBtns = screen.getAllByRole('button', { name: /lưu vào sổ tay/i })
+      expect(saveBtns.length).toBeGreaterThan(0)
+      fireEvent.click(saveBtns[0])
+
+      // Kiểm tra chuyển sang tab Notebook và form được điền sẵn nội dung draft
+      expect(await screen.findByText('Thêm ghi chú nghiên cứu')).toBeInTheDocument()
+      const textarea = screen.getByPlaceholderText(/nhập ghi chú nghiên cứu/i) as HTMLTextAreaElement
+      expect(textarea.value).toContain('Hạ tầng kỹ thuật quá khứ')
+      expect(textarea.value).toContain('Lăng kính Kỹ thuật & Công nghệ')
+    })
+
+    it('cho phép Hủy nháp sau khi lưu draft từ TRIZ 9-Windows', async () => {
+      mockedGetSession.mockResolvedValue(MOCK_SESSION_WITH_FRAME)
+      mockedListResearchNotes.mockResolvedValue({ data: [], meta: { total: 0 } })
+
+      renderWithClient(<SessionDetail sessionId="ses-456" />)
+
+      await waitFor(() => {
+        expect(screen.getByText('Tối ưu độ bền và trọng lượng cánh tay robot')).toBeInTheDocument()
+      })
+
+      // Mở collapsible 9-Windows
+      const toggleButton = screen.getByRole('button', {
+        name: /Mở rộng góc nhìn hệ thống đa chiều \(TRIZ 9-Windows\)|TRIZ 9-Windows/i,
+      })
+      fireEvent.click(toggleButton)
+
+      await waitFor(() => {
+        expect(screen.getAllByRole('article')).toHaveLength(9)
+      })
+
+      // Bấm nút Lưu vào sổ tay
+      const saveBtns = screen.getAllByRole('button', { name: /lưu vào sổ tay/i })
+      fireEvent.click(saveBtns[0])
+
+      // Kiểm tra đã ở tab Notebook và có nút Hủy nháp
+      expect(await screen.findByText('Thêm ghi chú nghiên cứu')).toBeInTheDocument()
+      const discardBtn = screen.getByRole('button', { name: /hủy nháp/i })
+      fireEvent.click(discardBtn)
+
+      // Sau khi hủy nháp, textarea trở về rỗng và banner biến mất
+      const textarea = screen.getByPlaceholderText(/nhập ghi chú nghiên cứu/i) as HTMLTextAreaElement
+      expect(textarea.value).toBe('')
+      expect(screen.queryByText(/Đang soạn thảo từ bản nháp gợi ý/i)).not.toBeInTheDocument()
     })
   })
 

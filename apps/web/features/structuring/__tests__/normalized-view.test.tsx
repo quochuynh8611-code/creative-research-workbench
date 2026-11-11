@@ -247,4 +247,63 @@ describe('NormalizedView — TRIZ 9-Windows Integration (Batch C3a: RED Phase)',
 
     expect(screen.queryByRole('button', { name: /Lưu vào Notebook|Lưu ghi chú/i })).not.toBeInTheDocument()
   })
+
+  describe('7. 9-Windows Notebook Integration (Batch C3b)', () => {
+    it('test_does_not_render_save_note_buttons_without_callback: không truyền onSaveAsNote thì không có nút Lưu vào sổ tay', async () => {
+      renderWithClient(<NormalizedView problemFrame={mockProblemFrame} />)
+
+      const toggleButton = screen.getByRole('button', {
+        name: /Mở rộng góc nhìn hệ thống đa chiều \(TRIZ 9-Windows\)|TRIZ 9-Windows/i,
+      })
+      fireEvent.click(toggleButton)
+
+      await waitFor(() => {
+        expect(screen.getAllByRole('article')).toHaveLength(9)
+      })
+
+      expect(screen.queryByRole('button', { name: /lưu vào sổ tay/i })).not.toBeInTheDocument()
+    })
+
+    it('test_passes_save_note_callback_to_nine_windows: truyền onSaveAsNote thì truyền tiếp xuống TrizNineWindows và gọi callback khi click', async () => {
+      const onSaveAsNote = jest.fn()
+      renderWithClient(<NormalizedView problemFrame={mockProblemFrame} onSaveAsNote={onSaveAsNote} />)
+
+      const toggleButton = screen.getByRole('button', {
+        name: /Mở rộng góc nhìn hệ thống đa chiều \(TRIZ 9-Windows\)|TRIZ 9-Windows/i,
+      })
+      fireEvent.click(toggleButton)
+
+      await waitFor(() => {
+        expect(screen.getAllByRole('article')).toHaveLength(9)
+      })
+
+      const saveButtons = screen.getAllByRole('button', { name: /lưu vào sổ tay/i })
+      expect(saveButtons).toHaveLength(9)
+
+      fireEvent.click(saveButtons[0])
+      expect(onSaveAsNote).toHaveBeenCalledTimes(1)
+      expect(onSaveAsNote).toHaveBeenCalledWith(
+        expect.objectContaining({
+          note_type: 'insight',
+          source_chunk_id: null,
+          content: expect.stringContaining('Siêu hệ thống'),
+        })
+      )
+    })
+
+    it('test_standalone_behavior_remains_read_only: khi không truyền callback, mở collapsible vẫn thuần read-only', async () => {
+      renderWithClient(<NormalizedView problemFrame={mockProblemFrame} />)
+
+      const toggleButton = screen.getByRole('button', {
+        name: /Mở rộng góc nhìn hệ thống đa chiều \(TRIZ 9-Windows\)|TRIZ 9-Windows/i,
+      })
+      fireEvent.click(toggleButton)
+
+      await waitFor(() => {
+        expect(screen.getAllByRole('article')).toHaveLength(9)
+      })
+
+      expect(screen.queryByRole('button', { name: /lưu vào sổ tay/i })).not.toBeInTheDocument()
+    })
+  })
 })

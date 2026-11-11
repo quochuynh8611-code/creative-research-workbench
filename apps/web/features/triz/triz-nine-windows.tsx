@@ -2,9 +2,9 @@
 
 import React, { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { HelpCircle, AlertCircle, RefreshCw } from 'lucide-react'
+import { HelpCircle, AlertCircle, RefreshCw, Bookmark } from 'lucide-react'
 import { getTrizNineWindows } from '@/lib/api-client'
-import type { TrizNineWindowsLens, TrizNineWindowsResponse } from '@/lib/types'
+import type { TrizNineWindowsLens, TrizNineWindowsResponse, NoteDraft } from '@/lib/types'
 
 const LEVEL_LABELS: Record<string, string> = {
   supersystem: 'Siêu hệ thống',
@@ -24,7 +24,11 @@ const LENSES: { key: TrizNineWindowsLens; label: string }[] = [
   { key: 'everyday', label: 'Đời sống' },
 ]
 
-export function TrizNineWindows() {
+interface TrizNineWindowsProps {
+  onSaveAsNote?: (draft: NoteDraft) => void
+}
+
+export function TrizNineWindows({ onSaveAsNote }: TrizNineWindowsProps = {}) {
   const [activeLens, setActiveLens] = useState<TrizNineWindowsLens>('engineering')
 
   const {
@@ -214,6 +218,32 @@ export function TrizNineWindows() {
                           </li>
                         ))}
                       </ul>
+                    </div>
+                  )}
+
+                  {/* Save to Notebook Action Button */}
+                  {onSaveAsNote && (
+                    <div className="mt-3 pt-2.5 border-t border-border/50 flex items-center justify-end">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const examplesSection =
+                            cell.examples_vi && cell.examples_vi.length > 0
+                              ? `\n\nVí dụ: ${cell.examples_vi.join('; ')}`
+                              : ''
+                          const content = `[TRIZ 9-Windows: ${data.lens_title} • ${levelLabel} - ${timeLabel}: ${cell.label_vi}]\nCâu hỏi gợi mở: ${cell.prompt_vi}\n\nĐặc điểm: ${cell.description_vi}${examplesSection}`
+                          onSaveAsNote({
+                            content,
+                            note_type: 'insight',
+                            source_chunk_id: null,
+                          })
+                        }}
+                        aria-label={`Lưu vào sổ tay: ${levelLabel} • ${timeLabel} - ${cell.label_vi}`}
+                        className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold rounded-lg bg-primary/10 hover:bg-primary/20 text-primary border border-primary/20 transition-all cursor-pointer focus-visible:ring-2 focus-visible:ring-primary focus:outline-none"
+                      >
+                        <Bookmark className="w-3.5 h-3.5" />
+                        <span>Lưu vào sổ tay</span>
+                      </button>
                     </div>
                   )}
                 </article>
