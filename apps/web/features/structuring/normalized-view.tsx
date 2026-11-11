@@ -1,9 +1,10 @@
 'use client'
 
-import React from 'react'
-import { Edit3, CheckCircle, Sparkles, FileText, ArrowRight } from 'lucide-react'
+import React, { useState } from 'react'
+import { Edit3, CheckCircle, Sparkles, FileText, ArrowRight, ChevronDown, Grid3X3 } from 'lucide-react'
 import { ContradictionBadge } from './contradiction-badge'
 import { SeparationStrategies } from './separation-strategies'
+import { TrizNineWindows } from '@/features/triz/triz-nine-windows'
 import type { ProblemFrame } from '@/lib/types'
 
 interface NormalizedViewProps {
@@ -17,6 +18,7 @@ export function NormalizedView({
   onEditIntake,
   onProceedToRetrieval,
 }: NormalizedViewProps) {
+  const [isNineWindowsExpanded, setIsNineWindowsExpanded] = useState(false)
   const statement = problemFrame.normalized_statement || problemFrame.raw_statement
 
   return (
@@ -79,6 +81,46 @@ export function NormalizedView({
       {String(problemFrame.contradiction_type || '').toLowerCase() === 'physical' && (
         <SeparationStrategies />
       )}
+
+      {/* Collapsible TRIZ 9-Windows Section */}
+      <div className="rounded-xl border border-border bg-card/60 backdrop-blur-sm shadow-sm overflow-hidden">
+        <button
+          type="button"
+          onClick={() => setIsNineWindowsExpanded((prev) => !prev)}
+          aria-expanded={isNineWindowsExpanded}
+          aria-controls="nine-windows-collapsible-content"
+          aria-label="Mở rộng góc nhìn hệ thống đa chiều (TRIZ 9-Windows)"
+          className="w-full flex items-center justify-between p-5 text-left hover:bg-muted/30 transition-colors focus-visible:ring-2 focus-visible:ring-primary focus:outline-none cursor-pointer"
+        >
+          <div className="flex items-center gap-3">
+            <div className="p-2 rounded-lg bg-primary/10 text-primary">
+              <Grid3X3 className="w-4 h-4" />
+            </div>
+            <div>
+              <h3 className="text-sm font-semibold text-foreground">
+                Mở rộng góc nhìn hệ thống đa chiều (TRIZ 9-Windows)
+              </h3>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Khung ma trận 3x3 mở rộng bối cảnh siêu hệ thống, hệ thống và phân hệ qua trục thời gian
+              </p>
+            </div>
+          </div>
+          <ChevronDown
+            className={`w-4 h-4 text-muted-foreground transition-transform duration-200 shrink-0 ml-2 ${
+              isNineWindowsExpanded ? 'rotate-180' : ''
+            }`}
+          />
+        </button>
+
+        {isNineWindowsExpanded && (
+          <div
+            id="nine-windows-collapsible-content"
+            className="p-6 border-t border-border bg-background/50 space-y-4"
+          >
+            <TrizNineWindows />
+          </div>
+        )}
+      </div>
 
       {/* Action Footer */}
       {onProceedToRetrieval && (
