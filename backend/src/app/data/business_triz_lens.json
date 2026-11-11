@@ -479,5 +479,37 @@
       ],
       "business_action_prompt": "Sự kết hợp giữa hai năng lực hoàn toàn khác biệt nào sẽ tạo ra giải pháp độc nhất vô nhị trên thị trường?"
     }
-  }
+  },
+  "auto_map_keywords": [
+    {
+      "phrase": "tốc độ ra mắt thị trường",
+      "parameter_id": 9,
+      "parameter_code": "speed"
+    },
+    {
+      "phrase": "tỷ lệ giữ chân nhân sự",
+      "parameter_id": 13,
+      "parameter_code": "stability"
+    },
+    {
+      "phrase": "vòng đời khách hàng",
+      "parameter_id": 16,
+      "parameter_code": "duration_stationary"
+    },
+    {
+      "phrase": "hao hụt hàng tồn kho",
+      "parameter_id": 23,
+      "parameter_code": "loss_of_substance"
+    },
+    {
+      "phrase": "thời gian chờ phê duyệt",
+      "parameter_id": 25,
+      "parameter_code": "loss_of_time"
+    },
+    {
+      "phrase": "trải nghiệm người dùng",
+      "parameter_id": 33,
+      "parameter_code": "ease_of_operation"
+    }
+  ]
 }

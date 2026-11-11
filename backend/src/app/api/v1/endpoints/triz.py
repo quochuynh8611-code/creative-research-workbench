@@ -8,7 +8,7 @@ Cung cấp:
 """
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, Literal
 from fastapi import APIRouter, HTTPException, Query, status
 from pydantic import BaseModel, Field, field_validator
 
@@ -28,6 +28,7 @@ router = APIRouter()
 class AutoMapRequest(BaseModel):
     text: str = Field(default="")
     top_k: int = Field(default=5, ge=1, le=39)
+    lens: Literal["engineering", "business"] = Field(default="engineering")
 
 
 # ──────────────────────────────────────────────
@@ -166,7 +167,7 @@ async def auto_map_triz_parameters(body: AutoMapRequest) -> dict[str, Any]:
     Hỗ trợ đối soát từ khóa song ngữ Việt - Anh và trả về danh sách candidates kèm điểm tương đồng.
     """
     try:
-        matches = auto_map_parameters(text=body.text, top_k=body.top_k)
+        matches = auto_map_parameters(text=body.text, top_k=body.top_k, lens=body.lens)
     except ValueError as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
