@@ -50,6 +50,7 @@ export function EverydayMetadataSection({
     <TrizLensMetadataSection
       lens="everyday"
       principle={principle}
+      principleId={principleId}
       className={className}
     />
   )

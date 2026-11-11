@@ -19,6 +19,7 @@ export type TrizLensType = 'engineering' | 'business' | 'everyday'
 export interface TrizLensMetadataSectionProps {
   lens: TrizLensType
   principle: TrizPrinciple
+  principleId?: number | string
   className?: string
 }
 ```
@@ -46,6 +47,12 @@ Feature: TrizLensMetadataSection Component
     Then hiển thị tên kỹ thuật gốc và mô tả kỹ thuật
     And hiển thị accordion với nhãn đời sống "Chi tiết đời sống & Câu hỏi gợi mở"
     And hiển thị đầy đủ: everyday_title, daily_application, daily_examples, action_prompt
+    And chỉ render accordion khi có ít nhất một trường nội dung (application, examples, action prompt)
+
+  Ghi chú về điều kiện render Accordion (Behavior Notes):
+    - Khối Accordion (Everyday/Business) chỉ render khi có ít nhất một trường nội dung con: application, examples, hoặc action prompt.
+    - Chỉ có riêng everyday_title hoặc business fallback title KHÔNG đủ điều kiện render accordion.
+    - Đây là thay đổi chủ đích so với mã nguồn cũ nhằm tránh tạo ra khối accordion rỗng không chứa nội dung (Empty Accordion Anti-Pattern).
 
   Scenario: 2. Render đầy đủ 4 trường metadata ở lăng kính Kinh doanh (Business)
     Given một nguyên tắc TRIZ có đầy đủ thông số kinh doanh

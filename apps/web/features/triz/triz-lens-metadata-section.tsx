@@ -10,16 +10,18 @@ export type TrizLensType = 'engineering' | 'business' | 'everyday'
 export interface TrizLensMetadataSectionProps {
   lens: TrizLensType
   principle: TrizPrinciple
+  principleId?: number | string
   className?: string
 }
 
 export function TrizLensMetadataSection({
   lens,
   principle,
+  principleId: explicitPrincipleId,
   className,
 }: TrizLensMetadataSectionProps) {
   const generatedId = useId()
-  const principleId = principle.principle_id || principle.id || 0
+  const principleId = explicitPrincipleId ?? (principle.principle_id || principle.id || 0)
   const contentId = `triz-lens-content-${principleId}-${generatedId.replace(/:/g, '')}`
 
   const isBusiness = lens === 'business'
