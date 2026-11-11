@@ -585,3 +585,34 @@ export interface AnalyticsOverviewResponse {
   data: AnalyticsOverviewData
   generated_at: string
 }
+
+// ──────────────────────────────────────────────
+// TRIZ 9-Windows Types (Batch C2)
+// ──────────────────────────────────────────────
+
+export type TrizNineWindowsLens = 'engineering' | 'business' | 'everyday'
+export type TrizSystemLevel = 'supersystem' | 'system' | 'subsystem'
+export type TrizTimeHorizon = 'past' | 'present' | 'future'
+
+export interface TrizNineWindowsCell {
+  level: TrizSystemLevel
+  time: TrizTimeHorizon
+  label_vi: string
+  prompt_vi: string
+  description_vi: string
+  label_en?: string
+  examples_vi?: string[]
+}
+
+export interface TrizNineWindowsMeta {
+  total_windows: number
+  system_levels: string[]
+  time_horizons: string[]
+}
+
+export interface TrizNineWindowsResponse {
+  lens: TrizNineWindowsLens
+  lens_title: string
+  grid: TrizNineWindowsCell[]
+  meta: TrizNineWindowsMeta
+}
