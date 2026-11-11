@@ -362,6 +362,12 @@ describe('Track 1.3 — TrizMatrixLookup Component Tests', () => {
       </QueryClientProvider>
     )
 
+    // Chuyển sang lăng kính Đời sống để kiểm tra everyday metadata
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: /Đời sống/i })).toBeInTheDocument()
+    })
+    fireEvent.click(screen.getByRole('button', { name: /Đời sống/i }))
+
     await waitFor(() => {
       // everyday_title
       expect(screen.getByText('Thay đổi tính chất (Chuyển đổi thông số)')).toBeInTheDocument()
@@ -392,6 +398,12 @@ describe('Track 1.3 — TrizMatrixLookup Component Tests', () => {
       </QueryClientProvider>
     )
 
+    // Chuyển sang lăng kính Đời sống để kiểm tra accordion toggle
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: /Đời sống/i })).toBeInTheDocument()
+    })
+    fireEvent.click(screen.getByRole('button', { name: /Đời sống/i }))
+
     await waitFor(() => {
       const toggleBtns = screen.getAllByRole('button', { name: /chi tiết đời sống|hướng dẫn đời thường|ví dụ & câu hỏi/i })
       expect(toggleBtns.length).toBeGreaterThan(0)
@@ -418,6 +430,12 @@ describe('Track 1.3 — TrizMatrixLookup Component Tests', () => {
         />
       </QueryClientProvider>
     )
+
+    // Chuyển sang lăng kính Đời sống để hiển thị tên lăng kính tương ứng
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: /Đời sống/i })).toBeInTheDocument()
+    })
+    fireEvent.click(screen.getByRole('button', { name: /Đời sống/i }))
 
     await waitFor(() => {
       expect(screen.getByText(/Thay đổi tính chất/i)).toBeInTheDocument()

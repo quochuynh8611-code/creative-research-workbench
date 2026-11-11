@@ -1,8 +1,8 @@
 'use client'
 
-import React, { useState, useId } from 'react'
-import { ChevronDown, Sparkles, HelpCircle, CheckCircle2 } from 'lucide-react'
-import { cn } from '@/lib/utils'
+import React from 'react'
+import { TrizLensMetadataSection } from '@/features/triz/triz-lens-metadata-section'
+import type { TrizPrinciple } from '@/lib/types'
 
 export interface EverydayMetadataSectionProps {
   everydayTitle?: string | null
@@ -16,6 +16,10 @@ export interface EverydayMetadataSectionProps {
   principleId: number | string
 }
 
+/**
+ * EverydayMetadataSection — Thin adapter bao bọc TrizLensMetadataSection
+ * với lăng kính 'everyday', bảo toàn tương thích ngược 100% cho luồng Ideation.
+ */
 export function EverydayMetadataSection({
   everydayTitle,
   dailyApplication,
@@ -27,109 +31,26 @@ export function EverydayMetadataSection({
   className,
   principleId,
 }: EverydayMetadataSectionProps) {
-  const generatedId = useId()
-  const contentId = `everyday-content-${principleId}-${generatedId.replace(/:/g, '')}`
+  const pId = typeof principleId === 'number' ? principleId : Number(principleId) || 0
 
-  const hasEverydayData = Boolean(
-    everydayTitle || dailyApplication || (dailyExamples && dailyExamples.length > 0) || actionPrompt
-  )
-
-  // Mặc định mở rộng nếu có dữ liệu đời sống
-  const [isExpanded, setIsExpanded] = useState<boolean>(true)
+  const principle: TrizPrinciple = {
+    id: pId,
+    principle_id: pId,
+    name_vi: technicalTitle,
+    name_en: '',
+    description: technicalDescription,
+    explanation: explanation || undefined,
+    everyday_title: everydayTitle || undefined,
+    daily_application: dailyApplication || undefined,
+    daily_examples: dailyExamples || undefined,
+    action_prompt: actionPrompt || undefined,
+  }
 
   return (
-    <div className={cn('space-y-3', className)}>
-      {/* Title area */}
-      <div className="space-y-1">
-        {everydayTitle ? (
-          <div>
-            <h4 className="text-base font-bold text-foreground tracking-tight">
-              {everydayTitle}
-            </h4>
-            <p className="text-xs text-muted-foreground font-medium flex items-center gap-1 mt-0.5">
-              <span>Thuật ngữ gốc:</span>
-              <span className="font-semibold text-foreground/80">{technicalTitle}</span>
-            </p>
-          </div>
-        ) : (
-          <h4 className="text-base font-bold text-foreground tracking-tight">
-            {technicalTitle}
-          </h4>
-        )}
-
-        <p className="text-xs text-muted-foreground leading-relaxed">
-          {technicalDescription}
-        </p>
-
-        {explanation && (
-          <div className="p-2 rounded bg-muted/40 text-[11px] text-muted-foreground italic border-l-2 border-amber-500/40 mt-1.5">
-            {explanation}
-          </div>
-        )}
-      </div>
-
-      {/* Everyday Details Accordion (Read-Only) */}
-      {hasEverydayData && (
-        <div className="rounded-xl border border-amber-500/20 bg-amber-500/5 overflow-hidden transition-all">
-          <button
-            type="button"
-            onClick={() => setIsExpanded((prev) => !prev)}
-            aria-expanded={isExpanded}
-            aria-controls={contentId}
-            aria-label={`Chi tiết đời sống và câu hỏi gợi mở nguyên tắc #${principleId}`}
-            className="w-full px-3 py-2 text-xs font-semibold text-amber-700 dark:text-amber-400 flex items-center justify-between hover:bg-amber-500/10 transition-colors cursor-pointer"
-          >
-            <span className="flex items-center gap-1.5">
-              <Sparkles className="w-3.5 h-3.5 text-amber-500 shrink-0" />
-              <span>Chi tiết đời sống & Câu hỏi gợi mở</span>
-            </span>
-            <ChevronDown
-              className={cn('w-3.5 h-3.5 transition-transform duration-200', isExpanded && 'rotate-180')}
-            />
-          </button>
-
-          {isExpanded && (
-            <div
-              id={contentId}
-              className="px-3 pb-3 pt-1 space-y-2.5 text-xs text-foreground/90 border-t border-amber-500/15"
-            >
-              {dailyApplication && (
-                <div className="space-y-0.5">
-                  <span className="font-semibold text-amber-700 dark:text-amber-400 text-[11px] uppercase tracking-wide">
-                    Cách áp dụng trong đời sống:
-                  </span>
-                  <p className="leading-relaxed text-muted-foreground">{dailyApplication}</p>
-                </div>
-              )}
-
-              {dailyExamples && dailyExamples.length > 0 && (
-                <div className="space-y-1">
-                  <span className="font-semibold text-amber-700 dark:text-amber-400 text-[11px] uppercase tracking-wide">
-                    Ví dụ minh họa:
-                  </span>
-                  <ul className="list-disc list-inside space-y-1 text-muted-foreground pl-1">
-                    {dailyExamples.map((ex, idx) => (
-                      <li key={idx} className="leading-relaxed">
-                        {ex}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-
-              {actionPrompt && (
-                <div className="p-2 rounded-lg bg-amber-500/10 border border-amber-500/20 text-amber-900 dark:text-amber-200 flex items-start gap-1.5">
-                  <HelpCircle className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
-                  <p className="font-medium text-[11px] leading-relaxed">
-                    <span className="font-bold">Câu hỏi gợi mở: </span>
-                    {actionPrompt}
-                  </p>
-                </div>
-              )}
-            </div>
-          )}
-        </div>
-      )}
-    </div>
+    <TrizLensMetadataSection
+      lens="everyday"
+      principle={principle}
+      className={className}
+    />
   )
 }

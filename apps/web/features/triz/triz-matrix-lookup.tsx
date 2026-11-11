@@ -18,7 +18,7 @@ import { getTrizParameters, lookupTrizMatrix } from '@/lib/api-client'
 import type { TrizPrinciple, TrizLookupResponse, NoteDraft } from '@/lib/types'
 import { cn } from '@/lib/utils'
 import { resolveParamId } from '@/lib/triz-param-resolver'
-import { EverydayMetadataSection } from '@/features/triz/everyday-metadata-section'
+import { TrizLensMetadataSection } from '@/features/triz/triz-lens-metadata-section'
 
 interface TrizMatrixLookupProps {
   improvingParameter?: string | number | null
@@ -313,31 +313,9 @@ export function TrizMatrixLookup({
                             </span>
                           </div>
 
-                          <EverydayMetadataSection
-                            principleId={pid}
-                            everydayTitle={
-                              activeLens === 'business'
-                                ? (principle.business_title || 'Đang cập nhật diễn giải kinh doanh...')
-                                : principle.everyday_title
-                            }
-                            dailyApplication={
-                              activeLens === 'business'
-                                ? (principle.business_application || null)
-                                : principle.daily_application
-                            }
-                            dailyExamples={
-                              activeLens === 'business'
-                                ? (principle.business_examples || null)
-                                : principle.daily_examples
-                            }
-                            actionPrompt={
-                              activeLens === 'business'
-                                ? (principle.business_action_prompt || null)
-                                : principle.action_prompt
-                            }
-                            technicalTitle={principle.name_vi}
-                            technicalDescription={principle.description}
-                            explanation={principle.explanation}
+                          <TrizLensMetadataSection
+                            lens={activeLens}
+                            principle={principle}
                           />
                         </div>
 
