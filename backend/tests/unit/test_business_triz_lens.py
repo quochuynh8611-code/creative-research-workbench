@@ -240,3 +240,115 @@ def test_business_lens_regression_engineering_and_everyday_preserved(client: Tes
     assert "daily_application" in p1
     assert "daily_examples" in p1
     assert "action_prompt" in p1
+
+
+# ---------------------------------------------------------------------------
+# 5. Validator Tests cho auto_map_keywords (Batch B2)
+# ---------------------------------------------------------------------------
+
+def test_validate_business_triz_lens_auto_map_keywords_valid() -> None:
+    """Validator phải pass khi auto_map_keywords là danh sách hợp lệ."""
+    from app.services.business_triz_lens import validate_business_triz_lens_data
+
+    params = {str(i): {"business_label": f"Label {i}"} for i in range(1, 40)}
+    principles = {
+        str(i): {
+            "business_title": f"Title {i}",
+            "business_application": f"App {i}",
+            "business_examples": ["Ex 1"],
+            "business_action_prompt": f"Prompt {i}",
+        }
+        for i in range(1, 41)
+    }
+    kws = [
+        {"phrase": "tốc độ ra mắt thị trường", "parameter_id": 9},
+        {"phrase": "tỷ lệ giữ chân nhân sự", "parameter_id": 13},
+    ]
+    validate_business_triz_lens_data(
+        {"parameters": params, "principles": principles, "auto_map_keywords": kws}
+    )
+
+
+def test_validate_business_triz_lens_auto_map_keywords_invalid_structure() -> None:
+    """Validator phải kích hoạt ValueError nếu auto_map_keywords không phải là list."""
+    from app.services.business_triz_lens import validate_business_triz_lens_data
+
+    params = {str(i): {"business_label": f"Label {i}"} for i in range(1, 40)}
+    principles = {
+        str(i): {
+            "business_title": f"Title {i}",
+            "business_application": f"App {i}",
+            "business_examples": ["Ex 1"],
+            "business_action_prompt": f"Prompt {i}",
+        }
+        for i in range(1, 41)
+    }
+
+    with pytest.raises(ValueError, match="auto_map_keywords"):
+        validate_business_triz_lens_data(
+            {"parameters": params, "principles": principles, "auto_map_keywords": "invalid_type"}
+        )
+
+    with pytest.raises(ValueError, match="dictionary"):
+        validate_business_triz_lens_data(
+            {"parameters": params, "principles": principles, "auto_map_keywords": ["not_a_dict"]}
+        )
+
+
+def test_validate_business_triz_lens_auto_map_keywords_empty_phrase_or_invalid_id() -> None:
+    """Validator phải kích hoạt ValueError nếu phrase rỗng hoặc parameter_id không thuộc 1..39."""
+    from app.services.business_triz_lens import validate_business_triz_lens_data
+
+    params = {str(i): {"business_label": f"Label {i}"} for i in range(1, 40)}
+    principles = {
+        str(i): {
+            "business_title": f"Title {i}",
+            "business_application": f"App {i}",
+            "business_examples": ["Ex 1"],
+            "business_action_prompt": f"Prompt {i}",
+        }
+        for i in range(1, 41)
+    }
+
+    with pytest.raises(ValueError, match="thiếu 'phrase'"):
+        validate_business_triz_lens_data(
+            {
+                "parameters": params,
+                "principles": principles,
+                "auto_map_keywords": [{"phrase": "   ", "parameter_id": 9}],
+            }
+        )
+
+    with pytest.raises(ValueError, match="parameter_id"):
+        validate_business_triz_lens_data(
+            {
+                "parameters": params,
+                "principles": principles,
+                "auto_map_keywords": [{"phrase": "cụm hợp lệ", "parameter_id": 99}],
+            }
+        )
+
+
+def test_validate_business_triz_lens_auto_map_keywords_duplicate_phrase() -> None:
+    """Validator phải kích hoạt ValueError nếu có cụm từ trùng lặp (case-insensitive)."""
+    from app.services.business_triz_lens import validate_business_triz_lens_data
+
+    params = {str(i): {"business_label": f"Label {i}"} for i in range(1, 40)}
+    principles = {
+        str(i): {
+            "business_title": f"Title {i}",
+            "business_application": f"App {i}",
+            "business_examples": ["Ex 1"],
+            "business_action_prompt": f"Prompt {i}",
+        }
+        for i in range(1, 41)
+    }
+    kws = [
+        {"phrase": "tốc độ ra mắt thị trường", "parameter_id": 9},
+        {"phrase": "Tốc Độ Ra Mắt Thị Trường", "parameter_id": 9},
+    ]
+
+    with pytest.raises(ValueError, match="trùng lặp"):
+        validate_business_triz_lens_data(
+            {"parameters": params, "principles": principles, "auto_map_keywords": kws}
+        )

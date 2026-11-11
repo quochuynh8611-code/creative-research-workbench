@@ -86,6 +86,28 @@ def validate_business_triz_lens_data(data: dict[str, Any]) -> None:
                     f"Principle '{k}' chứa phần tử 'business_examples' rỗng hoặc không phải string."
                 )
 
+    if "auto_map_keywords" in data:
+        keywords = data["auto_map_keywords"]
+        if not isinstance(keywords, list):
+            raise ValueError("Trường 'auto_map_keywords' phải là một danh sách.")
+        seen_phrases: set[str] = set()
+        for idx, entry in enumerate(keywords):
+            if not isinstance(entry, dict):
+                raise ValueError(f"Entry {idx} trong 'auto_map_keywords' phải là một dictionary.")
+            phrase = entry.get("phrase")
+            if not isinstance(phrase, str) or not phrase.strip():
+                raise ValueError(f"Entry {idx} trong 'auto_map_keywords' thiếu 'phrase' hoặc là chuỗi rỗng.")
+            phrase_norm = phrase.strip().lower()
+            if phrase_norm in seen_phrases:
+                raise ValueError(f"Cụm từ trùng lặp trong 'auto_map_keywords': '{phrase}'.")
+            seen_phrases.add(phrase_norm)
+
+            param_id = entry.get("parameter_id")
+            if not isinstance(param_id, int) or param_id < 1 or param_id > 39:
+                raise ValueError(
+                    f"Entry {idx} trong 'auto_map_keywords' có 'parameter_id' không hợp lệ: {param_id}. Phải thuộc 1..39."
+                )
+
 
 class BusinessTrizLens:
     """Service cung cấp góc nhìn kinh doanh & quản trị cho 40 nguyên tắc và 39 thông số TRIZ."""
@@ -94,6 +116,7 @@ class BusinessTrizLens:
         self._path = json_path or _BUSINESS_JSON_PATH
         self._principles: dict[int, dict[str, Any]] = {}
         self._parameters: dict[int, dict[str, Any]] = {}
+        self._auto_map_keywords: list[dict[str, Any]] = []
         self._load()
 
     def _load(self) -> None:
@@ -118,6 +141,12 @@ class BusinessTrizLens:
         for k, v in data.get("parameters", {}).items():
             if str(k).isdigit():
                 self._parameters[int(k)] = v
+
+        self._auto_map_keywords = list(data.get("auto_map_keywords", []))
+
+    def get_auto_map_keywords(self) -> list[dict[str, Any]]:
+        """Lấy danh sách các cụm từ kinh doanh tự động ánh xạ thông số TRIZ."""
+        return list(self._auto_map_keywords)
 
     def get_principle_lens(self, principle_id: int) -> dict[str, Any]:
         """Lấy thông tin lăng kính kinh doanh của một nguyên tắc (1..40)."""

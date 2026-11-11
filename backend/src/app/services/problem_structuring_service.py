@@ -616,15 +616,20 @@ class ProblemStructuringService:
         session.add(frame)
         session.flush()
 
-    def auto_map_parameters(self, text: str, top_k: int = 5) -> list[dict[str, Any]]:
+    def auto_map_parameters(
+        self, text: str, top_k: int = 5, lens: str = "engineering"
+    ) -> list[dict[str, Any]]:
         """Method wrapper cho auto_map_parameters."""
-        return auto_map_parameters(text=text, top_k=top_k)
+        return auto_map_parameters(text=text, top_k=top_k, lens=lens)
 
 
-def auto_map_parameters(text: str, top_k: int = 5) -> list[dict[str, Any]]:
+def auto_map_parameters(
+    text: str, top_k: int = 5, lens: str = "engineering"
+) -> list[dict[str, Any]]:
     """
     Tự động trích xuất và xếp hạng các thông số TRIZ 39 từ chuỗi văn bản tự do (Phase 10.1).
     Hỗ trợ đối soát từ khóa song ngữ Việt - Anh và tính điểm tương đồng.
+    Hỗ trợ opt-in Business lens (Batch B2).
     """
     if not text or not text.strip():
         raise ValueError("text must not be empty or whitespace only")
@@ -632,7 +637,7 @@ def auto_map_parameters(text: str, top_k: int = 5) -> list[dict[str, Any]]:
     clean_text = text.lower().strip()
     raw_params = _TRIZ_DATA.get("parameters", {})
 
-    candidates: list[dict[str, Any]] = []
+    param_matches: dict[int, dict[str, Any]] = {}
 
     for code, keywords in _PARAMETER_KEYWORDS.items():
         matched_kws: list[str] = []
@@ -646,23 +651,64 @@ def auto_map_parameters(text: str, top_k: int = 5) -> list[dict[str, Any]]:
             if not param_id:
                 param_id = _PARAM_CODE_TO_ID.get(code, 0)
 
-            p_data = raw_params.get(str(param_id), {})
-            name_vi = p_data.get("name_vi", code)
-            name_en = p_data.get("name_en", code)
-            description = p_data.get("description", "")
+            if param_id:
+                if param_id not in param_matches:
+                    param_matches[param_id] = {
+                        "code": code,
+                        "matched_keywords": list(matched_kws),
+                    }
+                else:
+                    for mk in matched_kws:
+                        if mk not in param_matches[param_id]["matched_keywords"]:
+                            param_matches[param_id]["matched_keywords"].append(mk)
 
-            # Tính score: số lượng match và độ dài từ khóa match
-            score = round(min(1.0, 0.6 + 0.15 * len(matched_kws) + 0.02 * max(len(k) for k in matched_kws)), 2)
+    if lens == "business":
+        from app.services.business_triz_lens import get_business_triz_lens
 
-            candidates.append({
-                "id": param_id,
-                "code": code,
-                "name_vi": name_vi,
-                "name_en": name_en,
-                "score": score,
-                "matched_keywords": matched_kws,
-                "description": description,
-            })
+        business_lens = get_business_triz_lens()
+        auto_map_kws = business_lens.get_auto_map_keywords()
+        for item in auto_map_kws:
+            phrase = item.get("phrase", "")
+            param_id = item.get("parameter_id")
+            if phrase and param_id:
+                phrase_clean = phrase.lower().strip()
+                if phrase_clean and phrase_clean in clean_text:
+                    if param_id not in param_matches:
+                        p_code = item.get("parameter_code")
+                        if not p_code:
+                            p_data = raw_params.get(str(param_id), {})
+                            p_code = p_data.get("code", f"param_{param_id}")
+                        param_matches[param_id] = {
+                            "code": p_code,
+                            "matched_keywords": [phrase],
+                        }
+                    else:
+                        if phrase not in param_matches[param_id]["matched_keywords"]:
+                            param_matches[param_id]["matched_keywords"].append(phrase)
+
+    candidates: list[dict[str, Any]] = []
+    for param_id, match_info in param_matches.items():
+        code = match_info["code"]
+        matched_kws = match_info["matched_keywords"]
+        p_data = raw_params.get(str(param_id), {})
+        name_vi = p_data.get("name_vi", code)
+        name_en = p_data.get("name_en", code)
+        description = p_data.get("description", "")
+
+        # Tính score: số lượng match và độ dài từ khóa match
+        score = round(
+            min(1.0, 0.6 + 0.15 * len(matched_kws) + 0.02 * max(len(k) for k in matched_kws)), 2
+        )
+
+        candidates.append({
+            "id": param_id,
+            "code": code,
+            "name_vi": name_vi,
+            "name_en": name_en,
+            "score": score,
+            "matched_keywords": matched_kws,
+            "description": description,
+        })
 
     # Xếp theo score giảm dần
     candidates.sort(key=lambda x: (-x["score"], x["id"]))
