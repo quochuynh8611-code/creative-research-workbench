@@ -21,6 +21,7 @@ from app.services.problem_structuring_service import (
 )
 from app.services.everyday_triz_lens import get_everyday_triz_lens
 from app.services.business_triz_lens import get_business_triz_lens
+from app.services.triz_nine_windows_service import get_nine_windows
 
 router = APIRouter()
 
@@ -194,3 +195,16 @@ async def get_triz_separation_principles() -> dict[str, Any]:
         "strategies": strategies,
         "total": len(strategies),
     }
+
+
+@router.get("/nine-windows", status_code=status.HTTP_200_OK)
+async def get_triz_nine_windows(
+    lens: Literal["engineering", "business", "everyday"] = Query(
+        default="engineering",
+        description="Lăng kính tư duy TRIZ 9 cửa sổ (engineering, business, everyday)",
+    ),
+) -> dict[str, Any]:
+    """
+    Sơ đồ 9 Màn hình (9-Windows / System Operator / Multi-Screen Scheme) theo lăng kính.
+    """
+    return get_nine_windows(lens=lens)

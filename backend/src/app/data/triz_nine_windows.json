@@ -1,0 +1,322 @@
+{
+  "version": "1.0",
+  "title": "TRIZ 9-Windows System Operator (Sơ đồ 9 Màn hình Đa Lăng kính)",
+  "description": "Kho tri thức chuẩn hóa 9 cửa sổ không gian - thời gian (System Levels x Time Horizons) cho 3 lăng kính: Kỹ thuật, Kinh doanh và Đời sống.",
+  "lenses": {
+    "engineering": {
+      "lens_title": "Lăng kính Kỹ thuật & Công nghệ",
+      "description": "Phân tích không gian - thời gian cho các hệ thống kỹ thuật, cơ khí, phần mềm, vật liệu và hạ tầng công nghệ.",
+      "windows": [
+        {
+          "level": "supersystem",
+          "time": "past",
+          "label_vi": "Môi trường và hạ tầng kỹ thuật trong quá khứ",
+          "label_en": "Past Supersystem",
+          "prompt_vi": "Hệ sinh thái hạ tầng, nguồn năng lượng và tiêu chuẩn kỹ thuật trước đây đã định hình hoặc giới hạn hệ thống như thế nào?",
+          "description_vi": "Phân tích bối cảnh hạ tầng vật lý, mạng lưới cung cấp năng lượng và môi trường tương tác của thế hệ công nghệ tiền nhiệm.",
+          "examples_vi": [
+            "Đường ray xe lửa khổ hẹp và mạng lưới tiếp vận than đá giới hạn công suất đầu máy hơi nước thế kỷ 19."
+          ]
+        },
+        {
+          "level": "supersystem",
+          "time": "present",
+          "label_vi": "Môi trường và hạ tầng kỹ thuật hiện tại",
+          "label_en": "Present Supersystem",
+          "prompt_vi": "Hạ tầng đám mây, mạng lưới viễn thông và lưới điện thông minh hiện nay đang tương tác với hệ thống ra sao?",
+          "description_vi": "Nhận diện các ràng buộc môi trường hiện hữu, tiêu chuẩn giao tiếp không dây và nguồn tài nguyên ngoại vi sẵn có.",
+          "examples_vi": [
+            "Mạng 5G độ trễ thấp và trạm sạc xe điện chuẩn CCS/NACS trên toàn quốc tạo môi trường vận hành cho xe tự hành."
+          ]
+        },
+        {
+          "level": "supersystem",
+          "time": "future",
+          "label_vi": "Môi trường và hạ tầng kỹ thuật trong tương lai",
+          "label_en": "Future Supersystem",
+          "prompt_vi": "Hạ tầng giao thông tích hợp, năng lượng tái tạo phân tán và điện toán lượng tử sẽ đòi hỏi hệ thống phải tương thích thế nào?",
+          "description_vi": "Dự báo sự chuyển dịch của siêu hệ thống kỹ thuật trong 5-10 năm tới để định hướng chuẩn bị giao thức và năng lực tương thích.",
+          "examples_vi": [
+            "Lưới điện thông minh siêu nhỏ (microgrid) hai chiều kết hợp vệ tinh quỹ đạo thấp (LEO) bao phủ toàn cầu."
+          ]
+        },
+        {
+          "level": "system",
+          "time": "past",
+          "label_vi": "Hệ thống kỹ thuật trong quá khứ",
+          "label_en": "Past System",
+          "prompt_vi": "Thiết kế ban đầu của sản phẩm kỹ thuật giải quyết mâu thuẫn cốt lõi bằng cơ chế cơ học hay nhiệt động học nào?",
+          "description_vi": "Xem xét nguyên lý vật lý và kiến trúc kỹ thuật của phiên bản trước nhằm hiểu nguồn gốc các giới hạn kỹ thuật hiện thời.",
+          "examples_vi": [
+            "Điện thoại di động dạng thanh cồng kềnh dùng ăng-ten ngoài và pin Ni-Cd chỉ hỗ trợ liên lạc thoại cơ bản."
+          ]
+        },
+        {
+          "level": "system",
+          "time": "present",
+          "label_vi": "Hệ thống kỹ thuật hiện tại",
+          "label_en": "Present System",
+          "prompt_vi": "Sản phẩm công nghệ hiện tại đang gặp mâu thuẫn kỹ thuật nào giữa hiệu năng, trọng lượng, tản nhiệt và chi phí?",
+          "description_vi": "Điểm hội tụ của thiết kế hiện tại, xác định rõ ranh giới hệ thống, luồng truyền năng lượng và thông tin chính.",
+          "examples_vi": [
+            "Điện thoại thông minh tích hợp màn hình OLED 120Hz, chip xử lý 3nm và camera tiềm vọng đa thấu kính."
+          ]
+        },
+        {
+          "level": "system",
+          "time": "future",
+          "label_vi": "Hệ thống kỹ thuật trong tương lai",
+          "label_en": "Future System",
+          "prompt_vi": "Theo quy luật tăng tính lý tưởng (Ideality), hệ thống có thể tự biến đổi cấu trúc hoặc hòa tan chức năng vào môi trường như thế nào?",
+          "description_vi": "Mô phỏng trạng thái lý tưởng cuối cùng (IFR) của hệ thống kỹ thuật khi hiệu năng tăng tối đa mà thể tích và chi phí tiến về 0.",
+          "examples_vi": [
+            "Thiết bị giao tiếp không dây sinh học tự tiêu thụ năng lượng cơ thể hoặc giao diện não-máy không xâm lấn."
+          ]
+        },
+        {
+          "level": "subsystem",
+          "time": "past",
+          "label_vi": "Phân hệ và linh kiện trong quá khứ",
+          "label_en": "Past Subsystem",
+          "prompt_vi": "Linh kiện, vật liệu và cơ cấu chấp hành trước đây gồm những thành phần rời rạc nào?",
+          "description_vi": "Đánh giá chi tiết các bộ phận cấu tạo cơ học, mạch bán dẫn rời hoặc cảm biến thế hệ cũ.",
+          "examples_vi": [
+            "Bóng đèn chân không triode và rơ-le điện cơ trong các máy tính thế hệ đầu ENIAC."
+          ]
+        },
+        {
+          "level": "subsystem",
+          "time": "present",
+          "label_vi": "Phân hệ và linh kiện hiện tại",
+          "label_en": "Present Subsystem",
+          "prompt_vi": "Các linh kiện chủ chốt (vi xử lý, vật liệu bán dẫn, cảm biến MEMS, thuật toán nhúng) phối hợp và gây nghẽn ở mắt xích nào?",
+          "description_vi": "Bóc tách các mô-đun chức năng bên trong, phân tích tổn hao năng lượng và ma sát giữa các bề mặt tiếp xúc.",
+          "examples_vi": [
+            "Cảm biến hình ảnh CMOS khử nhiễu AI, tản nhiệt buồng hơi kim loại và pin thể rắn silicon-carbon."
+          ]
+        },
+        {
+          "level": "subsystem",
+          "time": "future",
+          "label_vi": "Phân hệ và linh kiện trong tương lai",
+          "label_en": "Future Subsystem",
+          "prompt_vi": "Những vật liệu thông minh (vật liệu tự phục hồi, siêu dẫn nhiệt độ phòng, bóng bán dẫn quang học) sẽ thay thế linh kiện hiện tại ra sao?",
+          "description_vi": "Dự phóng cấu trúc vi mô và giải pháp cấp hạt/phân tử cho phép phân hệ tự thích nghi với tải trọng biến đổi.",
+          "examples_vi": [
+            "Mạch tích hợp quang tử học (Photonic IC) và màng graphene tự phục hồi vết nứt cơ học ở cấp độ nguyên tử."
+          ]
+        }
+      ]
+    },
+    "business": {
+      "lens_title": "Lăng kính Kinh doanh & Thị trường",
+      "description": "Phân tích không gian - thời gian cho mô hình kinh doanh, cấu trúc ngành hàng, phân khúc khách hàng và chuỗi giá trị.",
+      "windows": [
+        {
+          "level": "supersystem",
+          "time": "past",
+          "label_vi": "Ngành hàng và quy định thị trường trong quá khứ",
+          "label_en": "Past Supersystem",
+          "prompt_vi": "Khung pháp lý, tập quán ngành và rào cản thương mại trước đây kiểm soát hành vi doanh nghiệp ra sao?",
+          "description_vi": "Khảo sát cơ cấu thị trường truyền thống, các đạo luật phân phối độc quyền và hành lang pháp lý cũ.",
+          "examples_vi": [
+            "Kênh phân phối truyền thống qua nhiều tầng đại lý cấp 1-2 và giấy phép kinh doanh viễn thông khắt khe."
+          ]
+        },
+        {
+          "level": "supersystem",
+          "time": "present",
+          "label_vi": "Hệ sinh thái ngành và thị trường hiện tại",
+          "label_en": "Present Supersystem",
+          "prompt_vi": "Nền kinh tế nền tảng (Platform Economy), tiêu chuẩn ESG và biến động chuỗi cung ứng toàn cầu đang tác động gì đến ngành?",
+          "description_vi": "Định vị vị thế ngành trong nền kinh tế, xu hướng liên minh chiến lược và các áp lực tuân thủ minh bạch dữ liệu.",
+          "examples_vi": [
+            "Quy chuẩn chứng chỉ carbon EU CBAM và sự thống trị của các sàn thương mại điện tử xuyên biên giới."
+          ]
+        },
+        {
+          "level": "supersystem",
+          "time": "future",
+          "label_vi": "Xu thế vĩ mô và kinh tế ngành trong tương lai",
+          "label_en": "Future Supersystem",
+          "prompt_vi": "Sự dịch chuyển dân số học, kinh tế tuần hoàn và tài chính phi tập trung sẽ tái cấu trúc toàn bộ ngành nghề như thế nào?",
+          "description_vi": "Dự phóng viễn cảnh kinh tế vĩ mô và chính sách bảo vệ tài nguyên để đón đầu làn sóng kinh doanh tiếp theo.",
+          "examples_vi": [
+            "Mô hình kinh tế tuần hoàn bắt buộc tái chế 100% bao bì và định danh sản phẩm số (Digital Product Passport)."
+          ]
+        },
+        {
+          "level": "system",
+          "time": "past",
+          "label_vi": "Mô hình kinh doanh trong quá khứ",
+          "label_en": "Past System",
+          "prompt_vi": "Doanh nghiệp từng kiếm tiền và tạo giá trị khác biệt cho khách hàng bằng mô hình bán hàng nào?",
+          "description_vi": "Xem xét dòng doanh thu truyền thống (bán đứt một lần, chiết khấu đại lý) và cơ cấu chi phí lịch sử.",
+          "examples_vi": [
+            "Bán đứt giấy phép phần mềm đóng gói kèm đĩa CD cài đặt và dịch vụ bảo trì tính phí hàng năm."
+          ]
+        },
+        {
+          "level": "system",
+          "time": "present",
+          "label_vi": "Mô hình kinh doanh hiện tại",
+          "label_en": "Present System",
+          "prompt_vi": "Mô hình định giá, chi phí thu hút khách hàng (CAC) và giá trị vòng đời (LTV) hiện tại đang gặp mâu thuẫn gì?",
+          "description_vi": "Đánh giá sự cân bằng giữa tăng trưởng doanh thu và biên lợi nhuận, phân tích tỷ lệ rời bỏ và lợi thế cạnh tranh cốt lõi.",
+          "examples_vi": [
+            "Mô hình SaaS đăng ký thuê bao hàng tháng (Subscription) kết hợp gói miễn phí có quảng cáo (Freemium)."
+          ]
+        },
+        {
+          "level": "system",
+          "time": "future",
+          "label_vi": "Mô hình kinh doanh trong tương lai",
+          "label_en": "Future System",
+          "prompt_vi": "Mô hình kinh doanh dựa trên kết quả đầu ra (Outcome-based), chia sẻ doanh thu tự động qua hợp đồng thông minh sẽ vận hành thế nào?",
+          "description_vi": "Định hình mô hình giá trị mới khi dịch vụ được cá nhân hóa tức thời và rủi ro được chia sẻ công bằng với khách hàng.",
+          "examples_vi": [
+            "Thanh toán vi mô tức thời theo đúng giá trị kinh tế thực tế tạo ra cho khách hàng (Pay-per-outcome)."
+          ]
+        },
+        {
+          "level": "subsystem",
+          "time": "past",
+          "label_vi": "Kênh phân phối và quy trình vận hành trong quá khứ",
+          "label_en": "Past Subsystem",
+          "prompt_vi": "Các phòng ban, quy trình giấy tờ thủ công và công cụ bán hàng trước đây hoạt động ra sao?",
+          "description_vi": "Rà soát phương thức giao tiếp nội bộ, quản lý sổ sách kế toán thủ công và lực lượng thị trường trực tiếp.",
+          "examples_vi": [
+            "Đội ngũ bán hàng gõ cửa từng nhà (door-to-door), chốt đơn bằng hóa đơn viết tay và đối soát công nợ cuối tháng."
+          ]
+        },
+        {
+          "level": "subsystem",
+          "time": "present",
+          "label_vi": "Kênh tiếp thị, bán hàng và bộ phận nội bộ hiện tại",
+          "label_en": "Present Subsystem",
+          "prompt_vi": "Mắt xích nội bộ nào (CRM, cổng thanh toán số, đội ngũ chăm sóc khách hàng) đang là điểm nghẽn chuyển đổi?",
+          "description_vi": "Đo lường hiệu quả chuyển đổi qua từng phễu, năng suất làm việc của nhân sự và khả năng cộng tác liên phòng ban.",
+          "examples_vi": [
+            "Hệ sinh thái CRM đa kênh (HubSpot/Salesforce) tích hợp AI chatbot trả lời khách hàng 24/7 và cổng thanh toán tự động."
+          ]
+        },
+        {
+          "level": "subsystem",
+          "time": "future",
+          "label_vi": "Tự động hóa vận hành và nguồn lực nội bộ trong tương lai",
+          "label_en": "Future Subsystem",
+          "prompt_vi": "Các tác tử AI tự trị (Autonomous Agents) và tự động hóa quy trình siêu việt sẽ thay đổi cơ cấu tổ chức ra sao?",
+          "description_vi": "Xây dựng tổ chức tinh gọn cực đại với quy trình vận hành tự tối ưu hóa và nhân sự tập trung 100% vào sáng tạo chiến lược.",
+          "examples_vi": [
+            "Mạng lưới AI Agent tự động đàm phán hợp đồng nhà cung ứng và đối soát kho bãi theo thời gian thực."
+          ]
+        }
+      ]
+    },
+    "everyday": {
+      "lens_title": "Lăng kính Đời sống & Cá nhân",
+      "description": "Phân tích không gian - thời gian cho thói quen hàng ngày, không gian sống gia đình, quản trị năng lượng và các mối quan hệ đời thường.",
+      "windows": [
+        {
+          "level": "supersystem",
+          "time": "past",
+          "label_vi": "Cộng đồng làng xóm và môi trường sống trong quá khứ",
+          "label_en": "Past Supersystem",
+          "prompt_vi": "Môi trường văn hóa gia đình, làng xóm và nhịp sống xã hội xưa đã chi phối thói quen sinh hoạt ra sao?",
+          "description_vi": "Tìm hiểu bối cảnh không gian sống truyền thống, mức độ gắn kết cộng đồng địa phương và nhịp sinh học tự nhiên.",
+          "examples_vi": [
+            "Cộng đồng làng xóm gắn kết chặt chẽ, tối lửa tắt đèn có nhau và thói quen sinh hoạt phụ thuộc ánh sáng mặt trời."
+          ]
+        },
+        {
+          "level": "supersystem",
+          "time": "present",
+          "label_vi": "Môi trường đô thị và không gian sống hiện tại",
+          "label_en": "Present Supersystem",
+          "prompt_vi": "Không gian căn hộ đô thị thu hẹp, mạng xã hội 24/7 và ô nhiễm tiếng ồn đang ảnh hưởng thế nào đến cá nhân?",
+          "description_vi": "Nhận diện những áp lực từ môi trường sống hiện đại, sự phân mảnh chú ý và nhu cầu tái lập không gian bình yên.",
+          "examples_vi": [
+            "Căn hộ chung cư diện tích nhỏ tại đô thị lớn chịu áp lực tiếng ồn giao thông và quá tải kích thích từ màn hình điện tử."
+          ]
+        },
+        {
+          "level": "supersystem",
+          "time": "future",
+          "label_vi": "Môi trường sống sinh thái và cộng đồng kết nối trong tương lai",
+          "label_en": "Future Supersystem",
+          "prompt_vi": "Đô thị xanh thông minh, cộng đồng đồng hành chia sẻ không gian và lối sống thuận tự nhiên sẽ phát triển ra sao?",
+          "description_vi": "Phác họa môi trường sống lý tưởng kết hợp công nghệ bảo vệ sức khỏe và không gian tái tạo năng lượng tinh thần.",
+          "examples_vi": [
+            "Khu dân cư sinh thái tuần hoàn năng lượng với khu vườn chung gắn kết các thế hệ và không gian tĩnh lặng số."
+          ]
+        },
+        {
+          "level": "system",
+          "time": "past",
+          "label_vi": "Thói quen và lối sống cá nhân trong quá khứ",
+          "label_en": "Past System",
+          "prompt_vi": "Các thế hệ đi trước tổ chức cuộc sống gia đình, việc nội trợ và chăm sóc con cái bằng quy tắc nề nếp nào?",
+          "description_vi": "Nhìn lại phương thức quản lý thời gian, công việc nhà và các nghi thức sinh hoạt gia đình truyền thống.",
+          "examples_vi": [
+            "Nấu ăn bằng bếp củi, giặt giũ bằng tay tại giếng làng và bảo quản thực phẩm hoàn toàn bằng phơi khô, muối chua."
+          ]
+        },
+        {
+          "level": "system",
+          "time": "present",
+          "label_vi": "Thói quen và sinh hoạt cá nhân hiện tại",
+          "label_en": "Present System",
+          "prompt_vi": "Cá nhân đang gặp mâu thuẫn gì giữa công việc bận rộn, chăm sóc sức khỏe, nuôi dạy con và thời gian nghỉ ngơi?",
+          "description_vi": "Phân tích xung đột thời gian biểu, tình trạng kiệt sức số và nỗ lực cân bằng giữa hiệu suất công việc và hạnh phúc gia đình.",
+          "examples_vi": [
+            "Sử dụng nồi chiên không dầu và máy rửa bát để tiết kiệm 1 giờ nấu nướng mỗi tối nhưng vẫn thiếu thời gian trò chuyện cùng con."
+          ]
+        },
+        {
+          "level": "system",
+          "time": "future",
+          "label_vi": "Lối sống hài hòa và tự chủ trong tương lai",
+          "label_en": "Future System",
+          "prompt_vi": "Khi cuộc sống đạt trạng thái tự do và thảnh thơi lý tưởng, sinh hoạt mỗi ngày sẽ được điều phối tự động như thế nào?",
+          "description_vi": "Mục tiêu tối thượng của đời sống: giải phóng con người khỏi việc vặt lặp lại để tập trung vào trải nghiệm ý nghĩa và phát triển bản thân.",
+          "examples_vi": [
+            "Ngôi nhà thông minh tự điều phối việc nhà và thực đơn dinh dưỡng theo chỉ số sinh học, giúp gia chủ có trọn vẹn thời gian sáng tạo."
+          ]
+        },
+        {
+          "level": "subsystem",
+          "time": "past",
+          "label_vi": "Vật dụng gia đình và đồ dùng cá nhân trong quá khứ",
+          "label_en": "Past Subsystem",
+          "prompt_vi": "Những công cụ lao động thô sơ, đồ dùng cơ bản trong gia đình xưa gồm những vật phẩm nào?",
+          "description_vi": "Khảo sát các công cụ sinh hoạt bền chắc, đơn chức năng được chế tác thủ công từ vật liệu tự nhiên.",
+          "examples_vi": [
+            "Đèn dầu hỏa, chạn bát gỗ lót vỉ chống kiến và cối đá xay bột thủ công."
+          ]
+        },
+        {
+          "level": "subsystem",
+          "time": "present",
+          "label_vi": "Thiết bị tiện ích và ứng dụng cá nhân hiện tại",
+          "label_en": "Present Subsystem",
+          "prompt_vi": "Các thiết bị gia dụng thông minh, ứng dụng nhắc việc đang hỗ trợ tốt hay làm tăng sự phụ thuộc công nghệ?",
+          "description_vi": "Đánh giá vai trò của từng vật dụng cụ thể trong nhà (máy giặt, robot hút bụi, điện thoại, ứng dụng to-do) đối với chất lượng sống.",
+          "examples_vi": [
+            "Robot hút bụi tự đổ rác kết hợp ứng dụng quản lý chi tiêu cá nhân trên điện thoại thông minh."
+          ]
+        },
+        {
+          "level": "subsystem",
+          "time": "future",
+          "label_vi": "Vật dụng tự thích ứng và hỗ trợ sức khỏe trong tương lai",
+          "label_en": "Future Subsystem",
+          "prompt_vi": "Đồ nội thất sinh học, quần áo tự điều chỉnh nhiệt độ và trợ lý gia đình vô hình sẽ tương tác với giác quan ra sao?",
+          "description_vi": "Dự phóng các đồ dùng vi mô có khả năng tự nhận biết cảm xúc, hỗ trợ tư thế làm việc và thanh lọc vi khí hậu phòng ở.",
+          "examples_vi": [
+            "Nệm thông minh tự điều chỉnh độ cứng theo chu kỳ ngủ REM và màng lọc không khí nano tự phân hủy bụi mịn."
+          ]
+        }
+      ]
+    }
+  }
+}
