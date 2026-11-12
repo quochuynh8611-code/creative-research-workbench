@@ -26,10 +26,16 @@ const LENSES: { key: TrizNineWindowsLens; label: string }[] = [
 
 interface TrizNineWindowsProps {
   onSaveAsNote?: (draft: NoteDraft) => void
+  initialLens?: TrizNineWindowsLens
 }
 
-export function TrizNineWindows({ onSaveAsNote }: TrizNineWindowsProps = {}) {
-  const [activeLens, setActiveLens] = useState<TrizNineWindowsLens>('engineering')
+export function TrizNineWindows({
+  onSaveAsNote,
+  initialLens,
+}: TrizNineWindowsProps = {}) {
+  const [activeLens, setActiveLens] = useState<TrizNineWindowsLens>(
+    initialLens ?? 'engineering',
+  )
 
   const {
     data,

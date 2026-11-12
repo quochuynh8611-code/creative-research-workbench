@@ -208,7 +208,7 @@ describe('NormalizedView — TRIZ 9-Windows Integration (Batch C3a: RED Phase)',
     expect(screen.queryByRole('article')).not.toBeInTheDocument()
   })
 
-  it('4. test_does_not_map_session_domain_to_lens: dù domain là business, lần mở đầu tiên vẫn luôn gọi lens="engineering"', async () => {
+  it('4. test_replaces_previous_no_mapping_contract_with_initial_lens_contract: thay thế hợp đồng cũ (luôn engineering) bằng hợp đồng mới truyền initialLens theo domain', async () => {
     renderWithClient(<NormalizedView problemFrame={mockBusinessFrame} />)
 
     const toggleButton = screen.getByRole('button', {
@@ -216,8 +216,8 @@ describe('NormalizedView — TRIZ 9-Windows Integration (Batch C3a: RED Phase)',
     })
     fireEvent.click(toggleButton)
 
-    expect(mockedGetTrizNineWindows).toHaveBeenCalledWith('engineering')
-    expect(mockedGetTrizNineWindows).not.toHaveBeenCalledWith('business')
+    expect(mockedGetTrizNineWindows).toHaveBeenCalledWith('business')
+    expect(mockedGetTrizNineWindows).not.toHaveBeenCalledWith('engineering')
   })
 
   it('5. test_has_accessible_expand_control: nút điều khiển có accessible name rõ ràng và aria-expanded phản ánh chính xác', () => {
@@ -304,6 +304,74 @@ describe('NormalizedView — TRIZ 9-Windows Integration (Batch C3a: RED Phase)',
       })
 
       expect(screen.queryByRole('button', { name: /lưu vào sổ tay/i })).not.toBeInTheDocument()
+    })
+  })
+
+  describe('Batch C5 — Context Mapping: Domain to 9-Windows Initial Lens (RED Phase)', () => {
+    it('12. test_preselects_business_lens_when_problem_frame_domain_is_business: domain="business" mở 9-Windows gọi API với lens="business"', async () => {
+      renderWithClient(<NormalizedView problemFrame={{ ...mockProblemFrame, domain: 'business' }} />)
+
+      const toggleButton = screen.getByRole('button', {
+        name: /Mở rộng góc nhìn hệ thống đa chiều \(TRIZ 9-Windows\)|TRIZ 9-Windows/i,
+      })
+      fireEvent.click(toggleButton)
+
+      expect(mockedGetTrizNineWindows).toHaveBeenCalledWith('business')
+    })
+
+    it('13. test_preselects_everyday_lens_when_problem_frame_domain_is_life: domain="life" mở 9-Windows gọi API với lens="everyday"', async () => {
+      renderWithClient(<NormalizedView problemFrame={{ ...mockProblemFrame, domain: 'life' }} />)
+
+      const toggleButton = screen.getByRole('button', {
+        name: /Mở rộng góc nhìn hệ thống đa chiều \(TRIZ 9-Windows\)|TRIZ 9-Windows/i,
+      })
+      fireEvent.click(toggleButton)
+
+      expect(mockedGetTrizNineWindows).toHaveBeenCalledWith('everyday')
+    })
+
+    it('14. test_preselects_everyday_lens_when_problem_frame_domain_is_culture: domain="culture" mở 9-Windows gọi API với lens="everyday"', async () => {
+      renderWithClient(<NormalizedView problemFrame={{ ...mockProblemFrame, domain: 'culture' }} />)
+
+      const toggleButton = screen.getByRole('button', {
+        name: /Mở rộng góc nhìn hệ thống đa chiều \(TRIZ 9-Windows\)|TRIZ 9-Windows/i,
+      })
+      fireEvent.click(toggleButton)
+
+      expect(mockedGetTrizNineWindows).toHaveBeenCalledWith('everyday')
+    })
+
+    it('15. test_preselects_everyday_lens_when_problem_frame_domain_is_society: domain="society" mở 9-Windows gọi API với lens="everyday"', async () => {
+      renderWithClient(<NormalizedView problemFrame={{ ...mockProblemFrame, domain: 'society' }} />)
+
+      const toggleButton = screen.getByRole('button', {
+        name: /Mở rộng góc nhìn hệ thống đa chiều \(TRIZ 9-Windows\)|TRIZ 9-Windows/i,
+      })
+      fireEvent.click(toggleButton)
+
+      expect(mockedGetTrizNineWindows).toHaveBeenCalledWith('everyday')
+    })
+
+    it('16. test_preselects_engineering_lens_for_technical_domain: domain="technical" mở 9-Windows gọi API với lens="engineering"', async () => {
+      renderWithClient(<NormalizedView problemFrame={{ ...mockProblemFrame, domain: 'technical' }} />)
+
+      const toggleButton = screen.getByRole('button', {
+        name: /Mở rộng góc nhìn hệ thống đa chiều \(TRIZ 9-Windows\)|TRIZ 9-Windows/i,
+      })
+      fireEvent.click(toggleButton)
+
+      expect(mockedGetTrizNineWindows).toHaveBeenCalledWith('engineering')
+    })
+
+    it('17. test_preselects_engineering_lens_for_missing_domain: domain=null hoặc undefined mở 9-Windows gọi API với lens="engineering"', async () => {
+      renderWithClient(<NormalizedView problemFrame={{ ...mockProblemFrame, domain: null }} />)
+
+      const toggleButton = screen.getByRole('button', {
+        name: /Mở rộng góc nhìn hệ thống đa chiều \(TRIZ 9-Windows\)|TRIZ 9-Windows/i,
+      })
+      fireEvent.click(toggleButton)
+
+      expect(mockedGetTrizNineWindows).toHaveBeenCalledWith('engineering')
     })
   })
 })

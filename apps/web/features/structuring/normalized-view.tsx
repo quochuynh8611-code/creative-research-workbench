@@ -5,6 +5,7 @@ import { Edit3, CheckCircle, Sparkles, FileText, ArrowRight, ChevronDown, Grid3X
 import { ContradictionBadge } from './contradiction-badge'
 import { SeparationStrategies } from './separation-strategies'
 import { TrizNineWindows } from '@/features/triz/triz-nine-windows'
+import { resolveLensFromDomain } from '@/lib/triz-lens-resolver'
 import type { ProblemFrame, NoteDraft } from '@/lib/types'
 
 interface NormalizedViewProps {
@@ -119,7 +120,10 @@ export function NormalizedView({
             id="nine-windows-collapsible-content"
             className="p-6 border-t border-border bg-background/50 space-y-4"
           >
-            <TrizNineWindows onSaveAsNote={onSaveAsNote} />
+            <TrizNineWindows
+              onSaveAsNote={onSaveAsNote}
+              initialLens={resolveLensFromDomain(problemFrame.domain)}
+            />
           </div>
         )}
       </div>
