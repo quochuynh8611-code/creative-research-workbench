@@ -2,7 +2,8 @@
 
 import React, { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { Sparkles } from 'lucide-react'
+import { Sparkles, Search, X } from 'lucide-react'
+import { cn } from '@/lib/utils'
 import {
   listResearchNotes,
   createResearchNote,
@@ -29,6 +30,17 @@ const NOTE_TYPE_LABELS: Record<NoteType, string> = {
   question: 'Question',
   action: 'Action',
 }
+
+type FilterType = NoteType | 'all'
+
+const FILTER_OPTIONS: { key: FilterType; label: string }[] = [
+  { key: 'all', label: 'Tất cả' },
+  { key: 'insight', label: 'Insight' },
+  { key: 'hypothesis', label: 'Hypothesis' },
+  { key: 'decision', label: 'Decision' },
+  { key: 'question', label: 'Question' },
+  { key: 'action', label: 'Action' },
+]
 
 const NOTE_TYPE_STYLES: Record<NoteType, string> = {
   insight: 'bg-purple-50 text-purple-700 border-purple-200 dark:bg-purple-950/40 dark:text-purple-300 dark:border-purple-800',
@@ -121,7 +133,32 @@ export function ResearchNotebook({
     deleteMutation.mutate(noteId)
   }
 
+  const [selectedType, setSelectedType] = useState<FilterType>('all')
+  const [searchQuery, setSearchQuery] = useState('')
+
   const notes = notesResponse?.data ?? []
+
+  const counters: Record<FilterType, number> = {
+    all: notes.length,
+    insight: notes.filter((n) => n.note_type === 'insight').length,
+    hypothesis: notes.filter((n) => n.note_type === 'hypothesis').length,
+    decision: notes.filter((n) => n.note_type === 'decision').length,
+    question: notes.filter((n) => n.note_type === 'question').length,
+    action: notes.filter((n) => n.note_type === 'action').length,
+  }
+
+  const filteredNotes = notes.filter((note) => {
+    const matchesType = selectedType === 'all' || note.note_type === selectedType
+    const matchesSearch =
+      !searchQuery.trim() ||
+      note.content.toLowerCase().includes(searchQuery.trim().toLowerCase())
+    return matchesType && matchesSearch
+  })
+
+  const handleClearFilters = () => {
+    setSelectedType('all')
+    setSearchQuery('')
+  }
 
   return (
     <div className={`space-y-6 ${className}`}>
@@ -285,7 +322,7 @@ export function ResearchNotebook({
           </div>
         )}
 
-        {/* Empty state */}
+        {/* Empty state khi phiên chưa có ghi chú nào */}
         {!isLoading && !isError && notes.length === 0 && (
           <div className="p-8 text-center bg-white dark:bg-slate-900 rounded-xl border border-dashed border-slate-200 dark:border-slate-800">
             <svg
@@ -310,10 +347,81 @@ export function ResearchNotebook({
           </div>
         )}
 
-        {/* List items */}
+        {/* Filter Bar & Search controls (chỉ hiển thị khi session có ghi chú) */}
         {!isLoading && !isError && notes.length > 0 && (
+          <div className="space-y-3 pt-1">
+            {/* Search Input */}
+            <div className="relative">
+              <label htmlFor="search-notes" className="sr-only">
+                Tìm kiếm ghi chú
+              </label>
+              <input
+                id="search-notes"
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Tìm kiếm ghi chú theo nội dung..."
+                aria-label="Tìm kiếm ghi chú"
+                className="w-full pl-9 pr-8 py-2 text-xs rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              />
+              <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5 pointer-events-none" />
+              {searchQuery && (
+                <button
+                  type="button"
+                  onClick={() => setSearchQuery('')}
+                  aria-label="Xóa từ khóa tìm kiếm"
+                  className="absolute right-2.5 top-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-0.5 rounded cursor-pointer"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              )}
+            </div>
+
+            {/* Filter Buttons */}
+            <div className="flex flex-wrap items-center gap-1.5" role="toolbar" aria-label="Bộ lọc danh sách">
+              {FILTER_OPTIONS.map((opt) => {
+                const isActive = selectedType === opt.key
+                const count = counters[opt.key]
+                return (
+                  <button
+                    key={opt.key}
+                    type="button"
+                    onClick={() => setSelectedType(opt.key)}
+                    className={cn(
+                      'inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium rounded-lg border transition-colors cursor-pointer',
+                      isActive
+                        ? 'bg-indigo-600 text-white border-indigo-600 shadow-2xs font-semibold'
+                        : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700/50'
+                    )}
+                  >
+                    <span>{`${opt.label} (${count})`}</span>
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* Empty filter state (khi session có notes nhưng không note nào khớp filter/search) */}
+        {!isLoading && !isError && notes.length > 0 && filteredNotes.length === 0 && (
+          <div className="p-8 text-center bg-white dark:bg-slate-900 rounded-xl border border-dashed border-slate-200 dark:border-slate-800 space-y-3">
+            <p className="text-sm font-medium text-slate-700 dark:text-slate-300">
+              Không tìm thấy ghi chú phù hợp với bộ lọc
+            </p>
+            <button
+              type="button"
+              onClick={handleClearFilters}
+              className="px-3.5 py-1.5 text-xs font-semibold bg-indigo-50 hover:bg-indigo-100 text-indigo-700 dark:bg-indigo-950/50 dark:hover:bg-indigo-900/50 dark:text-indigo-300 rounded-lg transition-colors border border-indigo-200 dark:border-indigo-800 cursor-pointer shadow-2xs"
+            >
+              Xóa bộ lọc
+            </button>
+          </div>
+        )}
+
+        {/* List items */}
+        {!isLoading && !isError && filteredNotes.length > 0 && (
           <div className="space-y-3">
-            {notes.map((note: ResearchNote) => (
+            {filteredNotes.map((note: ResearchNote) => (
               <div
                 key={note.id}
                 className="group bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 p-4 shadow-sm hover:border-slate-300 dark:hover:border-slate-700 transition-all space-y-2.5"
