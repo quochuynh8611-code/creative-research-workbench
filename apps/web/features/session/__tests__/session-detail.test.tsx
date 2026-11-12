@@ -65,6 +65,7 @@ const mockedGetTrizParameters = getTrizParameters as jest.MockedFunction<typeof 
 const mockedLookupTrizMatrix = lookupTrizMatrix as jest.MockedFunction<typeof lookupTrizMatrix>
 const mockedFindRelatedSessions = findRelatedSessions as jest.MockedFunction<typeof findRelatedSessions>
 const mockedGetTrizNineWindows = getTrizNineWindows as jest.MockedFunction<typeof getTrizNineWindows>
+const mockedCreateResearchNote = createResearchNote as jest.MockedFunction<typeof createResearchNote>
 
 
 function createTestQueryClient() {
@@ -758,6 +759,424 @@ describe('Phase 5.4 — Problem Intake & Structuring Canvas Tests', () => {
       const textarea = screen.getByPlaceholderText(/nhập ghi chú nghiên cứu/i) as HTMLTextAreaElement
       expect(textarea.value).toBe('')
       expect(screen.queryByText(/Đang soạn thảo từ bản nháp gợi ý/i)).not.toBeInTheDocument()
+    })
+  })
+
+  describe('8.1. Batch C4a — Notebook Draft Preservation and Overwrite Guard', () => {
+    it('9. test_saves_nine_windows_insight_to_notebook_draft_when_notebook_is_clean: lưu insight từ 9-Windows prefill vào Notebook khi form chưa dirty', async () => {
+      mockedGetSession.mockResolvedValue(MOCK_SESSION_WITH_FRAME)
+      mockedListResearchNotes.mockResolvedValue({ data: [], meta: { total: 0 } })
+
+      renderWithClient(<SessionDetail sessionId="ses-456" />)
+      await waitFor(() => {
+        expect(screen.getByText('Tối ưu độ bền và trọng lượng cánh tay robot')).toBeInTheDocument()
+      })
+
+      // Mở collapsible 9-Windows
+      const toggleButton = screen.getByRole('button', {
+        name: /Mở rộng góc nhìn hệ thống đa chiều \(TRIZ 9-Windows\)|TRIZ 9-Windows/i,
+      })
+      fireEvent.click(toggleButton)
+      await waitFor(() => {
+        expect(screen.getAllByRole('article')).toHaveLength(9)
+      })
+
+      // Lưu cell đầu tiên khi notebook chưa có draft / clean
+      const saveBtns = screen.getAllByRole('button', { name: /lưu vào sổ tay/i })
+      fireEvent.click(saveBtns[0])
+
+      // Không hiển thị confirmation dialog vì chưa dirty
+      expect(screen.queryByRole('dialog', { name: /Ghi đè bản nháp chưa lưu/i })).not.toBeInTheDocument()
+
+      // Tự động chuyển tab sang Notebook và textarea có nội dung
+      expect(await screen.findByText('Thêm ghi chú nghiên cứu')).toBeInTheDocument()
+      const textarea = screen.getByPlaceholderText(/nhập ghi chú nghiên cứu/i) as HTMLTextAreaElement
+      expect(textarea.value).toContain('Hạ tầng kỹ thuật quá khứ')
+    })
+
+    it('10. test_preserves_notebook_edits_when_switching_to_another_tab_and_back: bảo toàn nội dung và noteType người dùng đang soạn khi chuyển tab qua lại', async () => {
+      mockedGetSession.mockResolvedValue(MOCK_SESSION_WITH_FRAME)
+      mockedListResearchNotes.mockResolvedValue({ data: [], meta: { total: 0 } })
+
+      renderWithClient(<SessionDetail sessionId="ses-456" />)
+      await waitFor(() => {
+        expect(screen.getByText('Tối ưu độ bền và trọng lượng cánh tay robot')).toBeInTheDocument()
+      })
+
+      // Chuyển sang tab Notebook
+      const notebookTab = screen.getByRole('button', { name: /Ghi chép \(Notebook\)|Ghi chép/i })
+      fireEvent.click(notebookTab)
+      expect(await screen.findByText('Thêm ghi chú nghiên cứu')).toBeInTheDocument()
+
+      // Người dùng gõ ghi chú dở dang và đổi noteType sang hypothesis
+      const textarea = screen.getByPlaceholderText(/nhập ghi chú nghiên cứu/i) as HTMLTextAreaElement
+      fireEvent.change(textarea, { target: { value: 'Nội dung phân tích cá nhân đang viết dở dang' } })
+      const noteTypeSelect = screen.getByLabelText(/loại ghi chú/i) as HTMLSelectElement
+      fireEvent.change(noteTypeSelect, { target: { value: 'hypothesis' } })
+
+      // Chuyển sang tab Phân tích cấu trúc
+      const structuringTab = screen.getByRole('button', { name: /^Phân tích cấu trúc$/i })
+      fireEvent.click(structuringTab)
+      expect(screen.getByText('Bài toán đã chuẩn hóa (Normalized Problem Statement)')).toBeInTheDocument()
+
+      // Chuyển lại tab Notebook
+      fireEvent.click(notebookTab)
+      expect(await screen.findByText('Thêm ghi chú nghiên cứu')).toBeInTheDocument()
+
+      // Cả content lẫn noteType phải được bảo tồn hoàn toàn, không bị xóa do unmount
+      const restoredTextarea = screen.getByPlaceholderText(/nhập ghi chú nghiên cứu/i) as HTMLTextAreaElement
+      expect(restoredTextarea.value).toBe('Nội dung phân tích cá nhân đang viết dở dang')
+      const restoredSelect = screen.getByLabelText(/loại ghi chú/i) as HTMLSelectElement
+      expect(restoredSelect.value).toBe('hypothesis')
+    })
+
+    it('11. test_shows_overwrite_confirmation_when_saving_a_new_insight_while_notebook_is_dirty: hiển thị confirmation dialog khi lưu ô mới trong lúc notebook đang dirty (cả khi sửa content lẫn đổi noteType)', async () => {
+      mockedGetSession.mockResolvedValue(MOCK_SESSION_WITH_FRAME)
+      mockedListResearchNotes.mockResolvedValue({ data: [], meta: { total: 0 } })
+
+      renderWithClient(<SessionDetail sessionId="ses-456" />)
+      await waitFor(() => {
+        expect(screen.getByText('Tối ưu độ bền và trọng lượng cánh tay robot')).toBeInTheDocument()
+      })
+
+      // Case 1: Đổi noteType so với draft gốc khiến isDirty = true
+      // Mở 9-Windows và nạp cell 0
+      const toggleButton = screen.getByRole('button', {
+        name: /Mở rộng góc nhìn hệ thống đa chiều \(TRIZ 9-Windows\)|TRIZ 9-Windows/i,
+      })
+      fireEvent.click(toggleButton)
+      await waitFor(() => {
+        expect(screen.getAllByRole('article')).toHaveLength(9)
+      })
+      const saveBtns = screen.getAllByRole('button', { name: /lưu vào sổ tay/i })
+      fireEvent.click(saveBtns[0])
+      expect(await screen.findByText('Thêm ghi chú nghiên cứu')).toBeInTheDocument()
+
+      // Giữ nguyên content, chỉ đổi noteType từ 'insight' sang 'decision'
+      const select = screen.getByLabelText(/loại ghi chú/i) as HTMLSelectElement
+      fireEvent.change(select, { target: { value: 'decision' } })
+
+      // Quay lại Structuring và lưu cell 1
+      const structuringTab = screen.getByRole('button', { name: /^Phân tích cấu trúc$/i })
+      fireEvent.click(structuringTab)
+      const toggleBtn = screen.getByRole('button', {
+        name: /Mở rộng góc nhìn hệ thống đa chiều \(TRIZ 9-Windows\)|TRIZ 9-Windows/i,
+      })
+      fireEvent.click(toggleBtn)
+      await waitFor(() => {
+        expect(screen.getAllByRole('article')).toHaveLength(9)
+      })
+      const saveBtnsAgain = screen.getAllByRole('button', { name: /lưu vào sổ tay/i })
+      fireEvent.click(saveBtnsAgain[1])
+
+      // Phải xuất hiện dialog xác nhận ghi đè vì noteType đã thay đổi (isDirty = true)
+      const dialog = screen.getByRole('dialog', { name: /Ghi đè bản nháp chưa lưu\?/i })
+      expect(dialog).toBeInTheDocument()
+      expect(dialog).toHaveAttribute('aria-modal', 'true')
+      expect(screen.getByText(/Bạn đang có nội dung chưa lưu trong Sổ tay nghiên cứu/i)).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: 'Ghi đè' })).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: 'Hủy' })).toBeInTheDocument()
+    })
+
+    it('12. test_does_not_change_tab_while_overwrite_confirmation_is_open: giữ nguyên active tab hiện tại khi confirmation dialog đang mở', async () => {
+      mockedGetSession.mockResolvedValue(MOCK_SESSION_WITH_FRAME)
+      mockedListResearchNotes.mockResolvedValue({ data: [], meta: { total: 0 } })
+
+      renderWithClient(<SessionDetail sessionId="ses-456" />)
+      await waitFor(() => {
+        expect(screen.getByText('Tối ưu độ bền và trọng lượng cánh tay robot')).toBeInTheDocument()
+      })
+
+      // Vào Notebook và gõ dirty
+      const notebookTab = screen.getByRole('button', { name: /Ghi chép \(Notebook\)|Ghi chép/i })
+      fireEvent.click(notebookTab)
+      expect(await screen.findByText('Thêm ghi chú nghiên cứu')).toBeInTheDocument()
+      const textarea = screen.getByPlaceholderText(/nhập ghi chú nghiên cứu/i) as HTMLTextAreaElement
+      fireEvent.change(textarea, { target: { value: 'Nội dung dirty' } })
+
+      // Sang tab Structuring
+      const structuringTab = screen.getByRole('button', { name: /^Phân tích cấu trúc$/i })
+      fireEvent.click(structuringTab)
+      const toggleButton = screen.getByRole('button', {
+        name: /Mở rộng góc nhìn hệ thống đa chiều \(TRIZ 9-Windows\)|TRIZ 9-Windows/i,
+      })
+      fireEvent.click(toggleButton)
+      await waitFor(() => {
+        expect(screen.getAllByRole('article')).toHaveLength(9)
+      })
+
+      const saveBtns = screen.getAllByRole('button', { name: /lưu vào sổ tay/i })
+      fireEvent.click(saveBtns[1])
+
+      // Dialog mở, nhưng tab vẫn phải là Structuring, không được chuyển sang Notebook
+      expect(screen.getByRole('dialog', { name: /Ghi đè bản nháp chưa lưu\?/i })).toBeInTheDocument()
+      expect(screen.getByText('Bài toán đã chuẩn hóa (Normalized Problem Statement)')).toBeInTheDocument()
+    })
+
+    it('13. test_replaces_draft_and_switches_to_notebook_after_overwrite_confirmation: khi chọn Ghi đè, thay thế draft, reset isDirty, nạp content/noteType mới và chuyển Notebook', async () => {
+      mockedGetSession.mockResolvedValue(MOCK_SESSION_WITH_FRAME)
+      mockedListResearchNotes.mockResolvedValue({ data: [], meta: { total: 0 } })
+
+      renderWithClient(<SessionDetail sessionId="ses-456" />)
+      await waitFor(() => {
+        expect(screen.getByText('Tối ưu độ bền và trọng lượng cánh tay robot')).toBeInTheDocument()
+      })
+
+      // Tạo dirty draft trong Notebook
+      const notebookTab = screen.getByRole('button', { name: /Ghi chép \(Notebook\)|Ghi chép/i })
+      fireEvent.click(notebookTab)
+      const textarea = screen.getByPlaceholderText(/nhập ghi chú nghiên cứu/i) as HTMLTextAreaElement
+      fireEvent.change(textarea, { target: { value: 'Bản nháp cũ sắp bị ghi đè' } })
+
+      // Sang tab Structuring và click lưu cell 9-Windows thứ 2 ("Hạ tầng kỹ thuật hiện tại")
+      const structuringTab = screen.getByRole('button', { name: /^Phân tích cấu trúc$/i })
+      fireEvent.click(structuringTab)
+      const toggleButton = screen.getByRole('button', {
+        name: /Mở rộng góc nhìn hệ thống đa chiều \(TRIZ 9-Windows\)|TRIZ 9-Windows/i,
+      })
+      fireEvent.click(toggleButton)
+      await waitFor(() => {
+        expect(screen.getAllByRole('article')).toHaveLength(9)
+      })
+
+      const saveBtns = screen.getAllByRole('button', { name: /lưu vào sổ tay/i })
+      fireEvent.click(saveBtns[1])
+
+      // Bấm nút "Ghi đè" trong confirmation dialog
+      const confirmBtn = screen.getByRole('button', { name: 'Ghi đè' })
+      fireEvent.click(confirmBtn)
+
+      // Dialog đóng, chuyển tab sang Notebook và nạp nội dung của cell thứ 2
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+      expect(await screen.findByText('Thêm ghi chú nghiên cứu')).toBeInTheDocument()
+      const newTextarea = screen.getByPlaceholderText(/nhập ghi chú nghiên cứu/i) as HTMLTextAreaElement
+      expect(newTextarea.value).toContain('Hạ tầng kỹ thuật hiện tại')
+
+      // isDirty đã được reset về false: quay lại Structuring và lưu cell thứ 3 mà không bị guard
+      fireEvent.click(structuringTab)
+      const toggleBtnCell3 = screen.getByRole('button', {
+        name: /Mở rộng góc nhìn hệ thống đa chiều \(TRIZ 9-Windows\)|TRIZ 9-Windows/i,
+      })
+      fireEvent.click(toggleBtnCell3)
+      await waitFor(() => {
+        expect(screen.getAllByRole('article')).toHaveLength(9)
+      })
+      const saveBtnsCell3 = screen.getAllByRole('button', { name: /lưu vào sổ tay/i })
+      fireEvent.click(saveBtnsCell3[2])
+      expect(screen.queryByRole('dialog', { name: /Ghi đè bản nháp chưa lưu\?/i })).not.toBeInTheDocument()
+    })
+
+    it('14. test_preserves_existing_edits_after_cancelling_overwrite_confirmation: khi chọn Hủy (hoặc Escape, click outside), giữ nguyên draft, content, noteType và activeTab', async () => {
+      mockedGetSession.mockResolvedValue(MOCK_SESSION_WITH_FRAME)
+      mockedListResearchNotes.mockResolvedValue({ data: [], meta: { total: 0 } })
+
+      renderWithClient(<SessionDetail sessionId="ses-456" />)
+      await waitFor(() => {
+        expect(screen.getByText('Tối ưu độ bền và trọng lượng cánh tay robot')).toBeInTheDocument()
+      })
+
+      // Tạo dirty draft và noteType hypothesis trong Notebook
+      const notebookTab = screen.getByRole('button', { name: /Ghi chép \(Notebook\)|Ghi chép/i })
+      fireEvent.click(notebookTab)
+      const textarea = screen.getByPlaceholderText(/nhập ghi chú nghiên cứu/i) as HTMLTextAreaElement
+      fireEvent.change(textarea, { target: { value: 'Nội dung giữ nguyên không ghi đè' } })
+      const select = screen.getByLabelText(/loại ghi chú/i) as HTMLSelectElement
+      fireEvent.change(select, { target: { value: 'hypothesis' } })
+
+      // Sang tab Structuring và click lưu
+      const structuringTab = screen.getByRole('button', { name: /^Phân tích cấu trúc$/i })
+      fireEvent.click(structuringTab)
+      const toggleButton = screen.getByRole('button', {
+        name: /Mở rộng góc nhìn hệ thống đa chiều \(TRIZ 9-Windows\)|TRIZ 9-Windows/i,
+      })
+      fireEvent.click(toggleButton)
+      await waitFor(() => {
+        expect(screen.getAllByRole('article')).toHaveLength(9)
+      })
+
+      const saveBtns = screen.getAllByRole('button', { name: /lưu vào sổ tay/i })
+      fireEvent.click(saveBtns[1])
+
+      // Bấm nút "Hủy" trong dialog
+      const cancelBtn = screen.getByRole('button', { name: 'Hủy' })
+      fireEvent.click(cancelBtn)
+
+      // Dialog biến mất, tab vẫn là Structuring
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+      expect(screen.getByText('Bài toán đã chuẩn hóa (Normalized Problem Statement)')).toBeInTheDocument()
+
+      // Khi người dùng chủ động vào lại Notebook, nội dung dirty và noteType vẫn nguyên vẹn
+      fireEvent.click(notebookTab)
+      const preservedTextarea = screen.getByPlaceholderText(/nhập ghi chú nghiên cứu/i) as HTMLTextAreaElement
+      expect(preservedTextarea.value).toBe('Nội dung giữ nguyên không ghi đè')
+      const preservedSelect = screen.getByLabelText(/loại ghi chú/i) as HTMLSelectElement
+      expect(preservedSelect.value).toBe('hypothesis')
+    })
+
+    it('15. test_clears_draft_content_note_type_and_dirty_state_after_discard: hủy nháp reset draft, content, noteType và isDirty', async () => {
+      mockedGetSession.mockResolvedValue(MOCK_SESSION_WITH_FRAME)
+      mockedListResearchNotes.mockResolvedValue({ data: [], meta: { total: 0 } })
+
+      renderWithClient(<SessionDetail sessionId="ses-456" />)
+      await waitFor(() => {
+        expect(screen.getByText('Tối ưu độ bền và trọng lượng cánh tay robot')).toBeInTheDocument()
+      })
+
+      // Lưu 1 cell 9-Windows vào Notebook
+      const toggleButton = screen.getByRole('button', {
+        name: /Mở rộng góc nhìn hệ thống đa chiều \(TRIZ 9-Windows\)|TRIZ 9-Windows/i,
+      })
+      fireEvent.click(toggleButton)
+      await waitFor(() => {
+        expect(screen.getAllByRole('article')).toHaveLength(9)
+      })
+      const saveBtns = screen.getAllByRole('button', { name: /lưu vào sổ tay/i })
+      fireEvent.click(saveBtns[0])
+
+      // Đã ở tab Notebook, gõ thêm nội dung và đổi noteType sang question
+      expect(await screen.findByText('Thêm ghi chú nghiên cứu')).toBeInTheDocument()
+      const textarea = screen.getByPlaceholderText(/nhập ghi chú nghiên cứu/i) as HTMLTextAreaElement
+      fireEvent.change(textarea, { target: { value: 'Gõ thêm chữ' } })
+      const select = screen.getByLabelText(/loại ghi chú/i) as HTMLSelectElement
+      fireEvent.change(select, { target: { value: 'question' } })
+
+      // Click "Hủy nháp"
+      const discardBtn = screen.getByRole('button', { name: /hủy nháp/i })
+      fireEvent.click(discardBtn)
+
+      // Textarea rỗng, draft banner biến mất, noteType về insight
+      expect(textarea.value).toBe('')
+      expect(screen.queryByText(/Đang soạn thảo từ bản nháp gợi ý/i)).not.toBeInTheDocument()
+      expect(select.value).toBe('insight')
+
+      // isDirty đã về false: sang Structuring và click lưu cell mới không xuất hiện dialog
+      const structuringTab = screen.getByRole('button', { name: /^Phân tích cấu trúc$/i })
+      fireEvent.click(structuringTab)
+      const toggleBtn = screen.getByRole('button', {
+        name: /Mở rộng góc nhìn hệ thống đa chiều \(TRIZ 9-Windows\)|TRIZ 9-Windows/i,
+      })
+      fireEvent.click(toggleBtn)
+      await waitFor(() => {
+        expect(screen.getAllByRole('article')).toHaveLength(9)
+      })
+      const saveBtnsAgain = screen.getAllByRole('button', { name: /lưu vào sổ tay/i })
+      fireEvent.click(saveBtnsAgain[1])
+      expect(screen.queryByRole('dialog', { name: /Ghi đè bản nháp chưa lưu\?/i })).not.toBeInTheDocument()
+    })
+
+    it('16. test_clears_draft_state_after_successful_note_creation: lưu thành công gọi onNoteCreated, SessionDetail reset toàn bộ draft state (draft, content, noteType, isDirty, pendingDraft)', async () => {
+      mockedGetSession.mockResolvedValue(MOCK_SESSION_WITH_FRAME)
+      mockedListResearchNotes.mockResolvedValue({ data: [], meta: { total: 0 } })
+      mockedCreateResearchNote.mockResolvedValueOnce({
+        id: 'new-note-id',
+        session_id: 'ses-456',
+        content: 'Nội dung lưu thành công',
+        note_type: 'insight',
+        source_chunk_id: null,
+        created_at: '2026-11-12T00:00:00Z',
+      })
+
+      renderWithClient(<SessionDetail sessionId="ses-456" />)
+      await waitFor(() => {
+        expect(screen.getByText('Tối ưu độ bền và trọng lượng cánh tay robot')).toBeInTheDocument()
+      })
+
+      // Nạp draft từ 9-Windows vào Notebook
+      const toggleButton = screen.getByRole('button', {
+        name: /Mở rộng góc nhìn hệ thống đa chiều \(TRIZ 9-Windows\)|TRIZ 9-Windows/i,
+      })
+      fireEvent.click(toggleButton)
+      await waitFor(() => {
+        expect(screen.getAllByRole('article')).toHaveLength(9)
+      })
+      const saveBtns = screen.getAllByRole('button', { name: /lưu vào sổ tay/i })
+      fireEvent.click(saveBtns[0])
+
+      expect(await screen.findByText('Thêm ghi chú nghiên cứu')).toBeInTheDocument()
+      expect(screen.getByText(/Đang soạn thảo từ bản nháp gợi ý/i)).toBeInTheDocument()
+
+      const textarea = screen.getByPlaceholderText(/nhập ghi chú nghiên cứu/i) as HTMLTextAreaElement
+      fireEvent.change(textarea, { target: { value: 'Nội dung lưu thành công' } })
+
+      const submitBtn = screen.getByRole('button', { name: /lưu ghi chú/i })
+      fireEvent.click(submitBtn)
+
+      await waitFor(() => {
+        expect(mockedCreateResearchNote).toHaveBeenCalled()
+      })
+
+      // Sau khi tạo thành công (qua onNoteCreated), SessionDetail reset toàn bộ draft state:
+      // draft = null (banner biến mất)
+      expect(screen.queryByText(/Đang soạn thảo từ bản nháp gợi ý/i)).not.toBeInTheDocument()
+      // content = ""
+      await waitFor(() => {
+        expect(textarea.value).toBe('')
+      })
+      // noteType = "insight"
+      const select = screen.getByLabelText(/loại ghi chú/i) as HTMLSelectElement
+      expect(select.value).toBe('insight')
+
+      // isDirty = false & pendingDraft = null: sang Structuring lưu cell mới không bị guard
+      const structuringTab = screen.getByRole('button', { name: /^Phân tích cấu trúc$/i })
+      fireEvent.click(structuringTab)
+      const toggleBtn = screen.getByRole('button', {
+        name: /Mở rộng góc nhìn hệ thống đa chiều \(TRIZ 9-Windows\)|TRIZ 9-Windows/i,
+      })
+      fireEvent.click(toggleBtn)
+      await waitFor(() => {
+        expect(screen.getAllByRole('article')).toHaveLength(9)
+      })
+      const saveBtnsAgain = screen.getAllByRole('button', { name: /lưu vào sổ tay/i })
+      fireEvent.click(saveBtnsAgain[1])
+      expect(screen.queryByRole('dialog', { name: /Ghi đè bản nháp chưa lưu\?/i })).not.toBeInTheDocument()
+    })
+
+    it('17. test_does_not_show_overwrite_confirmation_when_the_new_draft_matches_the_existing_untouched_draft: không hiển thị confirmation khi draft chưa hề bị chỉnh sửa hoặc khi gõ rồi xóa về đúng nội dung draft gốc', async () => {
+      mockedGetSession.mockResolvedValue(MOCK_SESSION_WITH_FRAME)
+      mockedListResearchNotes.mockResolvedValue({ data: [], meta: { total: 0 } })
+
+      renderWithClient(<SessionDetail sessionId="ses-456" />)
+      await waitFor(() => {
+        expect(screen.getByText('Tối ưu độ bền và trọng lượng cánh tay robot')).toBeInTheDocument()
+      })
+
+      // Lưu cell 9-Windows đầu tiên
+      const toggleButton = screen.getByRole('button', {
+        name: /Mở rộng góc nhìn hệ thống đa chiều \(TRIZ 9-Windows\)|TRIZ 9-Windows/i,
+      })
+      fireEvent.click(toggleButton)
+      await waitFor(() => {
+        expect(screen.getAllByRole('article')).toHaveLength(9)
+      })
+      const saveBtns = screen.getAllByRole('button', { name: /lưu vào sổ tay/i })
+      fireEvent.click(saveBtns[0])
+
+      expect(await screen.findByText('Thêm ghi chú nghiên cứu')).toBeInTheDocument()
+      const textarea = screen.getByPlaceholderText(/nhập ghi chú nghiên cứu/i) as HTMLTextAreaElement
+      const originalValue = textarea.value
+
+      // Trường hợp A: Gõ thêm rồi xóa về đúng nội dung draft gốc -> isDirty trở về false
+      fireEvent.change(textarea, { target: { value: originalValue + ' chỉnh sửa tạm' } })
+      fireEvent.change(textarea, { target: { value: originalValue } })
+
+      // Quay lại tab Structuring
+      const structuringTab = screen.getByRole('button', { name: /^Phân tích cấu trúc$/i })
+      fireEvent.click(structuringTab)
+      const toggleBtn = screen.getByRole('button', {
+        name: /Mở rộng góc nhìn hệ thống đa chiều \(TRIZ 9-Windows\)|TRIZ 9-Windows/i,
+      })
+      fireEvent.click(toggleBtn)
+      await waitFor(() => {
+        expect(screen.getAllByRole('article')).toHaveLength(9)
+      })
+
+      // Lưu lại cell đó (hoặc cell khác khi isDirty === false)
+      const saveBtnsAgain = screen.getAllByRole('button', { name: /lưu vào sổ tay/i })
+      fireEvent.click(saveBtnsAgain[1])
+
+      // Guard KHÔNG kích hoạt vì isDirty === false
+      expect(screen.queryByRole('dialog', { name: /Ghi đè bản nháp chưa lưu\?/i })).not.toBeInTheDocument()
+      expect(await screen.findByText('Thêm ghi chú nghiên cứu')).toBeInTheDocument()
     })
   })
 

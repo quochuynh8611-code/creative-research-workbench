@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import React, { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Sparkles } from 'lucide-react'
 import {
@@ -12,8 +12,13 @@ import type { NoteType, CreateResearchNoteInput, ResearchNote, NoteDraft } from 
 
 interface ResearchNotebookProps {
   sessionId: string
-  initialDraft?: NoteDraft | null
-  onClearDraft?: () => void
+  initialDraft: NoteDraft | null
+  content: string
+  noteType: NoteType
+  onContentChange: (content: string) => void
+  onNoteTypeChange: (noteType: NoteType) => void
+  onClearDraft: () => void
+  onNoteCreated: () => void
   className?: string
 }
 
@@ -36,34 +41,22 @@ const NOTE_TYPE_STYLES: Record<NoteType, string> = {
 export function ResearchNotebook({
   sessionId,
   initialDraft,
+  content,
+  noteType,
+  onContentChange,
+  onNoteTypeChange,
   onClearDraft,
+  onNoteCreated,
   className = '',
 }: ResearchNotebookProps) {
   const queryClient = useQueryClient()
-  const [content, setContent] = useState(initialDraft?.content || '')
-  const [noteType, setNoteType] = useState<NoteType>(initialDraft?.note_type || 'insight')
-  const [isDraftActive, setIsDraftActive] = useState<boolean>(Boolean(initialDraft))
   const [validationError, setValidationError] = useState<string | null>(null)
   const [actionError, setActionError] = useState<string | null>(null)
 
-  useEffect(() => {
-    if (initialDraft) {
-      setContent(initialDraft.content || '')
-      if (initialDraft.note_type) {
-        setNoteType(initialDraft.note_type)
-      }
-      setIsDraftActive(true)
-      setValidationError(null)
-    }
-  }, [initialDraft])
-
   const handleDiscardDraft = () => {
-    setContent('')
-    setNoteType('insight')
-    setIsDraftActive(false)
     setValidationError(null)
     setActionError(null)
-    onClearDraft?.()
+    onClearDraft()
   }
 
   const {
@@ -82,12 +75,9 @@ export function ResearchNotebook({
     mutationFn: (input: CreateResearchNoteInput) => createResearchNote(sessionId, input),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['sessions', sessionId, 'notes'] })
-      setContent('')
-      setNoteType('insight')
-      setIsDraftActive(false)
       setValidationError(null)
       setActionError(null)
-      onClearDraft?.()
+      onNoteCreated()
     },
     onError: (err: any) => {
       setActionError(err?.message || 'Không thể tạo ghi chú. Vui lòng thử lại.')
@@ -155,7 +145,7 @@ export function ResearchNotebook({
         </h3>
 
         {/* Draft Active Indicator Banner */}
-        {isDraftActive && (
+        {initialDraft && (
           <div className="p-3 mb-4 rounded-xl bg-amber-500/10 border border-amber-500/25 flex items-center justify-between gap-3 text-xs">
             <div className="flex items-center gap-2 text-amber-800 dark:text-amber-300 font-medium">
               <Sparkles className="w-4 h-4 text-amber-500 shrink-0" />
@@ -181,7 +171,7 @@ export function ResearchNotebook({
               rows={3}
               value={content}
               onChange={(e) => {
-                setContent(e.target.value)
+                onContentChange(e.target.value)
                 if (validationError) setValidationError(null)
               }}
               placeholder="Nhập ghi chú nghiên cứu (quan sát, giả thuyết, quyết định)..."
@@ -206,7 +196,7 @@ export function ResearchNotebook({
                 id="note-type"
                 aria-label="Loại ghi chú"
                 value={noteType}
-                onChange={(e) => setNoteType(e.target.value as NoteType)}
+                onChange={(e) => onNoteTypeChange(e.target.value as NoteType)}
                 className="px-3 py-1.5 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500 font-medium cursor-pointer"
               >
                 <option value="insight">Insight (Phát hiện)</option>
