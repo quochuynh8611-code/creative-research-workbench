@@ -542,6 +542,7 @@ export function SessionDetail({ sessionId }: SessionDetailProps) {
               problemFrame={effectiveProblemFrame}
               onEditIntake={() => setActiveTab('intake')}
               onProceedToRetrieval={() => setActiveTab('retrieval')}
+              onSaveAsNote={handleSaveAsNote}
             />
           ) : (
             <div className="text-center py-16 px-4 rounded-xl border border-dashed border-border text-muted-foreground space-y-4">

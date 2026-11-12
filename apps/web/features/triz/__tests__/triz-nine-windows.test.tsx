@@ -8,7 +8,7 @@ import '@testing-library/jest-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { TrizNineWindows } from '../triz-nine-windows'
 import * as apiClient from '@/lib/api-client'
-import type { TrizNineWindowsLens, TrizNineWindowsResponse } from '@/lib/types'
+import type { TrizNineWindowsLens, TrizNineWindowsResponse, NoteDraft } from '@/lib/types'
 
 jest.mock('@/lib/api-client', () => ({
   getTrizNineWindows: jest.fn(),
@@ -424,6 +424,120 @@ describe('TrizNineWindows Component (Batch C2 — Hardened RED Phase)', () => {
 
     await waitFor(() => {
       expect(screen.getByText('Hạ tầng kỹ thuật quá khứ')).toBeInTheDocument()
+    })
+  })
+
+  describe('13. Notebook Integration (Batch C3b)', () => {
+    it('test_does_not_render_save_note_buttons_without_callback: không truyền onSaveAsNote thì không có nút Lưu vào sổ tay', async () => {
+      mockedGetTrizNineWindows.mockResolvedValueOnce(MOCK_ENGINEERING_DATA)
+      renderWithClient(<TrizNineWindows />)
+
+      await waitFor(() => {
+        expect(screen.getAllByRole('article')).toHaveLength(9)
+      })
+
+      expect(screen.queryByRole('button', { name: /lưu vào sổ tay/i })).not.toBeInTheDocument()
+    })
+
+    it('test_renders_save_note_buttons_when_callback_provided: truyền onSaveAsNote thì có đúng 9 nút Lưu vào sổ tay', async () => {
+      mockedGetTrizNineWindows.mockResolvedValueOnce(MOCK_ENGINEERING_DATA)
+      const onSaveAsNote = jest.fn()
+      renderWithClient(<TrizNineWindows onSaveAsNote={onSaveAsNote} />)
+
+      await waitFor(() => {
+        expect(screen.getAllByRole('article')).toHaveLength(9)
+      })
+
+      const saveButtons = screen.getAllByRole('button', { name: /lưu vào sổ tay/i })
+      expect(saveButtons).toHaveLength(9)
+    })
+
+    it('test_saves_selected_cell_as_insight_draft: click nút lưu của một cell xác định sẽ gọi callback với NoteDraft chuẩn xác', async () => {
+      mockedGetTrizNineWindows.mockResolvedValueOnce(MOCK_ENGINEERING_DATA)
+      const onSaveAsNote = jest.fn()
+      renderWithClient(<TrizNineWindows onSaveAsNote={onSaveAsNote} />)
+
+      await waitFor(() => {
+        expect(screen.getAllByRole('article')).toHaveLength(9)
+      })
+
+      const saveButtons = screen.getAllByRole('button', { name: /lưu vào sổ tay/i })
+      fireEvent.click(saveButtons[0])
+
+      expect(onSaveAsNote).toHaveBeenCalledTimes(1)
+      const draft: NoteDraft = onSaveAsNote.mock.calls[0][0]
+      expect(draft.note_type).toBe('insight')
+      expect(draft.source_chunk_id).toBeNull()
+      expect(draft.content).toContain('Lăng kính Kỹ thuật & Công nghệ')
+      expect(draft.content).toContain('Siêu hệ thống')
+      expect(draft.content).toContain('Quá khứ')
+      expect(draft.content).toContain('Hạ tầng kỹ thuật quá khứ')
+      expect(draft.content).toContain('Hệ thống hạ tầng trước đây giới hạn công nghệ thế nào?')
+      expect(draft.content).toContain('Mô tả hạ tầng quá khứ.')
+      expect(draft.content).toContain('Ví dụ: Đường ray xe lửa khổ hẹp')
+    })
+
+    it('test_omits_examples_section_when_empty: examples_vi=[] thì content không chứa "Ví dụ:"', async () => {
+      const mockDataWithoutExamples: TrizNineWindowsResponse = {
+        ...MOCK_ENGINEERING_DATA,
+        grid: MOCK_ENGINEERING_DATA.grid.map((c, i) => (i === 0 ? { ...c, examples_vi: [] } : c)),
+      }
+      mockedGetTrizNineWindows.mockResolvedValueOnce(mockDataWithoutExamples)
+      const onSaveAsNote = jest.fn()
+      renderWithClient(<TrizNineWindows onSaveAsNote={onSaveAsNote} />)
+
+      await waitFor(() => {
+        expect(screen.getAllByRole('article')).toHaveLength(9)
+      })
+
+      const saveButtons = screen.getAllByRole('button', { name: /lưu vào sổ tay/i })
+      fireEvent.click(saveButtons[0])
+
+      expect(onSaveAsNote).toHaveBeenCalledTimes(1)
+      const draft: NoteDraft = onSaveAsNote.mock.calls[0][0]
+      expect(draft.content).not.toContain('Ví dụ:')
+    })
+
+    it('test_omits_examples_section_when_missing: examples_vi undefined thì content không chứa "Ví dụ:"', async () => {
+      const mockDataMissingExamples: TrizNineWindowsResponse = {
+        ...MOCK_ENGINEERING_DATA,
+        grid: MOCK_ENGINEERING_DATA.grid.map((c, i) => (i === 0 ? { ...c, examples_vi: undefined } : c)),
+      }
+      mockedGetTrizNineWindows.mockResolvedValueOnce(mockDataMissingExamples)
+      const onSaveAsNote = jest.fn()
+      renderWithClient(<TrizNineWindows onSaveAsNote={onSaveAsNote} />)
+
+      await waitFor(() => {
+        expect(screen.getAllByRole('article')).toHaveLength(9)
+      })
+
+      const saveButtons = screen.getAllByRole('button', { name: /lưu vào sổ tay/i })
+      fireEvent.click(saveButtons[0])
+
+      expect(onSaveAsNote).toHaveBeenCalledTimes(1)
+      const draft: NoteDraft = onSaveAsNote.mock.calls[0][0]
+      expect(draft.content).not.toContain('Ví dụ:')
+    })
+
+    it('test_save_button_has_unique_accessible_name: mỗi nút lưu có aria-label định danh riêng, không trùng lặp', async () => {
+      mockedGetTrizNineWindows.mockResolvedValueOnce(MOCK_ENGINEERING_DATA)
+      const onSaveAsNote = jest.fn()
+      renderWithClient(<TrizNineWindows onSaveAsNote={onSaveAsNote} />)
+
+      await waitFor(() => {
+        expect(screen.getAllByRole('article')).toHaveLength(9)
+      })
+
+      const saveButtons = screen.getAllByRole('button', { name: /lưu vào sổ tay/i })
+      expect(saveButtons).toHaveLength(9)
+
+      const accessibleNames = saveButtons.map((btn) => btn.getAttribute('aria-label') || btn.textContent)
+      accessibleNames.forEach((name) => {
+        expect(name).toBeTruthy()
+        expect(name).toMatch(/lưu vào sổ tay/i)
+      })
+      const uniqueNames = new Set(accessibleNames)
+      expect(uniqueNames.size).toBe(9)
     })
   })
 })
