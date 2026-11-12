@@ -540,4 +540,77 @@ describe('TrizNineWindows Component (Batch C2 — Hardened RED Phase)', () => {
       expect(uniqueNames.size).toBe(9)
     })
   })
+
+  describe('14. Context Mapping & Initial Lens (Batch C5 — RED Phase)', () => {
+    it('8. test_accepts_initial_lens_prop: nhận initialLens="business", nút Kinh doanh có aria-pressed=true và gọi API với lens=business', async () => {
+      mockedGetTrizNineWindows.mockResolvedValue(MOCK_BUSINESS_DATA)
+      renderWithClient(<TrizNineWindows {...({ initialLens: 'business' } as any)} />)
+
+      const businessBtn = screen.getByRole('button', { name: /Kinh doanh/i })
+      expect(businessBtn).toHaveAttribute('aria-pressed', 'true')
+
+      await waitFor(() => {
+        expect(mockedGetTrizNineWindows).toHaveBeenCalledWith('business')
+      })
+    })
+
+    it('9. test_defaults_to_engineering_when_initial_lens_is_omitted: không truyền initialLens thì mặc định là engineering', async () => {
+      mockedGetTrizNineWindows.mockResolvedValue(MOCK_ENGINEERING_DATA)
+      renderWithClient(<TrizNineWindows />)
+
+      const engineeringBtn = screen.getByRole('button', { name: /Kỹ thuật/i })
+      expect(engineeringBtn).toHaveAttribute('aria-pressed', 'true')
+
+      await waitFor(() => {
+        expect(mockedGetTrizNineWindows).toHaveBeenCalledWith('engineering')
+      })
+    })
+
+    it('10. test_allows_manual_lens_switch_after_initial_lens: khởi tạo với initialLens="business", người dùng bấm Đời sống sẽ đổi sang everyday', async () => {
+      mockedGetTrizNineWindows.mockResolvedValue(MOCK_BUSINESS_DATA)
+      renderWithClient(<TrizNineWindows {...({ initialLens: 'business' } as any)} />)
+
+      mockedGetTrizNineWindows.mockResolvedValue(MOCK_EVERYDAY_DATA)
+      const everydayBtn = screen.getByRole('button', { name: /Đời sống/i })
+      fireEvent.click(everydayBtn)
+
+      expect(everydayBtn).toHaveAttribute('aria-pressed', 'true')
+      await waitFor(() => {
+        expect(mockedGetTrizNineWindows).toHaveBeenCalledWith('everyday')
+      })
+    })
+
+    it('11. test_does_not_reset_manual_lens_selection_on_re_render: người dùng đã chọn lens thủ công thì re-render không làm reset về initialLens', async () => {
+      mockedGetTrizNineWindows.mockResolvedValue(MOCK_BUSINESS_DATA)
+      const queryClient = new QueryClient({
+        defaultOptions: {
+          queries: {
+            retry: false,
+            gcTime: 0,
+          },
+        },
+      })
+      const { rerender } = render(
+        <QueryClientProvider client={queryClient}>
+          <TrizNineWindows {...({ initialLens: 'business' } as any)} />
+        </QueryClientProvider>
+      )
+
+      mockedGetTrizNineWindows.mockResolvedValue(MOCK_EVERYDAY_DATA)
+      const everydayBtn = screen.getByRole('button', { name: /Đời sống/i })
+      fireEvent.click(everydayBtn)
+      expect(everydayBtn).toHaveAttribute('aria-pressed', 'true')
+
+      // Re-render component với initialLens ban đầu
+      rerender(
+        <QueryClientProvider client={queryClient}>
+          <TrizNineWindows {...({ initialLens: 'business', onSaveAsNote: jest.fn() } as any)} />
+        </QueryClientProvider>
+      )
+
+      // Lens người dùng đã bấm (everyday) phải được bảo toàn, không bị giật về business
+      const currentEverydayBtn = screen.getByRole('button', { name: /Đời sống/i })
+      expect(currentEverydayBtn).toHaveAttribute('aria-pressed', 'true')
+    })
+  })
 })
