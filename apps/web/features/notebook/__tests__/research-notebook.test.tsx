@@ -5,7 +5,7 @@ import '@testing-library/jest-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { ResearchNotebook } from '../research-notebook'
 import * as apiClient from '@/lib/api-client'
-import type { ResearchNotesResponse, ResearchNote } from '@/lib/types'
+import type { ResearchNotesResponse, ResearchNote, NoteType } from '@/lib/types'
 
 jest.mock('@/lib/api-client', () => ({
   listResearchNotes: jest.fn(),
@@ -41,6 +41,17 @@ const MOCK_NOTES: ResearchNote[] = [
   },
 ]
 
+const defaultProps = {
+  sessionId: 'ses-123',
+  initialDraft: null,
+  content: '',
+  noteType: 'insight' as const,
+  onContentChange: jest.fn(),
+  onNoteTypeChange: jest.fn(),
+  onClearDraft: jest.fn(),
+  onNoteCreated: jest.fn(),
+}
+
 describe('ResearchNotebook Component', () => {
   beforeEach(() => {
     jest.clearAllMocks()
@@ -57,7 +68,7 @@ describe('ResearchNotebook Component', () => {
     const queryClient = createTestQueryClient()
     render(
       <QueryClientProvider client={queryClient}>
-        <ResearchNotebook sessionId="ses-123" />
+        <ResearchNotebook {...defaultProps} sessionId="ses-123" />
       </QueryClientProvider>
     )
 
@@ -70,7 +81,7 @@ describe('ResearchNotebook Component', () => {
   })
 
   // 2. Create note successfully & form reset
-  it('2. tạo ghi chú mới thành công, gọi API và reset form nhập', async () => {
+  it('2. tạo ghi chú mới thành công, gọi API và thông báo onNoteCreated (không tự reset controlled content)', async () => {
     const mockResponse: ResearchNotesResponse = {
       data: [MOCK_NOTES[0]],
       meta: { total: 1 },
@@ -87,10 +98,38 @@ describe('ResearchNotebook Component', () => {
     }
     ;(apiClient.createResearchNote as jest.Mock).mockResolvedValueOnce(newNote)
 
+    const onContentChangeMock = jest.fn()
+    const onNoteTypeChangeMock = jest.fn()
+    const onClearDraftMock = jest.fn()
+    const onNoteCreatedMock = jest.fn()
+
+    function TestHarness() {
+      const [content, setContent] = React.useState('')
+      const [noteType, setNoteType] = React.useState<NoteType>('insight')
+      return (
+        <ResearchNotebook
+          {...defaultProps}
+          sessionId="ses-123"
+          content={content}
+          noteType={noteType}
+          onContentChange={(val) => {
+            setContent(val)
+            onContentChangeMock(val)
+          }}
+          onNoteTypeChange={(val) => {
+            setNoteType(val)
+            onNoteTypeChangeMock(val)
+          }}
+          onClearDraft={onClearDraftMock}
+          onNoteCreated={onNoteCreatedMock}
+        />
+      )
+    }
+
     const queryClient = createTestQueryClient()
     render(
       <QueryClientProvider client={queryClient}>
-        <ResearchNotebook sessionId="ses-123" />
+        <TestHarness />
       </QueryClientProvider>
     )
 
@@ -101,7 +140,9 @@ describe('ResearchNotebook Component', () => {
     const submitBtn = screen.getByRole('button', { name: /lưu ghi chú|thêm ghi chú/i })
 
     fireEvent.change(textarea, { target: { value: 'Cần xác nhận lại kết quả đo nhiệt lượng' } })
+    expect(onContentChangeMock).toHaveBeenCalledWith('Cần xác nhận lại kết quả đo nhiệt lượng')
     fireEvent.change(select, { target: { value: 'action' } })
+    expect(onNoteTypeChangeMock).toHaveBeenCalledWith('action')
     fireEvent.click(submitBtn)
 
     await waitFor(() => {
@@ -111,8 +152,9 @@ describe('ResearchNotebook Component', () => {
       })
     })
 
-    // Form reset
-    expect(textarea).toHaveValue('')
+    expect(onNoteCreatedMock).toHaveBeenCalledTimes(1)
+    expect(onClearDraftMock).not.toHaveBeenCalled()
+    expect(textarea).toHaveValue('Cần xác nhận lại kết quả đo nhiệt lượng')
   })
 
   // 3. Delete note
@@ -131,7 +173,7 @@ describe('ResearchNotebook Component', () => {
     const queryClient = createTestQueryClient()
     render(
       <QueryClientProvider client={queryClient}>
-        <ResearchNotebook sessionId="ses-123" />
+        <ResearchNotebook {...defaultProps} sessionId="ses-123" />
       </QueryClientProvider>
     )
 
@@ -153,10 +195,16 @@ describe('ResearchNotebook Component', () => {
     }
     ;(apiClient.listResearchNotes as jest.Mock).mockResolvedValueOnce(mockResponse)
 
+    const onContentChangeMock = jest.fn()
     const queryClient = createTestQueryClient()
     render(
       <QueryClientProvider client={queryClient}>
-        <ResearchNotebook sessionId="ses-123" />
+        <ResearchNotebook
+          {...defaultProps}
+          sessionId="ses-123"
+          content="   "
+          onContentChange={onContentChangeMock}
+        />
       </QueryClientProvider>
     )
 
@@ -183,7 +231,7 @@ describe('ResearchNotebook Component', () => {
     const queryClient = createTestQueryClient()
     render(
       <QueryClientProvider client={queryClient}>
-        <ResearchNotebook sessionId="ses-123" />
+        <ResearchNotebook {...defaultProps} sessionId="ses-123" />
       </QueryClientProvider>
     )
 
@@ -197,7 +245,7 @@ describe('ResearchNotebook Component', () => {
     const queryClient = createTestQueryClient()
     render(
       <QueryClientProvider client={queryClient}>
-        <ResearchNotebook sessionId="ses-123" />
+        <ResearchNotebook {...defaultProps} sessionId="ses-123" />
       </QueryClientProvider>
     )
 
@@ -233,6 +281,7 @@ describe('ResearchNotebook Component', () => {
     })
 
     const onClearDraftMock = jest.fn()
+    const onNoteCreatedMock = jest.fn()
     const draft = {
       content: 'Trích dẫn từ ADR-001 về kiến trúc',
       note_type: 'insight' as const,
@@ -243,9 +292,13 @@ describe('ResearchNotebook Component', () => {
     render(
       <QueryClientProvider client={queryClient}>
         <ResearchNotebook
+          {...defaultProps}
           sessionId="ses-123"
           initialDraft={draft}
+          content={draft.content}
+          noteType={draft.note_type}
           onClearDraft={onClearDraftMock}
+          onNoteCreated={onNoteCreatedMock}
         />
       </QueryClientProvider>
     )
@@ -264,7 +317,9 @@ describe('ResearchNotebook Component', () => {
         note_type: 'insight',
         source_chunk_id: 'chk-001',
       })
-      expect(onClearDraftMock).toHaveBeenCalled()
+      expect(onNoteCreatedMock).toHaveBeenCalledTimes(1)
+      expect(onClearDraftMock).not.toHaveBeenCalled()
+      expect(textarea).toHaveValue('Trích dẫn từ ADR-001 về kiến trúc')
     })
   })
 
@@ -285,8 +340,11 @@ describe('ResearchNotebook Component', () => {
     render(
       <QueryClientProvider client={queryClient}>
         <ResearchNotebook
+          {...defaultProps}
           sessionId="ses-123"
           initialDraft={draft}
+          content={draft.content}
+          noteType={draft.note_type}
           onClearDraft={onClearDraftMock}
         />
       </QueryClientProvider>
@@ -304,8 +362,6 @@ describe('ResearchNotebook Component', () => {
     fireEvent.click(clearDraftBtn)
 
     expect(onClearDraftMock).toHaveBeenCalled()
-    expect(textarea).toHaveValue('')
-    expect(screen.queryByText(/đang soạn thảo từ bản nháp/i)).not.toBeInTheDocument()
   })
 
   // 9. Preserve draft content on API failure
@@ -320,7 +376,12 @@ describe('ResearchNotebook Component', () => {
     const queryClient = createTestQueryClient()
     render(
       <QueryClientProvider client={queryClient}>
-        <ResearchNotebook sessionId="ses-123" />
+        <ResearchNotebook
+          {...defaultProps}
+          sessionId="ses-123"
+          content="Ghi chú quan trọng cần thử lại"
+          noteType="insight"
+        />
       </QueryClientProvider>
     )
 
@@ -329,7 +390,6 @@ describe('ResearchNotebook Component', () => {
     const textarea = screen.getByPlaceholderText(/nhập ghi chú/i)
     const submitBtn = screen.getByRole('button', { name: /lưu ghi chú/i })
 
-    fireEvent.change(textarea, { target: { value: 'Ghi chú quan trọng cần thử lại' } })
     fireEvent.click(submitBtn)
 
     await waitFor(() => {
@@ -338,5 +398,289 @@ describe('ResearchNotebook Component', () => {
 
     // Content should be preserved, not wiped
     expect(textarea).toHaveValue('Ghi chú quan trọng cần thử lại')
+  })
+
+  describe('10. Batch C4a — Controlled Notebook Form & State Preservation', () => {
+    it('1. test_renders_controlled_content_value: hiển thị nội dung textarea và note type theo controlled props từ SessionDetail', async () => {
+      const mockResponse: ResearchNotesResponse = { data: [], meta: { total: 0 } }
+      ;(apiClient.listResearchNotes as jest.Mock).mockResolvedValue(mockResponse)
+
+      const queryClient = createTestQueryClient()
+      render(
+        <QueryClientProvider client={queryClient}>
+          <ResearchNotebook
+            {...({
+              sessionId: 'ses-123',
+              initialDraft: null,
+              content: 'Nội dung do SessionDetail quản lý',
+              noteType: 'hypothesis',
+              onContentChange: jest.fn(),
+              onNoteTypeChange: jest.fn(),
+              onClearDraft: jest.fn(),
+              onNoteCreated: jest.fn(),
+            } as any)}
+          />
+        </QueryClientProvider>
+      )
+
+      await screen.findByText(/chưa có ghi chú nào/i)
+      const textarea = screen.getByPlaceholderText(/nhập ghi chú/i)
+      expect(textarea).toHaveValue('Nội dung do SessionDetail quản lý')
+      const select = screen.getByLabelText(/loại ghi chú/i)
+      expect(select).toHaveValue('hypothesis')
+    })
+
+    it('2. test_calls_on_content_change_when_the_user_edits_content: gọi callback onContentChange khi người dùng gõ vào textarea', async () => {
+      const mockResponse: ResearchNotesResponse = { data: [], meta: { total: 0 } }
+      ;(apiClient.listResearchNotes as jest.Mock).mockResolvedValue(mockResponse)
+      const onContentChange = jest.fn()
+
+      const queryClient = createTestQueryClient()
+      render(
+        <QueryClientProvider client={queryClient}>
+          <ResearchNotebook
+            {...({
+              sessionId: 'ses-123',
+              initialDraft: null,
+              content: '',
+              noteType: 'insight',
+              onContentChange,
+              onNoteTypeChange: jest.fn(),
+              onClearDraft: jest.fn(),
+              onNoteCreated: jest.fn(),
+            } as any)}
+          />
+        </QueryClientProvider>
+      )
+
+      await screen.findByText(/chưa có ghi chú nào/i)
+      const textarea = screen.getByPlaceholderText(/nhập ghi chú/i)
+      fireEvent.change(textarea, { target: { value: 'Nội dung mới đang gõ' } })
+      expect(onContentChange).toHaveBeenCalledWith('Nội dung mới đang gõ')
+    })
+
+    it('3. test_calls_on_note_type_change_when_the_user_changes_note_type: gọi callback onNoteTypeChange khi người dùng thay đổi combobox', async () => {
+      const mockResponse: ResearchNotesResponse = { data: [], meta: { total: 0 } }
+      ;(apiClient.listResearchNotes as jest.Mock).mockResolvedValue(mockResponse)
+      const onNoteTypeChange = jest.fn()
+
+      const queryClient = createTestQueryClient()
+      render(
+        <QueryClientProvider client={queryClient}>
+          <ResearchNotebook
+            {...({
+              sessionId: 'ses-123',
+              initialDraft: null,
+              content: '',
+              noteType: 'insight',
+              onContentChange: jest.fn(),
+              onNoteTypeChange,
+              onClearDraft: jest.fn(),
+              onNoteCreated: jest.fn(),
+            } as any)}
+          />
+        </QueryClientProvider>
+      )
+
+      await screen.findByText(/chưa có ghi chú nào/i)
+      const select = screen.getByLabelText(/loại ghi chú/i)
+      fireEvent.change(select, { target: { value: 'decision' } })
+      expect(onNoteTypeChange).toHaveBeenCalledWith('decision')
+    })
+
+    it('4. test_does_not_retain_internal_content_state_across_remounts: không lưu giữ bản sao state nội bộ khi remount với props mới', async () => {
+      const mockResponse: ResearchNotesResponse = { data: [], meta: { total: 0 } }
+      ;(apiClient.listResearchNotes as jest.Mock).mockResolvedValue(mockResponse)
+
+      const queryClient = createTestQueryClient()
+      const { unmount } = render(
+        <QueryClientProvider client={queryClient}>
+          <ResearchNotebook
+            {...({
+              sessionId: 'ses-123',
+              initialDraft: null,
+              content: 'Nội dung lần 1',
+              noteType: 'insight',
+              onContentChange: jest.fn(),
+              onNoteTypeChange: jest.fn(),
+              onClearDraft: jest.fn(),
+              onNoteCreated: jest.fn(),
+            } as any)}
+          />
+        </QueryClientProvider>
+      )
+
+      await screen.findByText(/chưa có ghi chú nào/i)
+      unmount()
+
+      render(
+        <QueryClientProvider client={queryClient}>
+          <ResearchNotebook
+            {...({
+              sessionId: 'ses-123',
+              initialDraft: null,
+              content: 'Nội dung mới hoàn toàn từ SessionDetail',
+              noteType: 'insight',
+              onContentChange: jest.fn(),
+              onNoteTypeChange: jest.fn(),
+              onClearDraft: jest.fn(),
+              onNoteCreated: jest.fn(),
+            } as any)}
+          />
+        </QueryClientProvider>
+      )
+
+      const textarea = screen.getByPlaceholderText(/nhập ghi chú/i)
+      expect(textarea).toHaveValue('Nội dung mới hoàn toàn từ SessionDetail')
+    })
+
+    it('5. test_loads_a_new_initial_draft_through_controlled_props: nạp initialDraft mới đồng bộ qua controlled props', async () => {
+      const mockResponse: ResearchNotesResponse = { data: [], meta: { total: 0 } }
+      ;(apiClient.listResearchNotes as jest.Mock).mockResolvedValue(mockResponse)
+
+      const draft = {
+        content: '[TRIZ 9-Windows: Kỹ thuật • Siêu hệ thống]\nGóc nhìn vĩ mô',
+        note_type: 'insight' as const,
+        source_chunk_id: null,
+      }
+
+      const queryClient = createTestQueryClient()
+      render(
+        <QueryClientProvider client={queryClient}>
+          <ResearchNotebook
+            {...({
+              sessionId: 'ses-123',
+              initialDraft: draft,
+              content: draft.content,
+              noteType: draft.note_type,
+              onContentChange: jest.fn(),
+              onNoteTypeChange: jest.fn(),
+              onClearDraft: jest.fn(),
+              onNoteCreated: jest.fn(),
+            } as any)}
+          />
+        </QueryClientProvider>
+      )
+
+      await screen.findByText(/chưa có ghi chú nào/i)
+      expect(screen.getByText(/đang soạn thảo từ bản nháp/i)).toBeInTheDocument()
+      const textarea = screen.getByPlaceholderText(/nhập ghi chú/i)
+      expect(textarea).toHaveValue(draft.content)
+    })
+
+    it('6. test_calls_on_clear_draft_when_user_clicks_discard_draft_button: gọi onClearDraft khi người dùng bấm nút Hủy nháp', async () => {
+      const mockResponse: ResearchNotesResponse = { data: [], meta: { total: 0 } }
+      ;(apiClient.listResearchNotes as jest.Mock).mockResolvedValue(mockResponse)
+      const onClearDraft = jest.fn()
+
+      const draft = {
+        content: 'Bản nháp sắp bị hủy',
+        note_type: 'insight' as const,
+      }
+
+      const queryClient = createTestQueryClient()
+      render(
+        <QueryClientProvider client={queryClient}>
+          <ResearchNotebook
+            {...({
+              sessionId: 'ses-123',
+              initialDraft: draft,
+              content: draft.content,
+              noteType: draft.note_type,
+              onContentChange: jest.fn(),
+              onNoteTypeChange: jest.fn(),
+              onClearDraft,
+              onNoteCreated: jest.fn(),
+            } as any)}
+          />
+        </QueryClientProvider>
+      )
+
+      await screen.findByText(/chưa có ghi chú nào/i)
+      const discardBtn = screen.getByRole('button', { name: /hủy nháp/i })
+      fireEvent.click(discardBtn)
+      expect(onClearDraft).toHaveBeenCalled()
+    })
+
+    it('7. test_calls_on_note_created_after_successful_note_creation: gọi onNoteCreated đúng một lần sau khi lưu thành công', async () => {
+      const mockResponse: ResearchNotesResponse = { data: [], meta: { total: 0 } }
+      ;(apiClient.listResearchNotes as jest.Mock).mockResolvedValue(mockResponse)
+      ;(apiClient.createResearchNote as jest.Mock).mockResolvedValueOnce({
+        id: 'note-persisted',
+        session_id: 'ses-123',
+        content: 'Ghi chú đã được lưu vào backend',
+        note_type: 'insight',
+        source_chunk_id: null,
+        created_at: '2026-11-12T00:00:00Z',
+      })
+      const onClearDraft = jest.fn()
+      const onNoteCreated = jest.fn()
+
+      const queryClient = createTestQueryClient()
+      render(
+        <QueryClientProvider client={queryClient}>
+          <ResearchNotebook
+            {...({
+              sessionId: 'ses-123',
+              initialDraft: { content: 'Ghi chú đã được lưu vào backend', note_type: 'insight' },
+              content: 'Ghi chú đã được lưu vào backend',
+              noteType: 'insight',
+              onContentChange: jest.fn(),
+              onNoteTypeChange: jest.fn(),
+              onClearDraft,
+              onNoteCreated,
+            } as any)}
+          />
+        </QueryClientProvider>
+      )
+
+      await screen.findByText(/chưa có ghi chú nào/i)
+      const submitBtn = screen.getByRole('button', { name: /lưu ghi chú/i })
+      fireEvent.click(submitBtn)
+
+      await waitFor(() => {
+        expect(apiClient.createResearchNote).toHaveBeenCalled()
+      })
+
+      // onNoteCreated được gọi đúng 1 lần sau khi createNoteMutation thành công
+      expect(onNoteCreated).toHaveBeenCalledTimes(1)
+      // onClearDraft KHÔNG được gọi trong luồng lưu thành công
+      expect(onClearDraft).not.toHaveBeenCalled()
+      // content và noteType không bị component tự reset (vẫn do controlled props giữ)
+      const textarea = screen.getByPlaceholderText(/nhập ghi chú/i)
+      expect(textarea).toHaveValue('Ghi chú đã được lưu vào backend')
+      const select = screen.getByLabelText(/loại ghi chú/i)
+      expect(select).toHaveValue('insight')
+    })
+
+    it('8. test_preserves_validation_and_submit_behavior: bảo toàn cơ chế validation rỗng và submit hợp lệ', async () => {
+      const mockResponse: ResearchNotesResponse = { data: [], meta: { total: 0 } }
+      ;(apiClient.listResearchNotes as jest.Mock).mockResolvedValue(mockResponse)
+
+      const queryClient = createTestQueryClient()
+      render(
+        <QueryClientProvider client={queryClient}>
+          <ResearchNotebook
+            {...({
+              sessionId: 'ses-123',
+              initialDraft: null,
+              content: '   ',
+              noteType: 'question',
+              onContentChange: jest.fn(),
+              onNoteTypeChange: jest.fn(),
+              onClearDraft: jest.fn(),
+              onNoteCreated: jest.fn(),
+            } as any)}
+          />
+        </QueryClientProvider>
+      )
+
+      await screen.findByText(/chưa có ghi chú nào/i)
+      const submitBtn = screen.getByRole('button', { name: /lưu ghi chú/i })
+      fireEvent.click(submitBtn)
+
+      expect(screen.getByText('Vui lòng nhập nội dung ghi chú')).toBeInTheDocument()
+      expect(apiClient.createResearchNote).not.toHaveBeenCalled()
+    })
   })
 })

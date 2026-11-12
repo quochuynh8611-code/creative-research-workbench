@@ -38,6 +38,7 @@ import type {
   WorkflowStage,
   RecommendedMethod,
   NoteDraft,
+  NoteType,
 } from '@/lib/types'
 
 const TABS = [
@@ -64,6 +65,37 @@ export function SessionDetail({ sessionId }: SessionDetailProps) {
     principle_used?: number | string
   } | null>(null)
   const [noteDraft, setNoteDraft] = useState<NoteDraft | null>(null)
+  const [noteContent, setNoteContent] = useState<string>('')
+  const [noteType, setNoteType] = useState<NoteType>('insight')
+  const [pendingDraft, setPendingDraft] = useState<NoteDraft | null>(null)
+
+  const isNoteDraftDirty =
+    noteContent !== (noteDraft?.content ?? '') ||
+    noteType !== (noteDraft?.note_type ?? 'insight')
+
+  // Reset draft state khi sessionId thay đổi
+  useEffect(() => {
+    setNoteDraft(null)
+    setNoteContent('')
+    setNoteType('insight')
+    setPendingDraft(null)
+  }, [sessionId])
+
+  // Đóng overwrite confirmation dialog khi nhấn phím Escape
+  useEffect(() => {
+    if (!pendingDraft) return
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setPendingDraft(null)
+      }
+    }
+
+    document.addEventListener('keydown', handleKeyDown)
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown)
+    }
+  }, [pendingDraft])
   const [isExporting, setIsExporting] = useState<boolean>(false)
   const [isExportOpen, setIsExportOpen] = useState<boolean>(false)
   const [exportError, setExportError] = useState<string | null>(null)
@@ -179,9 +211,44 @@ export function SessionDetail({ sessionId }: SessionDetailProps) {
     setActiveTab('structuring')
   }
 
-  const handleSaveAsNote = (draft: NoteDraft) => {
-    setNoteDraft(draft)
-    setActiveTab('notebook')
+  const handleSaveAsNote = (incomingDraft: NoteDraft) => {
+    if (!isNoteDraftDirty) {
+      setNoteDraft(incomingDraft)
+      setNoteContent(incomingDraft.content)
+      setNoteType(incomingDraft.note_type || 'insight')
+      setPendingDraft(null)
+      setActiveTab('notebook')
+    } else {
+      setPendingDraft(incomingDraft)
+    }
+  }
+
+  const handleConfirmOverwrite = () => {
+    if (pendingDraft) {
+      setNoteDraft(pendingDraft)
+      setNoteContent(pendingDraft.content)
+      setNoteType(pendingDraft.note_type || 'insight')
+      setPendingDraft(null)
+      setActiveTab('notebook')
+    }
+  }
+
+  const handleCancelOverwrite = () => {
+    setPendingDraft(null)
+  }
+
+  const handleClearDraft = () => {
+    setNoteDraft(null)
+    setNoteContent('')
+    setNoteType('insight')
+    setPendingDraft(null)
+  }
+
+  const handleNoteCreated = () => {
+    setNoteDraft(null)
+    setNoteContent('')
+    setNoteType('insight')
+    setPendingDraft(null)
   }
 
   const handlePrintPdf = () => {
@@ -519,6 +586,11 @@ export function SessionDetail({ sessionId }: SessionDetailProps) {
               >
                 <Icon className="w-4 h-4" />
                 <span>{tab.label}</span>
+                {tab.id === 'notebook' && isNoteDraftDirty && (
+                  <span className="text-[11px] font-normal px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30">
+                    Có chỉnh sửa chưa lưu
+                  </span>
+                )}
               </button>
             )
           })}
@@ -612,7 +684,12 @@ export function SessionDetail({ sessionId }: SessionDetailProps) {
           <ResearchNotebook
             sessionId={session.id}
             initialDraft={noteDraft}
-            onClearDraft={() => setNoteDraft(null)}
+            content={noteContent}
+            noteType={noteType}
+            onContentChange={setNoteContent}
+            onNoteTypeChange={setNoteType}
+            onClearDraft={handleClearDraft}
+            onNoteCreated={handleNoteCreated}
           />
         )}
 
@@ -834,6 +911,47 @@ export function SessionDetail({ sessionId }: SessionDetailProps) {
           </div>
         )}
       </div>
+      {/* Overwrite Confirmation Dialog */}
+      {pendingDraft && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+          onClick={handleCancelOverwrite}
+        >
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="overwrite-dialog-title"
+            aria-describedby="overwrite-dialog-desc"
+            className="w-full max-w-md rounded-2xl border border-border bg-card p-6 shadow-xl space-y-4"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="space-y-2">
+              <h3 id="overwrite-dialog-title" className="text-base font-semibold text-foreground">
+                Ghi đè bản nháp chưa lưu?
+              </h3>
+              <p id="overwrite-dialog-desc" className="text-xs text-muted-foreground leading-relaxed">
+                Bạn đang có nội dung chưa lưu trong Sổ tay nghiên cứu. Ghi đè sẽ thay thế nội dung này bằng góc nhìn mới.
+              </p>
+            </div>
+            <div className="flex items-center justify-end gap-2.5 pt-2">
+              <button
+                type="button"
+                onClick={handleCancelOverwrite}
+                className="px-3.5 py-2 rounded-xl text-xs font-semibold border border-border hover:bg-accent hover:text-accent-foreground transition-all cursor-pointer"
+              >
+                Hủy
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmOverwrite}
+                className="px-3.5 py-2 rounded-xl text-xs font-semibold bg-destructive text-destructive-foreground hover:bg-destructive/90 transition-all cursor-pointer shadow-sm"
+              >
+                Ghi đè
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
