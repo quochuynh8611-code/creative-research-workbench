@@ -683,4 +683,419 @@ describe('ResearchNotebook Component', () => {
       expect(apiClient.createResearchNote).not.toHaveBeenCalled()
     })
   })
+
+  describe('Batch C7a — Notebook Organization (Filter & Search)', () => {
+    const C7A_NOTES: ResearchNote[] = [
+      {
+        id: 'c7a-1',
+        session_id: 'ses-c7a',
+        content: 'Phát hiện cơ chế phân tán nhiệt qua cấu trúc tổ ong',
+        note_type: 'insight',
+        source_chunk_id: null,
+        created_at: '2026-10-01T08:00:00Z',
+      },
+      {
+        id: 'c7a-2',
+        session_id: 'ses-c7a',
+        content: 'Thử nghiệm phủ lớp graphene đa tầng',
+        note_type: 'hypothesis',
+        source_chunk_id: null,
+        created_at: '2026-10-01T09:00:00Z',
+      },
+      {
+        id: 'c7a-3',
+        session_id: 'ses-c7a',
+        content: 'Chấp nhận phương án vật liệu composite tổ ong',
+        note_type: 'decision',
+        source_chunk_id: null,
+        created_at: '2026-10-01T10:00:00Z',
+      },
+      {
+        id: 'c7a-4',
+        session_id: 'ses-c7a',
+        content: 'Khả năng chịu nhiệt của graphene là bao nhiêu?',
+        note_type: 'question',
+        source_chunk_id: null,
+        created_at: '2026-10-01T11:00:00Z',
+      },
+      {
+        id: 'c7a-5',
+        session_id: 'ses-c7a',
+        content: 'Đặt hàng mẫu thử nghiệm tổ ong độ bền cao',
+        note_type: 'action',
+        source_chunk_id: null,
+        created_at: '2026-10-01T12:00:00Z',
+      },
+      {
+        id: 'c7a-6',
+        session_id: 'ses-c7a',
+        content: 'Quan sát thấy cấu trúc tổ ong có độ giãn nở nhiệt thấp',
+        note_type: 'insight',
+        source_chunk_id: null,
+        created_at: '2026-10-01T13:00:00Z',
+      },
+      {
+        id: 'c7a-7',
+        session_id: 'ses-c7a',
+        content: 'Giả định rằng graphene làm tăng tính dẫn điện',
+        note_type: 'hypothesis',
+        source_chunk_id: null,
+        created_at: '2026-10-01T14:00:00Z',
+      },
+    ]
+
+    function renderNotebookWithNotes(notes: ResearchNote[] = C7A_NOTES, customProps = {}) {
+      const mockResponse: ResearchNotesResponse = {
+        data: notes,
+        meta: { total: notes.length },
+      }
+      ;(apiClient.listResearchNotes as jest.Mock).mockResolvedValue(mockResponse)
+
+      const queryClient = createTestQueryClient()
+      const props = {
+        ...defaultProps,
+        sessionId: 'ses-c7a',
+        ...customProps,
+      }
+
+      const utils = render(
+        <QueryClientProvider client={queryClient}>
+          <ResearchNotebook {...props} />
+        </QueryClientProvider>
+      )
+      return { ...utils, queryClient }
+    }
+
+    it('1. renders notebook filter options with correct counters', async () => {
+      renderNotebookWithNotes()
+
+      // Chờ dữ liệu load xong
+      expect(await screen.findByText('Phát hiện cơ chế phân tán nhiệt qua cấu trúc tổ ong')).toBeInTheDocument()
+
+      const allBtn = screen.getByRole('button', { name: /tất cả/i })
+      const insightBtn = screen.getByRole('button', { name: /insight/i })
+      const hypothesisBtn = screen.getByRole('button', { name: /hypothesis/i })
+      const decisionBtn = screen.getByRole('button', { name: /decision/i })
+      const questionBtn = screen.getByRole('button', { name: /question/i })
+      const actionBtn = screen.getByRole('button', { name: /action/i })
+
+      expect(allBtn).toHaveTextContent('7')
+      expect(insightBtn).toHaveTextContent('2')
+      expect(hypothesisBtn).toHaveTextContent('2')
+      expect(decisionBtn).toHaveTextContent('1')
+      expect(questionBtn).toHaveTextContent('1')
+      expect(actionBtn).toHaveTextContent('1')
+    })
+
+    it('2. filters notes by insight type', async () => {
+      renderNotebookWithNotes()
+
+      expect(await screen.findByText('Phát hiện cơ chế phân tán nhiệt qua cấu trúc tổ ong')).toBeInTheDocument()
+
+      const insightBtn = screen.getByRole('button', { name: /insight/i })
+      fireEvent.click(insightBtn)
+
+      // 2 insight notes hiển thị
+      expect(screen.getByText('Phát hiện cơ chế phân tán nhiệt qua cấu trúc tổ ong')).toBeInTheDocument()
+      expect(screen.getByText('Quan sát thấy cấu trúc tổ ong có độ giãn nở nhiệt thấp')).toBeInTheDocument()
+
+      // Các loại khác bị ẩn
+      expect(screen.queryByText('Thử nghiệm phủ lớp graphene đa tầng')).not.toBeInTheDocument()
+      expect(screen.queryByText('Chấp nhận phương án vật liệu composite tổ ong')).not.toBeInTheDocument()
+      expect(screen.queryByText('Khả năng chịu nhiệt của graphene là bao nhiêu?')).not.toBeInTheDocument()
+      expect(screen.queryByText('Đặt hàng mẫu thử nghiệm tổ ong độ bền cao')).not.toBeInTheDocument()
+    })
+
+    it('3. filters notes by hypothesis type', async () => {
+      renderNotebookWithNotes()
+
+      expect(await screen.findByText('Phát hiện cơ chế phân tán nhiệt qua cấu trúc tổ ong')).toBeInTheDocument()
+
+      const hypothesisBtn = screen.getByRole('button', { name: /hypothesis/i })
+      fireEvent.click(hypothesisBtn)
+
+      // 2 hypothesis notes hiển thị
+      expect(screen.getByText('Thử nghiệm phủ lớp graphene đa tầng')).toBeInTheDocument()
+      expect(screen.getByText('Giả định rằng graphene làm tăng tính dẫn điện')).toBeInTheDocument()
+
+      // Các loại khác bị ẩn
+      expect(screen.queryByText('Phát hiện cơ chế phân tán nhiệt qua cấu trúc tổ ong')).not.toBeInTheDocument()
+      expect(screen.queryByText('Chấp nhận phương án vật liệu composite tổ ong')).not.toBeInTheDocument()
+    })
+
+    it('4. filters notes by decision type', async () => {
+      renderNotebookWithNotes()
+
+      expect(await screen.findByText('Phát hiện cơ chế phân tán nhiệt qua cấu trúc tổ ong')).toBeInTheDocument()
+
+      const decisionBtn = screen.getByRole('button', { name: /decision/i })
+      fireEvent.click(decisionBtn)
+
+      expect(screen.getByText('Chấp nhận phương án vật liệu composite tổ ong')).toBeInTheDocument()
+      expect(screen.queryByText('Phát hiện cơ chế phân tán nhiệt qua cấu trúc tổ ong')).not.toBeInTheDocument()
+      expect(screen.queryByText('Thử nghiệm phủ lớp graphene đa tầng')).not.toBeInTheDocument()
+    })
+
+    it('5. filters notes by question type', async () => {
+      renderNotebookWithNotes()
+
+      expect(await screen.findByText('Phát hiện cơ chế phân tán nhiệt qua cấu trúc tổ ong')).toBeInTheDocument()
+
+      const questionBtn = screen.getByRole('button', { name: /question/i })
+      fireEvent.click(questionBtn)
+
+      expect(screen.getByText('Khả năng chịu nhiệt của graphene là bao nhiêu?')).toBeInTheDocument()
+      expect(screen.queryByText('Phát hiện cơ chế phân tán nhiệt qua cấu trúc tổ ong')).not.toBeInTheDocument()
+    })
+
+    it('6. filters notes by action type', async () => {
+      renderNotebookWithNotes()
+
+      expect(await screen.findByText('Phát hiện cơ chế phân tán nhiệt qua cấu trúc tổ ong')).toBeInTheDocument()
+
+      const actionBtn = screen.getByRole('button', { name: /action/i })
+      fireEvent.click(actionBtn)
+
+      expect(screen.getByText('Đặt hàng mẫu thử nghiệm tổ ong độ bền cao')).toBeInTheDocument()
+      expect(screen.queryByText('Phát hiện cơ chế phân tán nhiệt qua cấu trúc tổ ong')).not.toBeInTheDocument()
+    })
+
+    it('7. shows all notes when all filter is selected', async () => {
+      renderNotebookWithNotes()
+
+      expect(await screen.findByText('Phát hiện cơ chế phân tán nhiệt qua cấu trúc tổ ong')).toBeInTheDocument()
+
+      // Lọc theo insight trước
+      fireEvent.click(screen.getByRole('button', { name: /insight/i }))
+      expect(screen.queryByText('Thử nghiệm phủ lớp graphene đa tầng')).not.toBeInTheDocument()
+
+      // Chọn lại Tất cả
+      fireEvent.click(screen.getByRole('button', { name: /tất cả/i }))
+
+      expect(screen.getByText('Phát hiện cơ chế phân tán nhiệt qua cấu trúc tổ ong')).toBeInTheDocument()
+      expect(screen.getByText('Thử nghiệm phủ lớp graphene đa tầng')).toBeInTheDocument()
+      expect(screen.getByText('Chấp nhận phương án vật liệu composite tổ ong')).toBeInTheDocument()
+      expect(screen.getByText('Khả năng chịu nhiệt của graphene là bao nhiêu?')).toBeInTheDocument()
+      expect(screen.getByText('Đặt hàng mẫu thử nghiệm tổ ong độ bền cao')).toBeInTheDocument()
+      expect(screen.getByText('Quan sát thấy cấu trúc tổ ong có độ giãn nở nhiệt thấp')).toBeInTheDocument()
+      expect(screen.getByText('Giả định rằng graphene làm tăng tính dẫn điện')).toBeInTheDocument()
+    })
+
+    it('8. searches notes by content case-insensitively', async () => {
+      renderNotebookWithNotes()
+
+      expect(await screen.findByText('Phát hiện cơ chế phân tán nhiệt qua cấu trúc tổ ong')).toBeInTheDocument()
+
+      const searchInput = screen.getByPlaceholderText(/tìm kiếm ghi chú/i)
+      fireEvent.change(searchInput, { target: { value: 'TỔ ONG' } })
+
+      // 4 ghi chú chứa "tổ ong" hiển thị
+      expect(screen.getByText('Phát hiện cơ chế phân tán nhiệt qua cấu trúc tổ ong')).toBeInTheDocument()
+      expect(screen.getByText('Chấp nhận phương án vật liệu composite tổ ong')).toBeInTheDocument()
+      expect(screen.getByText('Đặt hàng mẫu thử nghiệm tổ ong độ bền cao')).toBeInTheDocument()
+      expect(screen.getByText('Quan sát thấy cấu trúc tổ ong có độ giãn nở nhiệt thấp')).toBeInTheDocument()
+
+      // Các ghi chú không chứa "tổ ong" bị ẩn
+      expect(screen.queryByText('Thử nghiệm phủ lớp graphene đa tầng')).not.toBeInTheDocument()
+      expect(screen.queryByText('Khả năng chịu nhiệt của graphene là bao nhiêu?')).not.toBeInTheDocument()
+      expect(screen.queryByText('Giả định rằng graphene làm tăng tính dẫn điện')).not.toBeInTheDocument()
+    })
+
+    it('9. shows empty filter state when no note matches search', async () => {
+      renderNotebookWithNotes()
+
+      expect(await screen.findByText('Phát hiện cơ chế phân tán nhiệt qua cấu trúc tổ ong')).toBeInTheDocument()
+
+      const searchInput = screen.getByPlaceholderText(/tìm kiếm ghi chú/i)
+      fireEvent.change(searchInput, { target: { value: 'từ khóa không hề tồn tại 99999' } })
+
+      expect(screen.getByText(/không tìm thấy ghi chú phù hợp với bộ lọc/i)).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: /xóa bộ lọc/i })).toBeInTheDocument()
+    })
+
+    it('10. combines type filter and search query with logical AND', async () => {
+      renderNotebookWithNotes()
+
+      expect(await screen.findByText('Phát hiện cơ chế phân tán nhiệt qua cấu trúc tổ ong')).toBeInTheDocument()
+
+      // Chọn loại Hypothesis
+      const hypothesisBtn = screen.getByRole('button', { name: /hypothesis/i })
+      fireEvent.click(hypothesisBtn)
+
+      // Tìm kiếm từ khóa "graphene"
+      const searchInput = screen.getByPlaceholderText(/tìm kiếm ghi chú/i)
+      fireEvent.change(searchInput, { target: { value: 'graphene' } })
+
+      // 2 hypothesis note chứa graphene được hiển thị
+      expect(screen.getByText('Thử nghiệm phủ lớp graphene đa tầng')).toBeInTheDocument()
+      expect(screen.getByText('Giả định rằng graphene làm tăng tính dẫn điện')).toBeInTheDocument()
+
+      // Ghi chú Question cũng chứa "graphene" nhưng bị loại vì khác type
+      expect(screen.queryByText('Khả năng chịu nhiệt của graphene là bao nhiêu?')).not.toBeInTheDocument()
+      // Ghi chú insight bị loại
+      expect(screen.queryByText('Phát hiện cơ chế phân tán nhiệt qua cấu trúc tổ ong')).not.toBeInTheDocument()
+
+      // Tiếp tục chuyển sang loại Decision với từ khóa "graphene" (không có kết quả)
+      const decisionBtn = screen.getByRole('button', { name: /decision/i })
+      fireEvent.click(decisionBtn)
+
+      expect(screen.getByText(/không tìm thấy ghi chú phù hợp với bộ lọc/i)).toBeInTheDocument()
+    })
+
+    it('11. resets filter and search when clear filters is clicked', async () => {
+      renderNotebookWithNotes()
+
+      expect(await screen.findByText('Phát hiện cơ chế phân tán nhiệt qua cấu trúc tổ ong')).toBeInTheDocument()
+
+      // Đặt bộ lọc Decision và search không khớp
+      fireEvent.click(screen.getByRole('button', { name: /decision/i }))
+      const searchInput = screen.getByPlaceholderText(/tìm kiếm ghi chú/i) as HTMLInputElement
+      fireEvent.change(searchInput, { target: { value: 'graphene' } })
+
+      expect(screen.getByText(/không tìm thấy ghi chú phù hợp với bộ lọc/i)).toBeInTheDocument()
+
+      // Nhấn Xóa bộ lọc
+      const clearBtn = screen.getByRole('button', { name: /xóa bộ lọc/i })
+      fireEvent.click(clearBtn)
+
+      // Ô tìm kiếm rỗng
+      expect(searchInput.value).toBe('')
+
+      // Toàn bộ 7 notes xuất hiện trở lại
+      expect(screen.getByText('Phát hiện cơ chế phân tán nhiệt qua cấu trúc tổ ong')).toBeInTheDocument()
+      expect(screen.getByText('Thử nghiệm phủ lớp graphene đa tầng')).toBeInTheDocument()
+      expect(screen.getByText('Chấp nhận phương án vật liệu composite tổ ong')).toBeInTheDocument()
+      expect(screen.getByText('Khả năng chịu nhiệt của graphene là bao nhiêu?')).toBeInTheDocument()
+      expect(screen.getByText('Đặt hàng mẫu thử nghiệm tổ ong độ bền cao')).toBeInTheDocument()
+      expect(screen.getByText('Quan sát thấy cấu trúc tổ ong có độ giãn nở nhiệt thấp')).toBeInTheDocument()
+      expect(screen.getByText('Giả định rằng graphene làm tăng tính dẫn điện')).toBeInTheDocument()
+    })
+
+    it('12. keeps type counters stable while search query changes', async () => {
+      renderNotebookWithNotes()
+
+      expect(await screen.findByText('Phát hiện cơ chế phân tán nhiệt qua cấu trúc tổ ong')).toBeInTheDocument()
+
+      const searchInput = screen.getByPlaceholderText(/tìm kiếm ghi chú/i)
+      fireEvent.change(searchInput, { target: { value: 'graphene' } })
+
+      // Dù chỉ có 3 note khớp search, counters của các loại vẫn giữ nguyên theo toàn bộ session
+      const allBtn = screen.getByRole('button', { name: /tất cả/i })
+      const insightBtn = screen.getByRole('button', { name: /insight/i })
+      const hypothesisBtn = screen.getByRole('button', { name: /hypothesis/i })
+      const decisionBtn = screen.getByRole('button', { name: /decision/i })
+      const questionBtn = screen.getByRole('button', { name: /question/i })
+      const actionBtn = screen.getByRole('button', { name: /action/i })
+
+      expect(allBtn).toHaveTextContent('7')
+      expect(insightBtn).toHaveTextContent('2')
+      expect(hypothesisBtn).toHaveTextContent('2')
+      expect(decisionBtn).toHaveTextContent('1')
+      expect(questionBtn).toHaveTextContent('1')
+      expect(actionBtn).toHaveTextContent('1')
+    })
+
+    it('13. preserves existing note creation behavior', async () => {
+      const onNoteCreated = jest.fn()
+      ;(apiClient.createResearchNote as jest.Mock).mockResolvedValueOnce({
+        id: 'new-note',
+        session_id: 'ses-c7a',
+        content: 'Ghi chú mới tạo',
+        note_type: 'insight',
+        created_at: '2026-10-01T15:00:00Z',
+      })
+
+      renderNotebookWithNotes(C7A_NOTES, {
+        content: 'Ghi chú mới tạo',
+        noteType: 'insight',
+        onNoteCreated,
+      })
+
+      expect(await screen.findByText('Phát hiện cơ chế phân tán nhiệt qua cấu trúc tổ ong')).toBeInTheDocument()
+
+      const submitBtn = screen.getByRole('button', { name: /lưu ghi chú/i })
+      fireEvent.click(submitBtn)
+
+      await waitFor(() => {
+        expect(apiClient.createResearchNote).toHaveBeenCalledWith('ses-c7a', {
+          content: 'Ghi chú mới tạo',
+          note_type: 'insight',
+        })
+      })
+      expect(onNoteCreated).toHaveBeenCalledTimes(1)
+    })
+
+    it('14. preserves existing note deletion behavior', async () => {
+      ;(apiClient.deleteResearchNote as jest.Mock).mockResolvedValueOnce({
+        status: 'success',
+        id: 'c7a-1',
+        session_id: 'ses-c7a',
+      })
+
+      renderNotebookWithNotes()
+
+      expect(await screen.findByText('Phát hiện cơ chế phân tán nhiệt qua cấu trúc tổ ong')).toBeInTheDocument()
+
+      const deleteButtons = screen.getAllByRole('button', { name: /xóa ghi chú/i })
+      fireEvent.click(deleteButtons[0])
+
+      await waitFor(() => {
+        expect(apiClient.deleteResearchNote).toHaveBeenCalledWith('ses-c7a', 'c7a-1')
+      })
+    })
+
+    it('15. preserves existing draft banner and controlled content behavior', async () => {
+      const onClearDraft = jest.fn()
+
+      renderNotebookWithNotes(C7A_NOTES, {
+        initialDraft: { content: 'Bản nháp gợi ý', note_type: 'hypothesis' },
+        content: 'Bản nháp gợi ý',
+        noteType: 'hypothesis',
+        onClearDraft,
+      })
+
+      expect(await screen.findByText(/đang soạn thảo từ bản nháp gợi ý/i)).toBeInTheDocument()
+
+      const discardBtn = screen.getByRole('button', { name: /hủy nháp/i })
+      fireEvent.click(discardBtn)
+
+      expect(onClearDraft).toHaveBeenCalledTimes(1)
+    })
+
+    it('16. does not persist filter or search state', async () => {
+      const localGetSpy = jest.spyOn(Storage.prototype, 'getItem')
+      const localSetSpy = jest.spyOn(Storage.prototype, 'setItem')
+
+      const { unmount } = renderNotebookWithNotes()
+
+      expect(await screen.findByText('Phát hiện cơ chế phân tán nhiệt qua cấu trúc tổ ong')).toBeInTheDocument()
+
+      // Không đọc storage khi mount
+      expect(localGetSpy).not.toHaveBeenCalledWith(expect.stringMatching(/notebook.*filter|search/i))
+
+      // Tìm kiếm và lọc
+      const hypothesisBtn = screen.getByRole('button', { name: /hypothesis/i })
+      fireEvent.click(hypothesisBtn)
+      const searchInput = screen.getByPlaceholderText(/tìm kiếm ghi chú/i)
+      fireEvent.change(searchInput, { target: { value: 'graphene' } })
+
+      // Không ghi storage khi filter/search thay đổi
+      expect(localSetSpy).not.toHaveBeenCalledWith(
+        expect.stringMatching(/notebook.*filter|search/i),
+        expect.anything()
+      )
+
+      unmount()
+
+      // Mount lại và xác nhận mặc định là Tất cả và ô search rỗng
+      renderNotebookWithNotes()
+      expect(await screen.findByText('Phát hiện cơ chế phân tán nhiệt qua cấu trúc tổ ong')).toBeInTheDocument()
+      const newSearchInput = screen.getByPlaceholderText(/tìm kiếm ghi chú/i) as HTMLInputElement
+      expect(newSearchInput.value).toBe('')
+      expect(screen.getByText('Thử nghiệm phủ lớp graphene đa tầng')).toBeInTheDocument()
+
+      localGetSpy.mockRestore()
+      localSetSpy.mockRestore()
+    })
+  })
 })
