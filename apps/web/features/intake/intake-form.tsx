@@ -1,11 +1,12 @@
 'use client'
 
 import { useState } from 'react'
-import { Plus, X, ChevronRight, Loader2, AlertCircle, Sparkles, Zap } from 'lucide-react'
+import { Plus, X, ChevronRight, Loader2, AlertCircle, Sparkles, Zap, BookOpen } from 'lucide-react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { cn } from '@/lib/utils'
 import { createProblemFrame, analyzeProblemWithAI } from '@/lib/api-client'
 import type { ProblemFrame, AIProblemAnalysisResponse } from '@/lib/types'
+import { InsightReferencePanel, type InsightTarget } from './insight-reference-panel'
 
 interface ProblemFrameDraft {
   goal: string
@@ -187,6 +188,19 @@ export function IntakeForm({
   const [submitError, setSubmitError] = useState<string | null>(null)
   const [aiError, setAiError] = useState<string | null>(null)
   const [aiSuggestion, setAiSuggestion] = useState<AIProblemAnalysisResponse | null>(null)
+  const [isInsightPanelOpen, setIsInsightPanelOpen] = useState(false)
+
+  const handleApplyInsight = (content: string, target: InsightTarget) => {
+    if (target === 'want') {
+      handleWantChange(content)
+    } else if (target === 'obstacle') {
+      handleObstacleChange(content)
+    } else if (target === 'context') {
+      handleContextChange(content)
+    } else if (target === 'goal') {
+      setForm((f) => ({ ...f, goal: content }))
+    }
+  }
 
   const addItem = (field: keyof Omit<ProblemFrameDraft, 'goal'>) => (val: string) =>
     setForm((f) => ({ ...f, [field]: [...f[field], val] }))
@@ -304,6 +318,35 @@ export function IntakeForm({
         </div>
       )}
 
+      {/* Insight Reference Trigger & Panel */}
+      <div className="space-y-3">
+        <div className="flex items-center justify-between">
+          <button
+            type="button"
+            onClick={() => setIsInsightPanelOpen((prev) => !prev)}
+            aria-expanded={isInsightPanelOpen}
+            className="inline-flex items-center gap-2 px-3 py-1.5 text-xs font-semibold rounded-lg border border-border bg-card hover:bg-muted text-foreground transition-colors cursor-pointer shadow-2xs"
+          >
+            <BookOpen className="w-3.5 h-3.5 text-indigo-500" />
+            <span>Dùng insight từ Sổ tay</span>
+          </button>
+        </div>
+
+        {isInsightPanelOpen && (
+          <InsightReferencePanel
+            sessionId={sessionId}
+            currentValues={{
+              want: wantText,
+              obstacle: obstacleText,
+              context: contextText,
+              goal: form.goal,
+            }}
+            onApplyInsight={handleApplyInsight}
+            onCancelPreview={() => {}}
+          />
+        )}
+      </div>
+
       {/* Khung "Muốn... Nhưng..." và Quick Examples */}
       <div className="p-4 rounded-xl border border-border bg-card/60 backdrop-blur-sm space-y-4">
         <div>
@@ -384,7 +427,7 @@ export function IntakeForm({
       {/* Goal / Raw Statement */}
       <div className="space-y-2">
         <div className="flex items-center justify-between">
-          <label className="block text-sm font-medium">
+          <label htmlFor="goal-statement" className="block text-sm font-medium">
             Mục tiêu / Mô tả bài toán <span className="text-destructive">*</span>
           </label>
           <button
@@ -412,6 +455,7 @@ export function IntakeForm({
           </button>
         </div>
         <textarea
+          id="goal-statement"
           value={form.goal}
           onChange={(e) => setForm((f) => ({ ...f, goal: e.target.value }))}
           placeholder="Bạn muốn đạt được điều gì? Ví dụ: Cần tăng độ bền và độ cứng của cánh tay robot nhưng không được làm tăng trọng lượng tổng thể..."
