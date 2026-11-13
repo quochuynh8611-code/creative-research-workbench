@@ -31,7 +31,7 @@ from sqlalchemy import (
     Text,
     UniqueConstraint,
 )
-from sqlalchemy.dialects.postgresql import ARRAY, UUID
+from sqlalchemy.dialects.postgresql import ARRAY, JSONB, UUID
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 from sqlalchemy.sql import func
 
@@ -361,6 +361,9 @@ class ResearchNote(Base):
         UUID(as_uuid=True),
         ForeignKey("chunks.id", ondelete="SET NULL"),
         nullable=True,
+    )
+    source_context: Mapped[dict[str, Any] | None] = mapped_column(
+        JSONB(none_as_null=True), nullable=True, default=None
     )
 
     created_at: Mapped[datetime] = mapped_column(

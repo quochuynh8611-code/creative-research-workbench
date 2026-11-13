@@ -177,7 +177,7 @@ def test_alembic_version_tracked_accurately(sync_engine: Engine):
     command.upgrade(cfg, "head")
     with sync_engine.connect() as conn:
         rev = conn.execute(text("SELECT version_num FROM alembic_version")).scalar()
-        assert rev == "005", f"Expected revision 005, got {rev}"
+        assert rev == "006", f"Expected revision 006, got {rev}"
 
 
 

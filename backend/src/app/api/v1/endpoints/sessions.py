@@ -5,7 +5,8 @@ from datetime import datetime, timezone
 from typing import Any, Generator, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Response, status
-from pydantic import BaseModel, Field, field_validator
+from fastapi.encoders import jsonable_encoder
+from pydantic import BaseModel, Field, ValidationError, field_validator
 from sqlalchemy import and_, create_engine, func
 from sqlalchemy.orm import Session
 
@@ -17,6 +18,7 @@ from app.domain.models import (
     ResearchSession,
     SessionStatus,
 )
+from app.schemas.note_context import NoteSourceContextUnion
 from app.services.ai_analysis_service import AIAnalysisService
 from app.services.ai_report_service import AIReportService
 from app.services.method_recommender import MethodRecommender
@@ -165,6 +167,7 @@ class ResearchNoteCreate(BaseModel):
     content: str = Field(..., min_length=1)
     note_type: str = "insight"
     source_chunk_id: Optional[uuid.UUID] = None
+    source_context: Optional[NoteSourceContextUnion] = None
 
     @field_validator("content")
     @classmethod
@@ -445,6 +448,11 @@ async def import_session(
 
     try:
         new_session, elements_summary = import_session_from_json(snapshot, db)
+    except ValidationError as e:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=jsonable_encoder(e.errors()),
+        )
     except ValueError as e:
         err_msg = str(e)
         if err_msg.startswith("SESSION_ID_CONFLICT:"):
@@ -1062,6 +1070,7 @@ async def list_research_notes(
             "content": n.content,
             "note_type": n.note_type,
             "source_chunk_id": str(n.source_chunk_id) if n.source_chunk_id else None,
+            "source_context": n.source_context,
             "created_at": n.created_at.isoformat() if n.created_at else None,
             "updated_at": n.updated_at.isoformat() if n.updated_at else None,
         })
@@ -1092,11 +1101,17 @@ async def create_research_note(
             detail=f"ResearchSession with id '{session_id}' not found.",
         )
 
+    source_context_payload = (
+        body.source_context.model_dump(mode="json")
+        if body.source_context is not None
+        else None
+    )
     note = ResearchNote(
         session_id=session_id,
         content=body.content,
         note_type=body.note_type,
         source_chunk_id=body.source_chunk_id,
+        source_context=source_context_payload,
     )
     db.add(note)
     db.flush()
@@ -1109,6 +1124,7 @@ async def create_research_note(
         "content": note.content,
         "note_type": note.note_type,
         "source_chunk_id": str(note.source_chunk_id) if note.source_chunk_id else None,
+        "source_context": note.source_context,
         "created_at": note.created_at.isoformat() if note.created_at else None,
         "updated_at": note.updated_at.isoformat() if note.updated_at else None,
     }

@@ -16,6 +16,20 @@ from app.domain.models import (
 from app.services.method_recommender import MethodRecommender
 
 
+def escape_markdown_inline(text: str) -> str:
+    """
+    Escape Markdown and HTML special formatting characters in client-supplied strings
+    to prevent line breaking, raw HTML rendering, or unintended link/formatting injection.
+    """
+    if not text:
+        return ""
+    sanitized = text.replace("\r", " ").replace("\n", " ")
+    sanitized = sanitized.replace("\\", r"\\")
+    for char in ("*", "_", "`", "[", "]", "<", ">"):
+        sanitized = sanitized.replace(char, f"\\{char}")
+    return sanitized
+
+
 def export_session_as_markdown(session: ResearchSession, db: Session) -> str:
     """
     Sinh tài liệu Markdown hoàn chỉnh (GitHub Flavored Markdown) từ dữ liệu của ResearchSession.
@@ -179,6 +193,22 @@ def export_session_as_markdown(session: ResearchSession, db: Session) -> str:
                 if note.created_at
                 else "N/A"
             )
+            context_str = ""
+            if getattr(note, "source_context", None) and isinstance(note.source_context, dict):
+                ctx = note.source_context
+                st = ctx.get("source_type")
+                if st == "triz_9_windows":
+                    context_str = f" | Nguồn: Lưới 9-Windows [{ctx.get('lens')} • {ctx.get('level')} - {ctx.get('time')}]"
+                elif st == "triz_matrix":
+                    context_str = f" | Nguồn: Ma trận TRIZ [Nguyên tắc {ctx.get('principle_id')}]"
+                elif st == "principle_suggestion":
+                    context_str = f" | Nguồn: Gợi ý Nguyên tắc [{ctx.get('principle_id')}]"
+                elif st == "evidence":
+                    escaped_ref = escape_markdown_inline(str(ctx.get("source_ref") or ""))
+                    context_str = f" | Nguồn: Bằng chứng [{escaped_ref}]"
+                elif st == "candidate_solution":
+                    context_str = f" | Nguồn: Giải pháp [{ctx.get('solution_id')}]"
+
             lines.extend([
                 f"### {idx}. [{note_type_badge}] {note_time}",
                 "",
@@ -186,6 +216,7 @@ def export_session_as_markdown(session: ResearchSession, db: Session) -> str:
                 "",
                 f"*(Mã ghi chú: `{note.id}`"
                 + (f" | Nguồn trích dẫn: `{note.source_chunk_id}`" if note.source_chunk_id else "")
+                + context_str
                 + ")*",
                 "",
                 "---",
@@ -314,6 +345,7 @@ def export_session_as_json(session: ResearchSession, db: Session) -> dict[str, A
             "content": n.content,
             "note_type": n.note_type,
             "source_chunk_id": str(n.source_chunk_id) if n.source_chunk_id else None,
+            "source_context": getattr(n, "source_context", None),
             "created_at": n.created_at.isoformat() if n.created_at else None,
             "updated_at": n.updated_at.isoformat() if n.updated_at else None,
         }
