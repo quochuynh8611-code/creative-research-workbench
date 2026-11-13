@@ -4,6 +4,7 @@ import React, { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { HelpCircle, AlertCircle, RefreshCw, Bookmark } from 'lucide-react'
 import { getTrizNineWindows } from '@/lib/api-client'
+import { validateTriz9WindowsContext } from '@/lib/triz-9-windows-context-validator'
 import type { TrizNineWindowsLens, TrizNineWindowsResponse, NoteDraft } from '@/lib/types'
 
 const LEVEL_LABELS: Record<string, string> = {
@@ -36,6 +37,7 @@ export function TrizNineWindows({
   const [activeLens, setActiveLens] = useState<TrizNineWindowsLens>(
     initialLens ?? 'engineering',
   )
+  const [cellError, setCellError] = useState<string | null>(null)
 
   const {
     data,
@@ -47,6 +49,7 @@ export function TrizNineWindows({
   } = useQuery<TrizNineWindowsResponse>({
     queryKey: ['triz', 'nine-windows', activeLens],
     queryFn: () => getTrizNineWindows(activeLens),
+    placeholderData: (previousData) => previousData,
   })
 
   return (
@@ -88,6 +91,26 @@ export function TrizNineWindows({
           })}
         </div>
       </div>
+
+      {/* Cell Validation Error Alert */}
+      {cellError && (
+        <div
+          role="alert"
+          className="rounded-xl border border-destructive/40 bg-destructive/10 p-3 text-destructive text-xs flex items-center justify-between gap-2"
+        >
+          <div className="flex items-center gap-2">
+            <AlertCircle className="w-4 h-4 shrink-0" />
+            <span>{cellError}</span>
+          </div>
+          <button
+            type="button"
+            onClick={() => setCellError(null)}
+            className="text-destructive hover:underline text-[11px] font-medium cursor-pointer"
+          >
+            Đóng
+          </button>
+        </div>
+      )}
 
       {/* Loading Skeleton State */}
       {isLoading && (
@@ -233,6 +256,21 @@ export function TrizNineWindows({
                       <button
                         type="button"
                         onClick={() => {
+                          const contextCandidate = {
+                            schema_version: 1,
+                            source_type: 'triz_9_windows',
+                            lens: data.lens,
+                            level: cell.level,
+                            time: cell.time,
+                            cell_label: cell.label_vi,
+                          }
+                          const validation = validateTriz9WindowsContext(contextCandidate)
+                          if (!validation.ok) {
+                            setCellError(`Dữ liệu ô không hợp lệ: ${validation.error}`)
+                            return
+                          }
+                          setCellError(null)
+
                           const examplesSection =
                             cell.examples_vi && cell.examples_vi.length > 0
                               ? `\n\nVí dụ: ${cell.examples_vi.join('; ')}`
@@ -242,6 +280,7 @@ export function TrizNineWindows({
                             content,
                             note_type: 'insight',
                             source_chunk_id: null,
+                            source_context: validation.data,
                           })
                         }}
                         aria-label={`Lưu vào sổ tay: ${levelLabel} • ${timeLabel} - ${cell.label_vi}`}

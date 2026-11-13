@@ -9,6 +9,8 @@ import {
   createResearchNote,
   deleteResearchNote,
 } from '@/lib/api-client'
+import { validateTriz9WindowsContext } from '@/lib/triz-9-windows-context-validator'
+import { extractApiErrorMessage } from '@/lib/api-error-message'
 import type { NoteType, CreateResearchNoteInput, ResearchNote, NoteDraft } from '@/lib/types'
 
 interface ResearchNotebookProps {
@@ -165,8 +167,8 @@ export function ResearchNotebook({
       setActionError(null)
       onNoteCreated()
     },
-    onError: (err: any) => {
-      setActionError(err?.message || 'Không thể tạo ghi chú. Vui lòng thử lại.')
+    onError: (err: unknown) => {
+      setActionError(extractApiErrorMessage(err, 'Không thể tạo ghi chú. Vui lòng thử lại.'))
     },
   })
 
@@ -198,6 +200,14 @@ export function ResearchNotebook({
     }
     if (initialDraft?.source_chunk_id) {
       payload.source_chunk_id = initialDraft.source_chunk_id
+    }
+    if (initialDraft?.source_context) {
+      const validation = validateTriz9WindowsContext(initialDraft.source_context)
+      if (!validation.ok) {
+        setActionError(`Context không hợp lệ: ${validation.error}`)
+        return
+      }
+      payload.source_context = validation.data
     }
 
     createMutation.mutate(payload)

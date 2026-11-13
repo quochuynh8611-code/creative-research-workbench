@@ -229,12 +229,28 @@ export interface SourceRef {
   relevance_score: number
 }
 
+// ──────────────────────────────────────────────
+// Research Note Source Context Types (Pilot C7c-2a / ADR-015)
+// ──────────────────────────────────────────────
+
+export interface Triz9WindowsSourceContext {
+  schema_version: 1
+  source_type: 'triz_9_windows'
+  lens: 'engineering' | 'business' | 'everyday'
+  level: 'supersystem' | 'system' | 'subsystem'
+  time: 'past' | 'present' | 'future'
+  cell_label: string
+}
+
+export type NoteSourceContext = Triz9WindowsSourceContext
+
 export interface ResearchNote {
   id: string
   session_id: string
   content: string
   note_type: NoteType
   source_chunk_id?: string | null
+  source_context?: unknown | null
   created_at: string
 }
 
@@ -247,6 +263,7 @@ export interface CreateResearchNoteInput {
   content: string
   note_type?: NoteType
   source_chunk_id?: string | null
+  source_context?: NoteSourceContext | null
 }
 
 export interface DeleteResearchNoteResponse {
@@ -259,6 +276,7 @@ export interface NoteDraft {
   content: string
   note_type: NoteType
   source_chunk_id?: string | null
+  source_context?: NoteSourceContext | null
 }
 
 
