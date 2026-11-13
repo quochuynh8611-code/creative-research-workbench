@@ -494,4 +494,140 @@ describe('Pilot C7c-2a: ResearchNotebook source_context Submission & Validation'
       expect(callPayload.source_context).toBeUndefined()
     })
   })
+
+  describe('Batch C7c-2c: ResearchNotebook triz_matrix source_context Submission & Validation', () => {
+    const VALID_MATRIX_CONTEXT = {
+      schema_version: 1 as const,
+      source_type: 'triz_matrix' as const,
+      principle_id: 35,
+      improving_param_id: 1,
+      worsening_param_id: 14,
+      lens: 'business' as const,
+    }
+
+    it('submit draft kèm source_context triz_matrix hợp lệ chuyển nguyên vẹn context tới createResearchNote', async () => {
+      const draft: NoteDraft = {
+        content: '[Ma trận TRIZ - Nguyên tắc #35: ...]\nNội dung mô tả...',
+        note_type: 'hypothesis',
+        source_chunk_id: null,
+        source_context: VALID_MATRIX_CONTEXT,
+      } as any
+
+      const createdNote: ResearchNote = {
+        id: 'note-201',
+        session_id: 'ses-123',
+        content: draft.content,
+        note_type: draft.note_type,
+        source_chunk_id: null,
+        source_context: VALID_MATRIX_CONTEXT,
+        created_at: '2026-11-13T10:00:00Z',
+      } as any
+      mockedCreateResearchNote.mockResolvedValueOnce(createdNote)
+
+      const onNoteCreated = jest.fn()
+      const queryClient = createTestQueryClient()
+
+      render(
+        <QueryClientProvider client={queryClient}>
+          <ResearchNotebook
+            sessionId="ses-123"
+            initialDraft={draft}
+            content={draft.content}
+            noteType={draft.note_type}
+            onContentChange={jest.fn()}
+            onNoteTypeChange={jest.fn()}
+            onClearDraft={jest.fn()}
+            onNoteCreated={onNoteCreated}
+          />
+        </QueryClientProvider>
+      )
+
+      const submitBtn = screen.getByRole('button', { name: /lưu ghi chú/i })
+      fireEvent.click(submitBtn)
+
+      await waitFor(() => {
+        expect(mockedCreateResearchNote).toHaveBeenCalledTimes(1)
+      })
+
+      const callPayload = mockedCreateResearchNote.mock.calls[0][1]
+      expect(callPayload).toHaveProperty('source_context')
+      expect(callPayload.source_context).toEqual(VALID_MATRIX_CONTEXT)
+      expect(onNoteCreated).toHaveBeenCalledTimes(1)
+    })
+
+    it('chặn submit và giữ draft khi draft kèm context triz_matrix invalid (principle_id: 0)', async () => {
+      const invalidDraft: NoteDraft = {
+        content: 'Ghi chú ma trận với context lỗi',
+        note_type: 'hypothesis',
+        source_chunk_id: null,
+        source_context: {
+          ...VALID_MATRIX_CONTEXT,
+          principle_id: 0,
+        },
+      } as any
+
+      const onNoteCreated = jest.fn()
+      const queryClient = createTestQueryClient()
+
+      render(
+        <QueryClientProvider client={queryClient}>
+          <ResearchNotebook
+            sessionId="ses-123"
+            initialDraft={invalidDraft}
+            content={invalidDraft.content}
+            noteType={invalidDraft.note_type}
+            onContentChange={jest.fn()}
+            onNoteTypeChange={jest.fn()}
+            onClearDraft={jest.fn()}
+            onNoteCreated={onNoteCreated}
+          />
+        </QueryClientProvider>
+      )
+
+      const submitBtn = screen.getByRole('button', { name: /lưu ghi chú/i })
+      fireEvent.click(submitBtn)
+
+      expect(mockedCreateResearchNote).not.toHaveBeenCalled()
+      expect(onNoteCreated).not.toHaveBeenCalled()
+
+      expect(await screen.findByText(/context không hợp lệ|principle_id phải là số nguyên/i)).toBeInTheDocument()
+      expect(screen.getByDisplayValue('Ghi chú ma trận với context lỗi')).toBeInTheDocument()
+    })
+
+    it('chặn submit và giữ draft khi draft kèm context triz_matrix thừa trường lạ', async () => {
+      const invalidDraft: NoteDraft = {
+        content: 'Ghi chú ma trận với context thừa trường',
+        note_type: 'hypothesis',
+        source_chunk_id: null,
+        source_context: {
+          ...VALID_MATRIX_CONTEXT,
+          extra_param: 'not allowed',
+        },
+      } as any
+
+      const queryClient = createTestQueryClient()
+
+      render(
+        <QueryClientProvider client={queryClient}>
+          <ResearchNotebook
+            sessionId="ses-123"
+            initialDraft={invalidDraft}
+            content={invalidDraft.content}
+            noteType={invalidDraft.note_type}
+            onContentChange={jest.fn()}
+            onNoteTypeChange={jest.fn()}
+            onClearDraft={jest.fn()}
+            onNoteCreated={jest.fn()}
+          />
+        </QueryClientProvider>
+      )
+
+      const submitBtn = screen.getByRole('button', { name: /lưu ghi chú/i })
+      fireEvent.click(submitBtn)
+
+      expect(mockedCreateResearchNote).not.toHaveBeenCalled()
+      expect(await screen.findByText(/context không hợp lệ/i)).toBeInTheDocument()
+      expect(screen.getByDisplayValue('Ghi chú ma trận với context thừa trường')).toBeInTheDocument()
+    })
+  })
 })

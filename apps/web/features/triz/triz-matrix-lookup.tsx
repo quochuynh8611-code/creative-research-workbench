@@ -19,6 +19,7 @@ import type { TrizPrinciple, TrizLookupResponse, NoteDraft } from '@/lib/types'
 import { cn } from '@/lib/utils'
 import { resolveParamId } from '@/lib/triz-param-resolver'
 import { TrizLensMetadataSection } from '@/features/triz/triz-lens-metadata-section'
+import { validateTrizMatrixContext } from '@/lib/triz-matrix-context-validator'
 
 interface TrizMatrixLookupProps {
   improvingParameter?: string | number | null
@@ -42,6 +43,7 @@ export function TrizMatrixLookup({
     improving: number
     worsening: number
   } | null>(null)
+  const [saveError, setSaveError] = useState<string | null>(null)
 
   // 1. Tải danh mục 39 thông số kỹ thuật TRIZ
   const {
@@ -252,6 +254,11 @@ export function TrizMatrixLookup({
       </div>
 
       {/* Results Section */}
+      {saveError && (
+        <div role="alert" className="p-3 rounded-lg border border-destructive/20 bg-destructive/10 text-destructive text-xs">
+          {saveError}
+        </div>
+      )}
       {isErrorLookup && (
         <div className="p-4 rounded-xl border border-destructive/20 bg-destructive/5 text-destructive text-sm flex items-start gap-2.5">
           <AlertTriangle className="w-5 h-5 shrink-0 mt-0.5" />
@@ -323,12 +330,34 @@ export function TrizMatrixLookup({
                           {onSaveAsNote && (
                             <button
                               type="button"
-                              onClick={() =>
+                              onClick={() => {
+                                if (!lookupResult || lookupResult.is_diagonal) {
+                                  setSaveError('Không thể tạo context: Kết quả tra cứu không hợp lệ')
+                                  return
+                                }
+
+                                const contextCandidate = {
+                                  schema_version: 1,
+                                  source_type: 'triz_matrix',
+                                  principle_id: principle.principle_id,
+                                  improving_param_id: lookupResult.improving_parameter?.id,
+                                  worsening_param_id: lookupResult.worsening_parameter?.id,
+                                  lens: activeLens,
+                                }
+
+                                const validation = validateTrizMatrixContext(contextCandidate)
+                                if (!validation.ok) {
+                                  setSaveError(`Không thể tạo context: ${validation.error}`)
+                                  return
+                                }
+
+                                setSaveError(null)
                                 onSaveAsNote({
                                   content: `[Ma trận TRIZ - Nguyên tắc #${pid}: ${principle.name_vi} (${principle.name_en})]\n${principle.description}${principle.explanation ? `\n\nGiải thích: ${principle.explanation}` : ''}`,
                                   note_type: 'hypothesis',
+                                  source_context: validation.data,
                                 })
-                              }
+                              }}
                               className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium bg-amber-500/10 hover:bg-amber-500/20 text-amber-700 dark:text-amber-400 border border-amber-500/20 transition-all cursor-pointer"
                             >
                               <Bookmark className="w-3.5 h-3.5" />

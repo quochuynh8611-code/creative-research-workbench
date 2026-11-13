@@ -9,7 +9,7 @@ import {
   createResearchNote,
   deleteResearchNote,
 } from '@/lib/api-client'
-import { validateTriz9WindowsContext } from '@/lib/triz-9-windows-context-validator'
+import { validateNoteSourceContext } from '@/lib/note-source-context-validator'
 import { extractApiErrorMessage } from '@/lib/api-error-message'
 import type { NoteType, CreateResearchNoteInput, ResearchNote, NoteDraft } from '@/lib/types'
 
@@ -202,7 +202,7 @@ export function ResearchNotebook({
       payload.source_chunk_id = initialDraft.source_chunk_id
     }
     if (initialDraft?.source_context !== undefined && initialDraft?.source_context !== null) {
-      const validation = validateTriz9WindowsContext(initialDraft.source_context)
+      const validation = validateNoteSourceContext(initialDraft.source_context)
       if (!validation.ok) {
         setActionError(`Context không hợp lệ: ${validation.error}`)
         return
