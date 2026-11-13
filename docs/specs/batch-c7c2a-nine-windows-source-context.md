@@ -4,7 +4,7 @@
 
 Tài liệu này xác lập đặc tả kỹ thuật chi tiết cho giai đoạn **Pilot C7c-2a** thuộc hệ thống Creative Research Workbench:
 - Triển khai luồng truyền dẫn dữ liệu nguồn gốc (`source_context`) một cách có kiểm soát và an toàn tuyệt đối từ công cụ **Sơ đồ 9 Màn hình TRIZ (`triz_9_windows`)** tới **Sổ tay nghiên cứu (`ResearchNotebook`)**.
-- Xác thực và bảo vệ hợp đồng dữ liệu ở tầng frontend trước khi gọi API `POST /api/v1/sessions/{session_id}/notes`, đảm bảo tuân thủ 100% schema backend đã định nghĩa tại `backend/src/app/schemas/note_context.py` (Batch C7c-1 / ADR-014).
+- Xác thực và bảo vệ hợp đồng dữ liệu ở tầng frontend trước khi gọi API `POST /api/v1/sessions/{session_id}/notes`, đảm bảo tuân thủ đầy đủ schema backend đã định nghĩa tại `backend/src/app/schemas/note_context.py` (Batch C7c-1 / ADR-014).
 - Duy trì tính toàn vẹn của vòng đời bản nháp (`NoteDraft`), cơ chế bảo vệ nội dung chưa lưu (`C4a Dirty Guard`), hộp thoại xác nhận ghi đè (`Overwrite Confirmation Dialog`), và cô lập trạng thái giữa các phiên làm việc (`Session Isolation`).
 - **Giới hạn phạm vi**: Lượt này là **Pilot duy nhất cho nguồn TRIZ 9-Windows**. Tuyệt đối KHÔNG triển khai đồng loạt 4 nguồn còn lại (`triz_matrix`, `principle_suggestion`, `evidence`, `candidate_solution`) trong batch này.
 
@@ -42,9 +42,10 @@ export interface Triz9WindowsSourceContext {
 }
 ```
 
-### 3.2. Ràng Buộc Lens Phải Khớp Dữ Liệu Grid Đang Hiển Thị
+### 3.2. Ràng Buộc Lens Phải Khớp Dữ Liệu Grid Đang Hiển Thị & placeholderData
 - `lens` trong `source_context` bắt buộc phải là lens của dữ liệu grid/cell thực tế đang hiển thị trên giao diện tại thời điểm người dùng bấm nút lưu (`data.lens` từ response API).
 - Tuyệt đối không được lấy state `activeLens` cục bộ nếu request chuyển lens đang pending hoặc đang tải skeleton, nhằm tránh lỗi ghép nhầm (mismatch) giữa `activeLens` mới với cell dữ liệu cũ của lens trước đó.
+- Component sử dụng `placeholderData: (previousData) => previousData` để giữ grid cũ hiển thị trong khi đổi lens (chống layout shift). Trong thời gian mạng đang tải, selector lens có thể đã hiển thị lens mới, nhưng `source_context` vẫn bảo đảm lấy `data.lens` của dữ liệu grid thực tế đang render bên dưới.
 - Lấy trực tiếp từ `cell` và `data` đã render:
   - `lens`: `data.lens` (hoặc `activeLens` khi đã đồng bộ hoàn tất với data).
   - `level`: `cell.level`.
@@ -59,12 +60,16 @@ export interface Triz9WindowsSourceContext {
 ### 3.4. Vòng Đời Bản Nháp (`NoteDraft Lifecycle`) & Bảo Vệ Trạng Thái
 1. **Tiếp nhận khi form sạch (Clean Draft)**: Nếu `!isNoteDraftDirty`, draft mới được nạp vào form ngay lập tức: `content`, `note_type`, và `source_context` thuộc cùng một draft đồng bộ. Tab tự động chuyển sang `notebook`.
 2. **Tiếp nhận khi form bẩn (Dirty Collision)**: Nếu `isNoteDraftDirty === true`, draft mới được lưu vào `pendingDraft` (mang đầy đủ `source_context` mới) và mở `Overwrite Confirmation Dialog`.
-3. **Hủy ghi đè (Cancel Overwrite)**: Nhấn "Hủy" hoặc phím `Escape`: `pendingDraft` bị hủy (`null`). Bản nháp hiện tại cùng `content`, `note_type`, và `source_context` cũ được giữ nguyên 100%.
+3. **Hủy ghi đè (Cancel Overwrite)**: Nhấn "Hủy" hoặc phím `Escape`: `pendingDraft` bị hủy (`null`). Bản nháp hiện tại cùng `content`, `note_type`, và `source_context` cũ được giữ nguyên vẹn.
 4. **Xác nhận ghi đè (Confirm Overwrite)**: Nhấn "Ghi đè": Toàn bộ `noteContent`, `noteType`, và `noteDraft` (chứa `source_context` mới) được thay thế đồng bộ. `pendingDraft` được reset về `null`.
 5. **Hủy nháp (Discard Draft)**: Bấm "Hủy nháp" trên banner Notebook: `noteDraft` bị reset về `null`, form được dọn sạch, không để lại tàn dư context.
 6. **Lưu thành công (Save Success)**: Sau khi tạo ghi chú thành công: `noteDraft` bị xóa, form reset về mặc định. Ghi chú thủ công tiếp theo của người dùng sẽ không mang context của draft trước.
 7. **Đổi phiên làm việc (Session Switch)**: Khi `sessionId` thay đổi, `useEffect` hook reset toàn bộ draft state (`noteDraft = null`, `pendingDraft = null`, `noteContent = ''`), chống rò rỉ context xuyên session.
 8. **Quy tắc Dirty Guard**: Cơ chế dirty guard vẫn dựa trên sự khác biệt giữa `noteContent` và `noteType` so với draft ban đầu; không thực hiện deep comparison trên metadata tĩnh.
+9. **Phân biệt context vắng mặt với context sai kiểu**:
+   - Chỉ khi `source_context` là `null` hoặc `undefined` thì mới được xem là không có context (lưu note thủ công tự do).
+   - Mọi giá trị khác (kể cả các giá trị falsy như `false`, `0`, `""`, `NaN`) đều bắt buộc phải đưa qua bộ kiểm thực `validateTriz9WindowsContext`.
+   - Nếu context sai kiểu hoặc vi phạm hợp đồng, hệ thống chặn submit `fail-closed`, hiển thị lỗi dạng chuỗi và giữ nguyên bản nháp; tuyệt đối không tự ý gỡ bỏ context sai kiểu để lưu lén plain note.
 
 ### 3.5. Kiểm Tra Dữ Liệu Không Hợp Lệ (Invalid Context Handling)
 Áp dụng kỷ luật kiểm tra fail-closed nghiêm ngặt theo hợp đồng backend:
@@ -132,7 +137,7 @@ export interface ResearchNote {
   content: string
   note_type: NoteType
   source_chunk_id?: string | null
-  source_context?: Record<string, any> | null // Kiểu linh hoạt khi đọc từ API
+  source_context?: unknown | null // Kiểu linh hoạt khi đọc từ API (apps/web/lib/types.ts:253)
   created_at: string
 }
 ```
@@ -258,6 +263,25 @@ Feature: TRIZ 9-Windows source_context transmission to Research Notebook
       And Hệ thống KHÔNG tự ý retry bằng cách gỡ bỏ context để gửi lén note.
 ```
 
+### Kịch bản 4: Context sai kiểu falsy không được coi là context vắng mặt
+```gherkin
+  Scenario: Context sai kiểu falsy không được coi là context vắng mặt
+    Given draft có source_context sai kiểu (ví dụ: boolean false, number 0, chuỗi rỗng "", hoặc NaN)
+    When Người dùng lưu ghi chú
+    Then Hệ thống KHÔNG thực hiện gọi API createResearchNote
+    And Form hiển thị lỗi accessible về context không hợp lệ
+    And Nội dung nháp và note_type được giữ nguyên vẹn.
+```
+
+### Kịch bản 5: Context vắng mặt vẫn cho phép lưu note thủ công
+```gherkin
+  Scenario: Context vắng mặt vẫn cho phép lưu note
+    Given source_context là null hoặc undefined
+    When Người dùng lưu ghi chú
+    Then Hệ thống gọi API createResearchNote với payload không mang context cũ
+    And Ghi chú được lưu thành công với giá trị SQL NULL trong cơ sở dữ liệu.
+```
+
 ---
 
 ## 6. Kế Hoạch Kiểm Thử 14 Nhóm Bắt Buộc
@@ -278,3 +302,14 @@ Feature: TRIZ 9-Windows source_context transmission to Research Notebook
 | **12** | Đổi `sessionId` reset toàn bộ draft và context, không rò rỉ xuyên session. | `session-detail-source-context.test.tsx` |
 | **13** | Backend trả về 422 (detail string hoặc array): UI hiển thị chuỗi an toàn, không crash React, giữ nguyên draft. | `research-notebook-source-context.test.tsx` |
 | **14** | Chế độ Standalone read-only, C6 Use insight, C7b Copy clipboard và 464 baseline tests không bị regression. | Full suite regression check |
+
+---
+
+## 7. Ghi Nhận Giới Hạn Nghiệm Thu Thực Tế (Pilot C7c-2a Scope)
+
+- **Đã kiểm chứng (Runtime Data Isolation PASS)**:
+  - Note tạo từ 9-Windows (`fd44ef7e-4b24-4d04-a1d8-9e2148352052`) được lưu trữ với đầy đủ 6 trường context chuẩn xác dạng JSONB Object.
+  - Note tạo thủ công sau đó (`345eee5c-28f1-4d0c-9736-b8825821253d`) được ghi nhận là chuẩn `SQL NULL` (`source_context IS NULL = true`).
+  - Dữ liệu API và Database hoàn toàn đồng nhất.
+- **Giới hạn nghiệm thu thủ công**:
+  - Do chưa xác nhận liệu người dùng có reload trang hay chuyển session giữa 2 lần lưu trên UI hay không, tài liệu chỉ ghi nhận nghiệm thu cho khía cạnh **cô lập dữ liệu runtime** (Runtime Data Isolation PASS), không tuyên bố đã chứng minh hành vi reset ngay tức thì trên cùng một trang (same-page immediate reset) nếu không reload.

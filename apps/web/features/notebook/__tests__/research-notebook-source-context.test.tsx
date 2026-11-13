@@ -328,4 +328,170 @@ describe('Pilot C7c-2a: ResearchNotebook source_context Submission & Validation'
 
     expect(screen.getByDisplayValue('Nội dung test lỗi 422 chuỗi')).toBeInTheDocument()
   })
+
+  // Hardening: Phân biệt context null/undefined với các giá trị sai kiểu falsy
+  describe('Hardening C7c-2a: Phân biệt context null/undefined với các giá trị sai kiểu falsy', () => {
+    const falsyCases = [
+      { name: 'boolean false', value: false },
+      { name: 'number 0', value: 0 },
+      { name: 'empty string ""', value: '' },
+      { name: 'NaN', value: NaN },
+    ]
+
+    test.each(falsyCases)(
+      'khi initialDraft có source_context là $name, submit bị chặn fail-closed: không gọi API, báo lỗi, giữ draft',
+      async ({ value }) => {
+        const invalidDraft: NoteDraft = {
+          content: 'Nội dung nháp với context falsy',
+          note_type: 'hypothesis',
+          source_chunk_id: null,
+          source_context: value as unknown as NoteDraft['source_context'],
+        }
+
+        const onNoteCreated = jest.fn()
+        const onClearDraft = jest.fn()
+        const queryClient = createTestQueryClient()
+
+        render(
+          <QueryClientProvider client={queryClient}>
+            <ResearchNotebook
+              sessionId="ses-123"
+              initialDraft={invalidDraft}
+              content={invalidDraft.content}
+              noteType={invalidDraft.note_type}
+              onContentChange={jest.fn()}
+              onNoteTypeChange={jest.fn()}
+              onClearDraft={onClearDraft}
+              onNoteCreated={onNoteCreated}
+            />
+          </QueryClientProvider>
+        )
+
+        const submitBtn = screen.getByRole('button', { name: /lưu ghi chú/i })
+        fireEvent.click(submitBtn)
+
+        // Không được gọi API createResearchNote
+        expect(mockedCreateResearchNote).not.toHaveBeenCalled()
+        expect(onNoteCreated).not.toHaveBeenCalled()
+        expect(onClearDraft).not.toHaveBeenCalled()
+
+        // Phải hiển thị thông báo lỗi accessible
+        const errorEl = await screen.findByText(/context không hợp lệ/i)
+        expect(errorEl).toBeInTheDocument()
+        expect(errorEl).toBeVisible()
+
+        // Form và textarea vẫn giữ nguyên nội dung bản nháp và note_type không mặc định
+        expect(
+          screen.getByDisplayValue('Nội dung nháp với context falsy')
+        ).toBeInTheDocument()
+        const selectEl = screen.getByRole('combobox', {
+          name: /loại ghi chú/i,
+        }) as HTMLSelectElement
+        expect(selectEl.value).toBe('hypothesis')
+      }
+    )
+
+    it('khi initialDraft là object hợp lệ với source_context: null, submit gọi API thành công và payload không mang context cũ', async () => {
+      const draftWithNullContext: NoteDraft = {
+        content: 'Ghi chú khởi tạo từ nháp có source_context null',
+        note_type: 'decision',
+        source_chunk_id: null,
+        source_context: null,
+      }
+
+      mockedCreateResearchNote.mockResolvedValueOnce({
+        id: 'note-105',
+        session_id: 'ses-123',
+        content: draftWithNullContext.content,
+        note_type: draftWithNullContext.note_type,
+        source_chunk_id: null,
+        created_at: '2026-11-13T10:20:00Z',
+      })
+
+      const onNoteCreated = jest.fn()
+      const onClearDraft = jest.fn()
+      const queryClient = createTestQueryClient()
+
+      render(
+        <QueryClientProvider client={queryClient}>
+          <ResearchNotebook
+            sessionId="ses-123"
+            initialDraft={draftWithNullContext}
+            content={draftWithNullContext.content}
+            noteType={draftWithNullContext.note_type}
+            onContentChange={jest.fn()}
+            onNoteTypeChange={jest.fn()}
+            onClearDraft={onClearDraft}
+            onNoteCreated={onNoteCreated}
+          />
+        </QueryClientProvider>
+      )
+
+      const submitBtn = screen.getByRole('button', { name: /lưu ghi chú/i })
+      fireEvent.click(submitBtn)
+
+      await waitFor(() => {
+        expect(mockedCreateResearchNote).toHaveBeenCalledTimes(1)
+      })
+
+      const callPayload = mockedCreateResearchNote.mock.calls[0][1]
+      expect(callPayload.content).toBe(
+        'Ghi chú khởi tạo từ nháp có source_context null'
+      )
+      expect(callPayload.note_type).toBe('decision')
+      expect(
+        callPayload.source_context === undefined ||
+          callPayload.source_context === null
+      ).toBe(true)
+      expect(callPayload.source_context).not.toEqual({})
+      expect(
+        screen.queryByText(/context không hợp lệ/i)
+      ).not.toBeInTheDocument()
+      expect(onNoteCreated).toHaveBeenCalledTimes(1)
+    })
+
+    it('khi initialDraft có source_context là undefined, vẫn cho phép lưu note thủ công và không gửi context rỗng', async () => {
+      mockedCreateResearchNote.mockResolvedValueOnce({
+        id: 'note-104',
+        session_id: 'ses-123',
+        content: 'Ghi chú với context undefined',
+        note_type: 'insight',
+        source_chunk_id: null,
+        created_at: '2026-11-13T10:15:00Z',
+      })
+
+      const queryClient = createTestQueryClient()
+      const draft: NoteDraft = {
+        content: 'Ghi chú với context undefined',
+        note_type: 'insight',
+        source_chunk_id: null,
+        source_context: undefined,
+      }
+
+      render(
+        <QueryClientProvider client={queryClient}>
+          <ResearchNotebook
+            sessionId="ses-123"
+            initialDraft={draft}
+            content={draft.content}
+            noteType={draft.note_type}
+            onContentChange={jest.fn()}
+            onNoteTypeChange={jest.fn()}
+            onClearDraft={jest.fn()}
+            onNoteCreated={jest.fn()}
+          />
+        </QueryClientProvider>
+      )
+
+      const submitBtn = screen.getByRole('button', { name: /lưu ghi chú/i })
+      fireEvent.click(submitBtn)
+
+      await waitFor(() => {
+        expect(mockedCreateResearchNote).toHaveBeenCalledTimes(1)
+      })
+
+      const callPayload = mockedCreateResearchNote.mock.calls[0][1]
+      expect(callPayload.source_context).toBeUndefined()
+    })
+  })
 })

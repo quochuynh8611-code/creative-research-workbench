@@ -201,7 +201,7 @@ export function ResearchNotebook({
     if (initialDraft?.source_chunk_id) {
       payload.source_chunk_id = initialDraft.source_chunk_id
     }
-    if (initialDraft?.source_context) {
+    if (initialDraft?.source_context !== undefined && initialDraft?.source_context !== null) {
       const validation = validateTriz9WindowsContext(initialDraft.source_context)
       if (!validation.ok) {
         setActionError(`Context không hợp lệ: ${validation.error}`)
