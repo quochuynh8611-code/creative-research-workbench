@@ -21,6 +21,7 @@ from app.domain.models import (
     ResearchNote,
     CandidateSolution,
 )
+from app.schemas.note_context import parse_note_source_context
 from app.services.problem_structuring_service import create_contradiction_record
 
 # Supported template schema versions (Phase 9.4 hardening)
@@ -303,11 +304,18 @@ def import_session_from_json(
                         except (ValueError, TypeError):
                             source_chunk_id = None
 
+                    parsed_context = None
+                    raw_context = n.get("source_context")
+                    if raw_context is not None:
+                        parsed_model = parse_note_source_context(raw_context)
+                        parsed_context = parsed_model.model_dump(mode="json")
+
                     note_record = ResearchNote(
                         session_id=new_session.id,
                         content=content,
                         note_type=note_type,
                         source_chunk_id=source_chunk_id,
+                        source_context=parsed_context,
                     )
                     db.add(note_record)
                     notes_count += 1

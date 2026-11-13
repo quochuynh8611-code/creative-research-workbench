@@ -71,7 +71,7 @@ def test_runner_e2e_full_rollout_and_verification(sync_engine: Engine) -> None:
     )
 
     assert isinstance(snapshot, MigrationRuntimeSnapshot)
-    assert snapshot.database_revision == "005"
+    assert snapshot.database_revision == "006"
     assert snapshot.index_name == "ix_chunks_embedding_cosine"
     assert "ivfflat" in snapshot.index_definition.lower()
     assert "vector_cosine_ops" in snapshot.index_definition.lower()
@@ -79,12 +79,12 @@ def test_runner_e2e_full_rollout_and_verification(sync_engine: Engine) -> None:
     # Query catalog directly to independently confirm
     with sync_engine.connect() as conn:
         current_rev = conn.execute(text("SELECT version_num FROM alembic_version")).scalar()
-        assert current_rev == "005"
+        assert current_rev == "006"
 
 
 def test_runner_e2e_idempotency_when_already_at_head(sync_engine: Engine) -> None:
     """
-    Given: Database already at head revision '005'.
+    Given: Database already at head revision '006'.
     When: run_migration_and_verify is executed again.
     Then: Succeeds idempotently without error and confirms snapshot.
     """
@@ -105,5 +105,5 @@ def test_runner_e2e_idempotency_when_already_at_head(sync_engine: Engine) -> Non
         database_url=url_str,
     )
 
-    assert snapshot.database_revision == "005"
+    assert snapshot.database_revision == "006"
     assert snapshot.index_name == "ix_chunks_embedding_cosine"
