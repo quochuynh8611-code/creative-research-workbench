@@ -242,7 +242,16 @@ export interface Triz9WindowsSourceContext {
   cell_label: string
 }
 
-export type NoteSourceContext = Triz9WindowsSourceContext
+export interface TrizMatrixSourceContext {
+  schema_version: 1
+  source_type: 'triz_matrix'
+  principle_id: number
+  improving_param_id: number
+  worsening_param_id: number
+  lens: 'engineering' | 'business' | 'everyday'
+}
+
+export type NoteSourceContext = Triz9WindowsSourceContext | TrizMatrixSourceContext
 
 export interface ResearchNote {
   id: string
