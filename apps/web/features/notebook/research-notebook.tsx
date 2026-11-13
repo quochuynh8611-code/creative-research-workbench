@@ -1,8 +1,8 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useState, useRef, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { Sparkles, Search, X } from 'lucide-react'
+import { Sparkles, Search, X, Copy, Check } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import {
   listResearchNotes,
@@ -32,6 +32,12 @@ const NOTE_TYPE_LABELS: Record<NoteType, string> = {
 }
 
 type FilterType = NoteType | 'all'
+
+type CopyStatus = {
+  noteId: string
+  status: 'success' | 'error'
+  message?: string
+} | null
 
 const FILTER_OPTIONS: { key: FilterType; label: string }[] = [
   { key: 'all', label: 'Tất cả' },
@@ -64,6 +70,74 @@ export function ResearchNotebook({
   const queryClient = useQueryClient()
   const [validationError, setValidationError] = useState<string | null>(null)
   const [actionError, setActionError] = useState<string | null>(null)
+
+  const [copyStatus, setCopyStatus] = useState<CopyStatus>(null)
+  const latestRequestIdRef = useRef<number>(0)
+  const copyTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const isMountedRef = useRef<boolean>(true)
+
+  useEffect(() => {
+    isMountedRef.current = true
+    return () => {
+      isMountedRef.current = false
+      if (copyTimerRef.current) {
+        clearTimeout(copyTimerRef.current)
+        copyTimerRef.current = null
+      }
+    }
+  }, [])
+
+  const handleCopyNote = async (note: ResearchNote) => {
+    latestRequestIdRef.current += 1
+    const currentRequestId = latestRequestIdRef.current
+
+    if (copyTimerRef.current) {
+      clearTimeout(copyTimerRef.current)
+      copyTimerRef.current = null
+    }
+    setCopyStatus(null)
+
+    if (
+      typeof navigator === 'undefined' ||
+      !navigator.clipboard ||
+      typeof navigator.clipboard.writeText !== 'function'
+    ) {
+      if (isMountedRef.current && currentRequestId === latestRequestIdRef.current) {
+        setCopyStatus({
+          noteId: note.id,
+          status: 'error',
+          message: 'Trình duyệt không hỗ trợ sao chép',
+        })
+      }
+      return
+    }
+
+    try {
+      await navigator.clipboard.writeText(note.content)
+
+      if (isMountedRef.current && currentRequestId === latestRequestIdRef.current) {
+        setCopyStatus({
+          noteId: note.id,
+          status: 'success',
+        })
+
+        copyTimerRef.current = setTimeout(() => {
+          if (isMountedRef.current && currentRequestId === latestRequestIdRef.current) {
+            setCopyStatus(null)
+            copyTimerRef.current = null
+          }
+        }, 2000)
+      }
+    } catch {
+      if (isMountedRef.current && currentRequestId === latestRequestIdRef.current) {
+        setCopyStatus({
+          noteId: note.id,
+          status: 'error',
+          message: 'Không thể sao chép vào bộ nhớ tạm',
+        })
+      }
+    }
+  }
 
   const handleDiscardDraft = () => {
     setValidationError(null)
@@ -439,6 +513,37 @@ export function ResearchNotebook({
                     <span className="text-[11px] text-slate-400 dark:text-slate-500">
                       {new Date(note.created_at).toLocaleString('vi-VN')}
                     </span>
+
+                    {copyStatus?.noteId === note.id && copyStatus.status === 'success' && (
+                      <span
+                        className="inline-flex items-center gap-1 text-xs font-medium text-emerald-600 dark:text-emerald-400 px-1.5 py-0.5 rounded bg-emerald-50 dark:bg-emerald-950/40"
+                        role="status"
+                        aria-live="polite"
+                      >
+                        <Check className="w-3.5 h-3.5" />
+                        <span>Đã chép</span>
+                      </span>
+                    )}
+
+                    {copyStatus?.noteId === note.id && copyStatus.status === 'error' && (
+                      <span
+                        className="inline-flex items-center gap-1 text-xs font-medium text-rose-600 dark:text-rose-400 px-1.5 py-0.5 rounded bg-rose-50 dark:bg-rose-950/40"
+                        role="alert"
+                      >
+                        <span>{copyStatus.message}</span>
+                      </span>
+                    )}
+
+                    <button
+                      type="button"
+                      onClick={() => handleCopyNote(note)}
+                      aria-label={`Sao chép ghi chú ${note.id}`}
+                      title="Sao chép nội dung"
+                      className="text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 p-1 rounded hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+                    >
+                      <Copy className="w-4 h-4" />
+                    </button>
+
                     <button
                       type="button"
                       onClick={() => handleDelete(note.id)}

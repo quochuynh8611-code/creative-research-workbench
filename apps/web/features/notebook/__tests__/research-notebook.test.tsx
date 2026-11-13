@@ -1,6 +1,6 @@
 /** @jest-environment jsdom */
 import React from 'react'
-import { render, screen, fireEvent, waitFor } from '@testing-library/react'
+import { render, screen, fireEvent, waitFor, act } from '@testing-library/react'
 import '@testing-library/jest-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { ResearchNotebook } from '../research-notebook'
@@ -1096,6 +1096,593 @@ describe('ResearchNotebook Component', () => {
 
       localGetSpy.mockRestore()
       localSetSpy.mockRestore()
+    })
+  })
+
+  describe('Batch C7b — Copy Note to Clipboard', () => {
+    const originalClipboard = navigator.clipboard
+
+    const C7B_NOTES: ResearchNote[] = [
+      {
+        id: 'c7b-1',
+        session_id: 'ses-c7b',
+        content: '\n   Phát hiện mâu thuẫn giữa độ bền và trọng lượng tại 500°C. \n\t   ',
+        note_type: 'insight',
+        source_chunk_id: null,
+        created_at: '2026-10-01T10:00:00Z',
+      },
+      {
+        id: 'c7b-2',
+        session_id: 'ses-c7b',
+        content: 'Quyết định áp dụng nguyên tắc phân chia 1 cho kết cấu vỏ.',
+        note_type: 'decision',
+        source_chunk_id: null,
+        created_at: '2026-10-01T11:00:00Z',
+      },
+      {
+        id: 'c7b-3',
+        session_id: 'ses-c7b',
+        content: 'Giả định rằng graphene làm tăng tính dẫn nhiệt đáng kể.',
+        note_type: 'hypothesis',
+        source_chunk_id: null,
+        created_at: '2026-10-01T12:00:00Z',
+      },
+    ]
+
+    function createDeferred<T>() {
+      let resolve!: (val: T) => void
+      let reject!: (err: any) => void
+      const promise = new Promise<T>((res, rej) => {
+        resolve = res
+        reject = rej
+      })
+      return { promise, resolve, reject }
+    }
+
+    function renderNotebookForC7b(notes: ResearchNote[] = C7B_NOTES, customProps = {}) {
+      const mockResponse: ResearchNotesResponse = {
+        data: notes,
+        meta: { total: notes.length },
+      }
+      ;(apiClient.listResearchNotes as jest.Mock).mockResolvedValue(mockResponse)
+
+      const queryClient = createTestQueryClient()
+      const props = {
+        ...defaultProps,
+        sessionId: 'ses-c7b',
+        ...customProps,
+      }
+
+      const utils = render(
+        <QueryClientProvider client={queryClient}>
+          <ResearchNotebook {...props} />
+        </QueryClientProvider>
+      )
+      return { ...utils, queryClient }
+    }
+
+    function mockClipboard(writeTextFn?: any) {
+      const clipboardObj = writeTextFn !== undefined ? { writeText: writeTextFn } : undefined
+      Object.defineProperty(navigator, 'clipboard', {
+        value: clipboardObj,
+        configurable: true,
+        writable: true,
+      })
+    }
+
+    afterEach(() => {
+      jest.useRealTimers()
+      Object.defineProperty(navigator, 'clipboard', {
+        value: originalClipboard,
+        configurable: true,
+        writable: true,
+      })
+    })
+
+    it('1. renders copy button with distinct accessible name on each note card', async () => {
+      mockClipboard(jest.fn().mockResolvedValue(undefined))
+      renderNotebookForC7b()
+
+      expect(await screen.findByText('Quyết định áp dụng nguyên tắc phân chia 1 cho kết cấu vỏ.')).toBeInTheDocument()
+
+      const copyBtn1 = screen.getByRole('button', { name: 'Sao chép ghi chú c7b-1' })
+      const copyBtn2 = screen.getByRole('button', { name: 'Sao chép ghi chú c7b-2' })
+      const copyBtn3 = screen.getByRole('button', { name: 'Sao chép ghi chú c7b-3' })
+
+      expect(copyBtn1).toHaveAttribute('type', 'button')
+      expect(copyBtn2).toHaveAttribute('type', 'button')
+      expect(copyBtn3).toHaveAttribute('type', 'button')
+    })
+
+    it('2. copies exact note content preserving leading/trailing whitespace, newlines, and unicode', async () => {
+      const mockWrite = jest.fn().mockResolvedValue(undefined)
+      mockClipboard(mockWrite)
+      renderNotebookForC7b()
+
+      expect(await screen.findByText(/Phát hiện mâu thuẫn giữa độ bền và trọng lượng/i)).toBeInTheDocument()
+
+      const copyBtn1 = screen.getByRole('button', { name: 'Sao chép ghi chú c7b-1' })
+      fireEvent.click(copyBtn1)
+
+      expect(mockWrite).toHaveBeenCalledTimes(1)
+      expect(mockWrite).toHaveBeenCalledWith('\n   Phát hiện mâu thuẫn giữa độ bền và trọng lượng tại 500°C. \n\t   ')
+    })
+
+    it('3. does not show success feedback while clipboard Promise is pending', async () => {
+      const deferred = createDeferred<void>()
+      const mockWrite = jest.fn().mockReturnValue(deferred.promise)
+      mockClipboard(mockWrite)
+      renderNotebookForC7b()
+
+      expect(await screen.findByText('Quyết định áp dụng nguyên tắc phân chia 1 cho kết cấu vỏ.')).toBeInTheDocument()
+
+      const copyBtn2 = screen.getByRole('button', { name: 'Sao chép ghi chú c7b-2' })
+      fireEvent.click(copyBtn2)
+
+      expect(mockWrite).toHaveBeenCalledWith('Quyết định áp dụng nguyên tắc phân chia 1 cho kết cấu vỏ.')
+      // Khi pending: chưa hiển thị text "Đã chép"
+      expect(screen.queryByText('Đã chép')).not.toBeInTheDocument()
+
+      // Giải quyết Promise
+      await act(async () => {
+        deferred.resolve()
+      })
+
+      // Sau khi resolve: hiển thị "Đã chép"
+      expect(screen.getByText('Đã chép')).toBeInTheDocument()
+    })
+
+    it('4. displays success feedback on the target note card upon resolution', async () => {
+      const mockWrite = jest.fn().mockResolvedValue(undefined)
+      mockClipboard(mockWrite)
+      renderNotebookForC7b()
+
+      expect(await screen.findByText('Quyết định áp dụng nguyên tắc phân chia 1 cho kết cấu vỏ.')).toBeInTheDocument()
+
+      const copyBtn2 = screen.getByRole('button', { name: 'Sao chép ghi chú c7b-2' })
+      fireEvent.click(copyBtn2)
+
+      expect(await screen.findByText('Đã chép')).toBeInTheDocument()
+
+      // Card 1 và Card 3 vẫn có nút sao chép bình thường
+      expect(screen.getByRole('button', { name: 'Sao chép ghi chú c7b-1' })).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: 'Sao chép ghi chú c7b-3' })).toBeInTheDocument()
+    })
+
+    it('5. success feedback remains before 2000ms and expires at 2000ms', async () => {
+      jest.useFakeTimers()
+      const mockWrite = jest.fn().mockResolvedValue(undefined)
+      mockClipboard(mockWrite)
+      renderNotebookForC7b()
+
+      // Chờ data load xong
+      expect(await screen.findByText('Quyết định áp dụng nguyên tắc phân chia 1 cho kết cấu vỏ.')).toBeInTheDocument()
+
+      const copyBtn2 = screen.getByRole('button', { name: 'Sao chép ghi chú c7b-2' })
+      await act(async () => {
+        fireEvent.click(copyBtn2)
+      })
+
+      expect(screen.getByText('Đã chép')).toBeInTheDocument()
+
+      // Tại 1999ms: vẫn còn "Đã chép"
+      act(() => {
+        jest.advanceTimersByTime(1999)
+      })
+      expect(screen.getByText('Đã chép')).toBeInTheDocument()
+
+      // Tại 2000ms: hết và trở về nút ban đầu
+      act(() => {
+        jest.advanceTimersByTime(1)
+      })
+      expect(screen.queryByText('Đã chép')).not.toBeInTheDocument()
+      expect(screen.getByRole('button', { name: 'Sao chép ghi chú c7b-2' })).toBeInTheDocument()
+    })
+
+    it('6. displays error message and does not show success when writeText rejects', async () => {
+      const mockWrite = jest.fn().mockRejectedValue(new Error('Permission denied'))
+      mockClipboard(mockWrite)
+      renderNotebookForC7b()
+
+      expect(await screen.findByText('Quyết định áp dụng nguyên tắc phân chia 1 cho kết cấu vỏ.')).toBeInTheDocument()
+
+      const copyBtn2 = screen.getByRole('button', { name: 'Sao chép ghi chú c7b-2' })
+      await act(async () => {
+        fireEvent.click(copyBtn2)
+      })
+
+      expect(screen.queryByText('Đã chép')).not.toBeInTheDocument()
+      expect(await screen.findByText(/Không thể sao chép vào bộ nhớ tạm/i)).toBeInTheDocument()
+    })
+
+    it('7. handles missing navigator.clipboard safely with error message', async () => {
+      mockClipboard(undefined)
+      renderNotebookForC7b()
+
+      expect(await screen.findByText('Quyết định áp dụng nguyên tắc phân chia 1 cho kết cấu vỏ.')).toBeInTheDocument()
+
+      const copyBtn2 = screen.getByRole('button', { name: 'Sao chép ghi chú c7b-2' })
+      await act(async () => {
+        fireEvent.click(copyBtn2)
+      })
+
+      expect(screen.queryByText('Đã chép')).not.toBeInTheDocument()
+      expect(await screen.findByText(/Trình duyệt không hỗ trợ sao chép/i)).toBeInTheDocument()
+    })
+
+    it('8. handles non-function writeText safely with error message', async () => {
+      mockClipboard('not-a-function' as any)
+      renderNotebookForC7b()
+
+      expect(await screen.findByText('Quyết định áp dụng nguyên tắc phân chia 1 cho kết cấu vỏ.')).toBeInTheDocument()
+
+      const copyBtn2 = screen.getByRole('button', { name: 'Sao chép ghi chú c7b-2' })
+      await act(async () => {
+        fireEvent.click(copyBtn2)
+      })
+
+      expect(screen.queryByText('Đã chép')).not.toBeInTheDocument()
+      expect(await screen.findByText(/Trình duyệt không hỗ trợ sao chép/i)).toBeInTheDocument()
+    })
+
+    it('9. timer from note A does not clear feedback of note B when copied sequentially', async () => {
+      jest.useFakeTimers()
+      const mockWrite = jest.fn().mockResolvedValue(undefined)
+      mockClipboard(mockWrite)
+      renderNotebookForC7b()
+
+      expect(await screen.findByText('Quyết định áp dụng nguyên tắc phân chia 1 cho kết cấu vỏ.')).toBeInTheDocument()
+
+      const copyBtn1 = screen.getByRole('button', { name: 'Sao chép ghi chú c7b-1' })
+      await act(async () => {
+        fireEvent.click(copyBtn1)
+      })
+      expect(screen.getByText('Đã chép')).toBeInTheDocument()
+
+      // Sau 1000ms, user bấm copy note 2
+      act(() => {
+        jest.advanceTimersByTime(1000)
+      })
+
+      const copyBtn2 = screen.getByRole('button', { name: 'Sao chép ghi chú c7b-2' })
+      await act(async () => {
+        fireEvent.click(copyBtn2)
+      })
+
+      // Card 2 đang có "Đã chép"
+      expect(screen.getByText('Đã chép')).toBeInTheDocument()
+
+      // Trôi thêm 1000ms (tổng 2000ms tính từ lần bấm A): timer của A đã bị cancel nên KHÔNG được xóa feedback của B
+      act(() => {
+        jest.advanceTimersByTime(1000)
+      })
+      expect(screen.getByText('Đã chép')).toBeInTheDocument()
+
+      // Trôi tiếp 1000ms nữa (đủ 2000ms của B): feedback của B mới hết
+      act(() => {
+        jest.advanceTimersByTime(1000)
+      })
+      expect(screen.queryByText('Đã chép')).not.toBeInTheDocument()
+    })
+
+    it('10. out-of-order resolution: A pending, B resolves first, A resolves later retains B feedback', async () => {
+      const deferredA = createDeferred<void>()
+      const deferredB = createDeferred<void>()
+
+      const mockWrite = jest.fn().mockImplementation((content: string) => {
+        if (content.includes('c7b-1') || content.includes('mâu thuẫn')) {
+          return deferredA.promise
+        }
+        return deferredB.promise
+      })
+      mockClipboard(mockWrite)
+      renderNotebookForC7b()
+
+      expect(await screen.findByText('Quyết định áp dụng nguyên tắc phân chia 1 cho kết cấu vỏ.')).toBeInTheDocument()
+
+      // Bấm note 1 (pending)
+      fireEvent.click(screen.getByRole('button', { name: 'Sao chép ghi chú c7b-1' }))
+      expect(screen.queryByText('Đã chép')).not.toBeInTheDocument()
+
+      // Bấm note 2 (pending)
+      fireEvent.click(screen.getByRole('button', { name: 'Sao chép ghi chú c7b-2' }))
+
+      // B resolve trước
+      await act(async () => {
+        deferredB.resolve()
+      })
+      expect(screen.getByText('Đã chép')).toBeInTheDocument()
+
+      // A resolve muộn hơn
+      await act(async () => {
+        deferredA.resolve()
+      })
+
+      // Vẫn giữ feedback của B, không bị chuyển lại card 1
+      expect(screen.getByRole('button', { name: 'Sao chép ghi chú c7b-1' })).toBeInTheDocument()
+      expect(screen.getByText('Đã chép')).toBeInTheDocument()
+    })
+
+    it('11. out-of-order resolution: A pending, B resolves, A rejects later retains B success', async () => {
+      const deferredA = createDeferred<void>()
+      const deferredB = createDeferred<void>()
+
+      const mockWrite = jest.fn().mockImplementation((content: string) => {
+        if (content.includes('c7b-1') || content.includes('mâu thuẫn')) {
+          return deferredA.promise
+        }
+        return deferredB.promise
+      })
+      mockClipboard(mockWrite)
+      renderNotebookForC7b()
+
+      expect(await screen.findByText('Quyết định áp dụng nguyên tắc phân chia 1 cho kết cấu vỏ.')).toBeInTheDocument()
+
+      // Bấm note 1 (pending)
+      fireEvent.click(screen.getByRole('button', { name: 'Sao chép ghi chú c7b-1' }))
+
+      // Bấm note 2 (resolve)
+      fireEvent.click(screen.getByRole('button', { name: 'Sao chép ghi chú c7b-2' }))
+      await act(async () => {
+        deferredB.resolve()
+      })
+      expect(screen.getByText('Đã chép')).toBeInTheDocument()
+
+      // A reject muộn hơn
+      await act(async () => {
+        deferredA.reject(new Error('Old operation rejected'))
+      })
+
+      // Phản hồi thành công của B không bị thay bằng lỗi của A
+      expect(screen.queryByText(/Không thể sao chép vào bộ nhớ tạm/i)).not.toBeInTheDocument()
+      expect(screen.getByText('Đã chép')).toBeInTheDocument()
+    })
+
+    it('12. out-of-order resolution: A pending, B rejects, A resolves later retains B error', async () => {
+      const deferredA = createDeferred<void>()
+      const deferredB = createDeferred<void>()
+
+      const mockWrite = jest.fn().mockImplementation((content: string) => {
+        if (content.includes('c7b-1') || content.includes('mâu thuẫn')) {
+          return deferredA.promise
+        }
+        return deferredB.promise
+      })
+      mockClipboard(mockWrite)
+      renderNotebookForC7b()
+
+      expect(await screen.findByText('Quyết định áp dụng nguyên tắc phân chia 1 cho kết cấu vỏ.')).toBeInTheDocument()
+
+      // Bấm note 1 (pending)
+      fireEvent.click(screen.getByRole('button', { name: 'Sao chép ghi chú c7b-1' }))
+
+      // Bấm note 2 (reject)
+      fireEvent.click(screen.getByRole('button', { name: 'Sao chép ghi chú c7b-2' }))
+      await act(async () => {
+        deferredB.reject(new Error('Permission denied'))
+      })
+      expect(await screen.findByText(/Không thể sao chép vào bộ nhớ tạm/i)).toBeInTheDocument()
+
+      // A resolve muộn hơn
+      await act(async () => {
+        deferredA.resolve()
+      })
+
+      // Lỗi của B không bị thay bằng success của A
+      expect(screen.queryByText('Đã chép')).not.toBeInTheDocument()
+      expect(screen.getByText(/Không thể sao chép vào bộ nhớ tạm/i)).toBeInTheDocument()
+    })
+
+    it('13. unmount after success cancels timer cleanly', async () => {
+      jest.useFakeTimers()
+      const mockWrite = jest.fn().mockResolvedValue(undefined)
+      mockClipboard(mockWrite)
+
+      // QueryClient riêng với gcTime: Infinity để cô lập Query GC
+      const isolatedQueryClient = new QueryClient({
+        defaultOptions: {
+          queries: { retry: false, gcTime: Infinity },
+          mutations: { retry: false },
+        },
+      })
+
+      const mockResponse: ResearchNotesResponse = {
+        data: C7B_NOTES,
+        meta: { total: C7B_NOTES.length },
+      }
+      ;(apiClient.listResearchNotes as jest.Mock).mockResolvedValue(mockResponse)
+
+      const clearTimeoutSpy = jest.spyOn(window, 'clearTimeout')
+
+      const { unmount } = render(
+        <QueryClientProvider client={isolatedQueryClient}>
+          <ResearchNotebook {...defaultProps} sessionId="ses-c7b" />
+        </QueryClientProvider>
+      )
+
+      expect(await screen.findByText('Quyết định áp dụng nguyên tắc phân chia 1 cho kết cấu vỏ.')).toBeInTheDocument()
+
+      const copyBtn = screen.getByRole('button', { name: 'Sao chép ghi chú c7b-2' })
+      await act(async () => {
+        fireEvent.click(copyBtn)
+      })
+
+      expect(screen.getByText('Đã chép')).toBeInTheDocument()
+      // Có đúng 1 timer feedback đang chạy
+      expect(jest.getTimerCount()).toBe(1)
+
+      unmount()
+
+      // Sau unmount: clearTimeout đã được gọi và timer count trở về 0
+      expect(clearTimeoutSpy).toHaveBeenCalled()
+      expect(jest.getTimerCount()).toBe(0)
+
+      clearTimeoutSpy.mockRestore()
+    })
+
+    it('14. unmount while pending does not create feedback timer upon resolution', async () => {
+      jest.useFakeTimers()
+      const deferred = createDeferred<void>()
+      mockClipboard(jest.fn().mockReturnValue(deferred.promise))
+
+      const { unmount } = renderNotebookForC7b()
+
+      expect(await screen.findByText('Quyết định áp dụng nguyên tắc phân chia 1 cho kết cấu vỏ.')).toBeInTheDocument()
+
+      const copyBtn = screen.getByRole('button', { name: 'Sao chép ghi chú c7b-2' })
+      fireEvent.click(copyBtn)
+
+      unmount()
+
+      const timersBeforeResolve = jest.getTimerCount()
+
+      // Resolve sau unmount
+      await act(async () => {
+        deferred.resolve()
+      })
+
+      // Không lập lịch feedback timer mới sau khi unmount
+      expect(jest.getTimerCount()).toBe(timersBeforeResolve)
+    })
+
+    it('15. copies note accurately in filtered/searched list', async () => {
+      const mockWrite = jest.fn().mockResolvedValue(undefined)
+      mockClipboard(mockWrite)
+      renderNotebookForC7b()
+
+      expect(await screen.findByText('Quyết định áp dụng nguyên tắc phân chia 1 cho kết cấu vỏ.')).toBeInTheDocument()
+
+      // Lọc theo search 'nguyên tắc'
+      const searchInput = screen.getByPlaceholderText(/tìm kiếm ghi chú/i)
+      fireEvent.change(searchInput, { target: { value: 'nguyên tắc' } })
+
+      // Chỉ c7b-2 hiển thị
+      expect(screen.queryByText(/Phát hiện mâu thuẫn/i)).not.toBeInTheDocument()
+      expect(screen.getByText('Quyết định áp dụng nguyên tắc phân chia 1 cho kết cấu vỏ.')).toBeInTheDocument()
+
+      const copyBtn2 = screen.getByRole('button', { name: 'Sao chép ghi chú c7b-2' })
+      fireEvent.click(copyBtn2)
+
+      expect(mockWrite).toHaveBeenCalledWith('Quyết định áp dụng nguyên tắc phân chia 1 cho kết cấu vỏ.')
+      expect(await screen.findByText('Đã chép')).toBeInTheDocument()
+    })
+
+    it('16. copy does not invoke create or delete mutation', async () => {
+      mockClipboard(jest.fn().mockResolvedValue(undefined))
+      renderNotebookForC7b()
+
+      expect(await screen.findByText('Quyết định áp dụng nguyên tắc phân chia 1 cho kết cấu vỏ.')).toBeInTheDocument()
+
+      const copyBtn2 = screen.getByRole('button', { name: 'Sao chép ghi chú c7b-2' })
+      fireEvent.click(copyBtn2)
+
+      expect(apiClient.createResearchNote).not.toHaveBeenCalled()
+      expect(apiClient.deleteResearchNote).not.toHaveBeenCalled()
+    })
+
+    it('17. copy preserves draft content, draft noteType, and filter/search inputs', async () => {
+      mockClipboard(jest.fn().mockResolvedValue(undefined))
+      const onContentChange = jest.fn()
+      const onNoteTypeChange = jest.fn()
+
+      renderNotebookForC7b(C7B_NOTES, {
+        content: 'Bản nháp đang gõ dở...',
+        noteType: 'decision',
+        onContentChange,
+        onNoteTypeChange,
+      })
+
+      expect(await screen.findByText('Quyết định áp dụng nguyên tắc phân chia 1 cho kết cấu vỏ.')).toBeInTheDocument()
+
+      // Nhập từ khóa tìm kiếm
+      const searchInput = screen.getByPlaceholderText(/tìm kiếm ghi chú/i) as HTMLInputElement
+      fireEvent.change(searchInput, { target: { value: 'kết cấu' } })
+
+      // Click copy
+      const copyBtn2 = screen.getByRole('button', { name: 'Sao chép ghi chú c7b-2' })
+      fireEvent.click(copyBtn2)
+
+      // Draft form không bị thay đổi
+      expect(onContentChange).not.toHaveBeenCalled()
+      expect(onNoteTypeChange).not.toHaveBeenCalled()
+      expect(searchInput.value).toBe('kết cấu')
+    })
+
+    it('18. hiding a card with active feedback via filter does not transfer feedback to another note', async () => {
+      jest.useFakeTimers()
+      const mockWrite = jest.fn().mockResolvedValue(undefined)
+      mockClipboard(mockWrite)
+      renderNotebookForC7b()
+
+      expect(await screen.findByText('Quyết định áp dụng nguyên tắc phân chia 1 cho kết cấu vỏ.')).toBeInTheDocument()
+
+      // Copy c7b-1 (insight)
+      const copyBtn1 = screen.getByRole('button', { name: 'Sao chép ghi chú c7b-1' })
+      await act(async () => {
+        fireEvent.click(copyBtn1)
+      })
+      expect(screen.getByText('Đã chép')).toBeInTheDocument()
+
+      // Lọc sang 'decision' (c7b-1 bị ẩn, chỉ c7b-2 hiển thị)
+      const decisionBtn = screen.getByRole('button', { name: /decision/i })
+      act(() => {
+        fireEvent.click(decisionBtn)
+      })
+
+      // c7b-1 đã bị ẩn
+      expect(screen.queryByText(/Phát hiện mâu thuẫn/i)).not.toBeInTheDocument()
+      // Card c7b-2 hiển thị nút sao chép bình thường, tuyệt đối KHÔNG hiển thị "Đã chép"
+      expect(screen.queryByText('Đã chép')).not.toBeInTheDocument()
+      expect(screen.getByRole('button', { name: 'Sao chép ghi chú c7b-2' })).toBeInTheDocument()
+    })
+
+    it('19. preserves copy button during success feedback and allows re-copying same note before 2000ms', async () => {
+      jest.useFakeTimers()
+      const mockWrite = jest.fn().mockResolvedValue(undefined)
+      mockClipboard(mockWrite)
+      renderNotebookForC7b()
+
+      expect(await screen.findByText('Quyết định áp dụng nguyên tắc phân chia 1 cho kết cấu vỏ.')).toBeInTheDocument()
+
+      // Bấm copy lần 1
+      const copyBtn = screen.getByRole('button', { name: 'Sao chép ghi chú c7b-2' })
+      await act(async () => {
+        fireEvent.click(copyBtn)
+      })
+
+      // Feedback "Đã chép" hiển thị
+      expect(screen.getByText('Đã chép')).toBeInTheDocument()
+      expect(mockWrite).toHaveBeenCalledTimes(1)
+
+      // Nút copy vẫn tồn tại và dùng được (không bị thay thế)
+      const reCopyBtn = screen.getByRole('button', { name: 'Sao chép ghi chú c7b-2' })
+      expect(reCopyBtn).toBeInTheDocument()
+
+      // Sau 1000ms (trước khi timer 2000ms hết), bấm copy lại cùng note
+      act(() => {
+        jest.advanceTimersByTime(1000)
+      })
+
+      await act(async () => {
+        fireEvent.click(reCopyBtn)
+      })
+
+      // Gọi writeText lần thứ hai
+      expect(mockWrite).toHaveBeenCalledTimes(2)
+      expect(screen.getByText('Đã chép')).toBeInTheDocument()
+
+      // Trôi thêm 1000ms (tổng 2000ms từ lần bấm 1): feedback vẫn còn vì timer đã được reset theo lần bấm 2
+      act(() => {
+        jest.advanceTimersByTime(1000)
+      })
+      expect(screen.getByText('Đã chép')).toBeInTheDocument()
+
+      // Trôi tiếp 1000ms nữa (đủ 2000ms từ lần bấm 2): feedback hết
+      act(() => {
+        jest.advanceTimersByTime(1000)
+      })
+      expect(screen.queryByText('Đã chép')).not.toBeInTheDocument()
+      expect(screen.getByRole('button', { name: 'Sao chép ghi chú c7b-2' })).toBeInTheDocument()
     })
   })
 })
