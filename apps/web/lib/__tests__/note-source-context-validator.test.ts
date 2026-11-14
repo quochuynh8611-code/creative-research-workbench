@@ -1,7 +1,7 @@
 import { validateNoteSourceContext } from '../note-source-context-validator'
-import type { Triz9WindowsSourceContext, TrizMatrixSourceContext } from '../types'
+import type { Triz9WindowsSourceContext, TrizMatrixSourceContext, PrincipleSuggestionSourceContext } from '../types'
 
-describe('validateNoteSourceContext dispatcher (Batch C7c-2c)', () => {
+describe('validateNoteSourceContext dispatcher (Batch C7c-2d-2)', () => {
   const VALID_9_WINDOWS: Triz9WindowsSourceContext = {
     schema_version: 1,
     source_type: 'triz_9_windows',
@@ -20,6 +20,13 @@ describe('validateNoteSourceContext dispatcher (Batch C7c-2c)', () => {
     lens: 'business',
   }
 
+  const VALID_SUGGESTION: PrincipleSuggestionSourceContext = {
+    schema_version: 1,
+    source_type: 'principle_suggestion',
+    principle_id: 35,
+    method_id: 'triz-principle-35',
+  }
+
   it('route thành công triz_9_windows', () => {
     const res = validateNoteSourceContext(VALID_9_WINDOWS)
     expect(res.ok).toBe(true)
@@ -36,6 +43,14 @@ describe('validateNoteSourceContext dispatcher (Batch C7c-2c)', () => {
     }
   })
 
+  it('route thành công principle_suggestion', () => {
+    const res = validateNoteSourceContext(VALID_SUGGESTION)
+    expect(res.ok).toBe(true)
+    if (res.ok) {
+      expect(res.data.source_type).toBe('principle_suggestion')
+    }
+  })
+
   it('bắt lỗi khi triz_9_windows không hợp lệ', () => {
     const invalid9W = { ...VALID_9_WINDOWS, cell_label: '' }
     const res = validateNoteSourceContext(invalid9W)
@@ -45,6 +60,12 @@ describe('validateNoteSourceContext dispatcher (Batch C7c-2c)', () => {
   it('bắt lỗi khi triz_matrix không hợp lệ', () => {
     const invalidMatrix = { ...VALID_MATRIX, principle_id: 0 }
     const res = validateNoteSourceContext(invalidMatrix)
+    expect(res.ok).toBe(false)
+  })
+
+  it('bắt lỗi khi principle_suggestion không hợp lệ', () => {
+    const invalidSuggestion = { ...VALID_SUGGESTION, method_id: '' }
+    const res = validateNoteSourceContext(invalidSuggestion)
     expect(res.ok).toBe(false)
   })
 

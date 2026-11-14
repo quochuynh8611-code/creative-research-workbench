@@ -10,6 +10,7 @@ describe('Phase 5.6 & P2 — PrincipleSuggestions Component Tests', () => {
     {
       id: 1,
       principle_id: 10,
+      method_id: 'triz-principle-10',
       title: 'Preliminary Action (Tác động sơ bộ)',
       description: 'Thực hiện trước một phần hoặc toàn bộ hành động cần thiết.',
       everyday_title: 'Chuẩn bị sẵn sàng (Tác động sơ bộ)',
@@ -23,6 +24,7 @@ describe('Phase 5.6 & P2 — PrincipleSuggestions Component Tests', () => {
     {
       id: 2,
       principle_id: 35,
+      method_id: 'triz-principle-35',
       title: 'Parameter changes (Chuyển đổi thông số)',
       description: 'Thay đổi trạng thái tập hợp, mật độ, độ dẻo, nhiệt độ.',
       // Không có everyday metadata để test fallback
