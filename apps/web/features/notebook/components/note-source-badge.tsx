@@ -1,6 +1,7 @@
 import React from 'react'
 import { validateNoteSourceContext } from '@/lib/note-source-context-validator'
 import { cn } from '@/lib/utils'
+import type { NoteSourceContext } from '@/lib/types'
 
 export interface NoteSourceBadgeProps {
   sourceContext?: unknown | null
@@ -28,6 +29,38 @@ const SOURCE_STYLES = {
     'bg-indigo-50 text-indigo-700 border-indigo-200 dark:bg-indigo-950/40 dark:text-indigo-300 dark:border-indigo-800',
 } as const
 
+const CANDIDATE_STATUS_LABELS = {
+  candidate: 'Đang xem xét',
+  accepted: 'Đã chấp nhận',
+  rejected: 'Bị từ chối',
+} as const
+
+function formatSourceTooltip(data: NoteSourceContext): string {
+  switch (data.source_type) {
+    case 'triz_9_windows':
+      return `Lưới 9 màn hình: ${data.cell_label}`
+    case 'triz_matrix':
+      return `Ma trận TRIZ: Nguyên tắc #${data.principle_id} (Cải thiện: #${data.improving_param_id}, Xấu đi: #${data.worsening_param_id})`
+    case 'principle_suggestion':
+      return `Gợi ý nguyên tắc: Nguyên tắc #${data.principle_id} (${data.method_id})`
+    case 'evidence': {
+      const truncatedRef =
+        data.source_ref.length > 100
+          ? `${data.source_ref.slice(0, 100)}...`
+          : data.source_ref
+      return `Bằng chứng: ${truncatedRef}`
+    }
+    case 'candidate_solution': {
+      const statusLabel =
+        CANDIDATE_STATUS_LABELS[data.solution_status] || data.solution_status
+      if (data.principle_used !== undefined && data.principle_used !== null) {
+        return `Giải pháp ứng viên: ${statusLabel} (Nguyên tắc #${data.principle_used})`
+      }
+      return `Giải pháp ứng viên: ${statusLabel}`
+    }
+  }
+}
+
 export function NoteSourceBadge({ sourceContext, className }: NoteSourceBadgeProps) {
   if (!sourceContext || typeof sourceContext !== 'object') {
     return null
@@ -46,9 +79,11 @@ export function NoteSourceBadge({ sourceContext, className }: NoteSourceBadgePro
     return null
   }
 
+  const tooltip = formatSourceTooltip(validation.data)
+
   return (
     <span
-      title={label}
+      title={tooltip}
       className={cn(
         'inline-flex items-center px-2 py-0.5 rounded text-[11px] font-medium border truncate max-w-[10rem] shrink-0',
         style,
