@@ -181,6 +181,7 @@ class MethodRecommender:
                     "id": p_num,
                     "principle_id": p_num,
                     "principle": p_num,
+                    "method_id": f"triz-principle-{p_num}",
                     "title": title,
                     "name_vi": name_vi,
                     "name_en": name_en,
