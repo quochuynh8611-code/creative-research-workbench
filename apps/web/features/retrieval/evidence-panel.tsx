@@ -8,6 +8,7 @@ import { searchKnowledge } from '@/lib/api-client'
 import { cn } from '@/lib/utils'
 import { buildSearchExplorerUrl } from '@/features/search/search-utils'
 import type { SearchResultItem, NoteDraft } from '@/lib/types'
+import { validateEvidenceContext } from '@/lib/evidence-context-validator'
 
 interface EvidencePanelProps {
   sessionId: string
@@ -33,6 +34,7 @@ export function EvidencePanel({
 
   const [searchInput, setSearchInput] = useState(initialQuery)
   const [activeQuery, setActiveQuery] = useState(initialQuery)
+  const [saveError, setSaveError] = useState<string | null>(null)
 
   const {
     data,
@@ -115,6 +117,16 @@ export function EvidencePanel({
           </button>
         </div>
       </div>
+
+      {saveError && (
+        <div
+          role="alert"
+          className="p-3 rounded-lg border border-destructive/20 bg-destructive/10 text-destructive text-xs flex items-center gap-2"
+        >
+          <AlertCircle className="w-4 h-4 shrink-0" />
+          <span>{saveError}</span>
+        </div>
+      )}
 
       {/* Loading state */}
       {isLoading && (
@@ -218,13 +230,27 @@ export function EvidencePanel({
                     <div className="pt-2 border-t border-border/50 flex items-center justify-end">
                       <button
                         type="button"
-                        onClick={() =>
+                        onClick={() => {
+                          const contextCandidate = {
+                            schema_version: 1,
+                            source_type: 'evidence',
+                            source_ref: item.source_ref,
+                          }
+
+                          const validation = validateEvidenceContext(contextCandidate)
+                          if (!validation.ok) {
+                            setSaveError(`Context không hợp lệ: ${validation.error}`)
+                            return
+                          }
+
+                          setSaveError(null)
                           onSaveAsNote({
                             content: `[Trích dẫn từ ${item.source_ref}]\n"${item.excerpt}"`,
                             note_type: 'insight',
                             source_chunk_id: item.chunk_id || null,
+                            source_context: validation.data,
                           })
-                        }
+                        }}
                         className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-primary/10 hover:bg-primary/20 text-primary border border-primary/20 transition-all cursor-pointer"
                       >
                         <Bookmark className="w-3.5 h-3.5" />

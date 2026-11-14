@@ -259,10 +259,17 @@ export interface PrincipleSuggestionSourceContext {
   method_id: string
 }
 
+export interface EvidenceSourceContext {
+  schema_version: 1
+  source_type: 'evidence'
+  source_ref: string
+}
+
 export type NoteSourceContext =
   | Triz9WindowsSourceContext
   | TrizMatrixSourceContext
   | PrincipleSuggestionSourceContext
+  | EvidenceSourceContext
 
 export interface ResearchNote {
   id: string
