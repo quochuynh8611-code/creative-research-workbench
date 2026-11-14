@@ -11,6 +11,7 @@ import {
 } from '@/lib/api-client'
 import { validateNoteSourceContext } from '@/lib/note-source-context-validator'
 import { extractApiErrorMessage } from '@/lib/api-error-message'
+import { NoteSourceBadge } from './components/note-source-badge'
 import type { NoteType, CreateResearchNoteInput, ResearchNote, NoteDraft } from '@/lib/types'
 
 interface ResearchNotebookProps {
@@ -511,13 +512,16 @@ export function ResearchNotebook({
                 className="group bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 p-4 shadow-sm hover:border-slate-300 dark:hover:border-slate-700 transition-all space-y-2.5"
               >
                 <div className="flex items-center justify-between gap-2">
-                  <span
-                    className={`inline-flex items-center px-2 py-0.5 rounded text-[11px] font-semibold border ${
-                      NOTE_TYPE_STYLES[note.note_type] || NOTE_TYPE_STYLES.insight
-                    }`}
-                  >
-                    {NOTE_TYPE_LABELS[note.note_type] || note.note_type}
-                  </span>
+                  <div className="flex flex-wrap items-center gap-1.5 min-w-0">
+                    <span
+                      className={`inline-flex items-center px-2 py-0.5 rounded text-[11px] font-semibold border ${
+                        NOTE_TYPE_STYLES[note.note_type] || NOTE_TYPE_STYLES.insight
+                      }`}
+                    >
+                      {NOTE_TYPE_LABELS[note.note_type] || note.note_type}
+                    </span>
+                    <NoteSourceBadge sourceContext={note.source_context} />
+                  </div>
 
                   <div className="flex items-center gap-2">
                     <span className="text-[11px] text-slate-400 dark:text-slate-500">
