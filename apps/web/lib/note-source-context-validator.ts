@@ -5,12 +5,14 @@
  * Hỗ trợ phân nhánh an toàn theo discriminator `source_type`:
  *   - 'triz_9_windows': validateTriz9WindowsContext
  *   - 'triz_matrix': validateTrizMatrixContext
+ *   - 'principle_suggestion': validatePrincipleSuggestionContext
  *   - các nguồn khác / unknown: fail-closed với thông báo lỗi chuỗi an toàn.
  */
 
 import type { NoteSourceContext } from './types'
 import { validateTriz9WindowsContext } from './triz-9-windows-context-validator'
 import { validateTrizMatrixContext } from './triz-matrix-context-validator'
+import { validatePrincipleSuggestionContext } from './principle-suggestion-context-validator'
 
 export type NoteSourceContextValidationResult =
   | { ok: true; data: NoteSourceContext }
@@ -34,6 +36,10 @@ export function validateNoteSourceContext(input: unknown): NoteSourceContextVali
 
   if (sourceType === 'triz_matrix') {
     return validateTrizMatrixContext(input)
+  }
+
+  if (sourceType === 'principle_suggestion') {
+    return validatePrincipleSuggestionContext(input)
   }
 
   return {

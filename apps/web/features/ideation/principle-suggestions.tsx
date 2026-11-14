@@ -1,10 +1,11 @@
 'use client'
 
-import React from 'react'
-import { Lightbulb, CheckCircle2, ArrowRight, Sparkles, HelpCircle, Bookmark } from 'lucide-react'
+import React, { useState } from 'react'
+import { Lightbulb, CheckCircle2, ArrowRight, Sparkles, HelpCircle, Bookmark, AlertCircle } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { RecommendedMethod, NoteDraft } from '@/lib/types'
 import { EverydayMetadataSection } from '@/features/triz/everyday-metadata-section'
+import { validatePrincipleSuggestionContext } from '@/lib/principle-suggestion-context-validator'
 
 interface PrincipleSuggestionsProps {
   methods?: RecommendedMethod[]
@@ -19,6 +20,8 @@ export function PrincipleSuggestions({
   onSaveAsNote,
   className,
 }: PrincipleSuggestionsProps) {
+  const [saveError, setSaveError] = useState<string | null>(null)
+
   if (!methods || methods.length === 0) {
     return (
       <div className={cn('p-8 rounded-2xl border border-dashed border-border text-center space-y-4 bg-card/30', className)}>
@@ -54,6 +57,16 @@ export function PrincipleSuggestions({
         </div>
       </div>
 
+      {saveError && (
+        <div
+          role="alert"
+          className="p-3 rounded-lg border border-destructive/20 bg-destructive/10 text-destructive text-xs flex items-center gap-2"
+        >
+          <AlertCircle className="w-4 h-4 shrink-0" />
+          <span>{saveError}</span>
+        </div>
+      )}
+
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {methods.map((method) => {
           const principleNum = method.principle_id || method.principle || method.id
@@ -83,12 +96,27 @@ export function PrincipleSuggestions({
                 {onSaveAsNote && (
                   <button
                     type="button"
-                    onClick={() =>
+                    onClick={() => {
+                      const contextCandidate = {
+                        schema_version: 1,
+                        source_type: 'principle_suggestion',
+                        principle_id: method.principle_id,
+                        method_id: method.method_id,
+                      }
+
+                      const validation = validatePrincipleSuggestionContext(contextCandidate)
+                      if (!validation.ok) {
+                        setSaveError(`Context không hợp lệ: ${validation.error}`)
+                        return
+                      }
+
+                      setSaveError(null)
                       onSaveAsNote({
                         content: `[Nguyên tắc sáng tạo #${principleNum}: ${method.title}]\n${method.description}`,
                         note_type: 'hypothesis',
+                        source_context: validation.data,
                       })
-                    }
+                    }}
                     className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-amber-500/10 hover:bg-amber-500/20 text-amber-700 dark:text-amber-400 border border-amber-500/20 transition-all cursor-pointer"
                   >
                     <Bookmark className="w-3.5 h-3.5" />

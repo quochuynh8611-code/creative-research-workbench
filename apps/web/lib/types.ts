@@ -71,6 +71,7 @@ export interface RecommendedMethod {
   id: number
   principle_id: number
   principle?: number
+  method_id?: string
   title: string
   description: string
   everyday_title?: string
@@ -251,7 +252,17 @@ export interface TrizMatrixSourceContext {
   lens: 'engineering' | 'business' | 'everyday'
 }
 
-export type NoteSourceContext = Triz9WindowsSourceContext | TrizMatrixSourceContext
+export interface PrincipleSuggestionSourceContext {
+  schema_version: 1
+  source_type: 'principle_suggestion'
+  principle_id: number
+  method_id: string
+}
+
+export type NoteSourceContext =
+  | Triz9WindowsSourceContext
+  | TrizMatrixSourceContext
+  | PrincipleSuggestionSourceContext
 
 export interface ResearchNote {
   id: string
