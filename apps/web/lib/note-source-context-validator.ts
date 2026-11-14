@@ -7,6 +7,7 @@
  *   - 'triz_matrix': validateTrizMatrixContext
  *   - 'principle_suggestion': validatePrincipleSuggestionContext
  *   - 'evidence': validateEvidenceContext
+ *   - 'candidate_solution': validateCandidateSolutionContext
  *   - các nguồn khác / unknown: fail-closed với thông báo lỗi chuỗi an toàn.
  */
 
@@ -15,6 +16,7 @@ import { validateTriz9WindowsContext } from './triz-9-windows-context-validator'
 import { validateTrizMatrixContext } from './triz-matrix-context-validator'
 import { validatePrincipleSuggestionContext } from './principle-suggestion-context-validator'
 import { validateEvidenceContext } from './evidence-context-validator'
+import { validateCandidateSolutionContext } from './candidate-solution-context-validator'
 
 export type NoteSourceContextValidationResult =
   | { ok: true; data: NoteSourceContext }
@@ -46,6 +48,10 @@ export function validateNoteSourceContext(input: unknown): NoteSourceContextVali
 
   if (sourceType === 'evidence') {
     return validateEvidenceContext(input)
+  }
+
+  if (sourceType === 'candidate_solution') {
+    return validateCandidateSolutionContext(input)
   }
 
   return {

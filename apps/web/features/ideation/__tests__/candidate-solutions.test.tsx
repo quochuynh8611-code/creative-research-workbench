@@ -25,7 +25,7 @@ function createTestQueryClient() {
 
 const MOCK_SOLUTIONS: CandidateSolution[] = [
   {
-    id: 'sol-001',
+    id: '550e8400-e29b-41d4-a716-446655440001',
     session_id: 'ses-123',
     title: 'Màng nano polymer tự phục hồi',
     mechanism: 'Cơ chế tự liên kết ngang khi bề mặt xuất hiện vết nứt vi mô.',
@@ -37,7 +37,7 @@ const MOCK_SOLUTIONS: CandidateSolution[] = [
     updated_at: '2026-10-01T08:30:00Z',
   },
   {
-    id: 'sol-002',
+    id: '550e8400-e29b-41d4-a716-446655440002',
     session_id: 'ses-123',
     title: 'Cánh tản nhiệt vi kênh đa tầng',
     mechanism: 'Ứng dụng vi dòng chảy cưỡng bức để giảm gradient nhiệt.',
@@ -280,7 +280,7 @@ describe('CandidateSolutions Component', () => {
     fireEvent.click(acceptBtn)
 
     await waitFor(() => {
-      expect(apiClient.updateCandidateSolution).toHaveBeenCalledWith('ses-123', 'sol-001', {
+      expect(apiClient.updateCandidateSolution).toHaveBeenCalledWith('ses-123', '550e8400-e29b-41d4-a716-446655440001', {
         status: 'accepted',
       })
     })
@@ -295,7 +295,7 @@ describe('CandidateSolutions Component', () => {
     ;(apiClient.listCandidateSolutions as jest.Mock).mockResolvedValue(mockResponse)
     ;(apiClient.deleteCandidateSolution as jest.Mock).mockResolvedValueOnce({
       status: 'deleted',
-      id: 'sol-001',
+      id: '550e8400-e29b-41d4-a716-446655440001',
       session_id: 'ses-123',
     })
 
@@ -312,7 +312,7 @@ describe('CandidateSolutions Component', () => {
     fireEvent.click(deleteBtn)
 
     await waitFor(() => {
-      expect(apiClient.deleteCandidateSolution).toHaveBeenCalledWith('ses-123', 'sol-001')
+      expect(apiClient.deleteCandidateSolution).toHaveBeenCalledWith('ses-123', '550e8400-e29b-41d4-a716-446655440001')
     })
   })
 

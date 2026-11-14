@@ -658,7 +658,7 @@ describe('Phase 5.4 — Problem Intake & Structuring Canvas Tests', () => {
       mockedListCandidateSolutions.mockResolvedValue({
         data: [
           {
-            id: 'sol-101',
+            id: '550e8400-e29b-41d4-a716-446655440101',
             session_id: 'ses-456',
             title: 'Hợp kim titan siêu nhẹ',
             mechanism: 'Cấu trúc mạng tổ ong rỗng chịu lực phân tán.',

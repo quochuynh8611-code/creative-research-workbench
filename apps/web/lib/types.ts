@@ -265,11 +265,20 @@ export interface EvidenceSourceContext {
   source_ref: string
 }
 
+export type CandidateSolutionSourceContext = {
+  schema_version: 1
+  source_type: 'candidate_solution'
+  solution_id: string
+  solution_status: 'candidate' | 'accepted' | 'rejected'
+  principle_used?: number | string
+}
+
 export type NoteSourceContext =
   | Triz9WindowsSourceContext
   | TrizMatrixSourceContext
   | PrincipleSuggestionSourceContext
   | EvidenceSourceContext
+  | CandidateSolutionSourceContext
 
 export interface ResearchNote {
   id: string

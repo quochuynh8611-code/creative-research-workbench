@@ -25,6 +25,7 @@ import {
   updateCandidateSolution,
   deleteCandidateSolution,
 } from '@/lib/api-client'
+import { validateCandidateSolutionContext } from '@/lib/candidate-solution-context-validator'
 import type {
   SolutionStatus,
   CandidateSolution,
@@ -71,6 +72,7 @@ export function CandidateSolutions({
   const [selectedStatusFilter, setSelectedStatusFilter] = useState<string>('all')
   const [validationError, setValidationError] = useState<string | null>(null)
   const [actionError, setActionError] = useState<string | null>(null)
+  const [saveError, setSaveError] = useState<string | null>(null)
   const [isFormOpen, setIsFormOpen] = useState(true)
 
   useEffect(() => {
@@ -399,6 +401,17 @@ export function CandidateSolutions({
           </div>
         </div>
 
+        {/* Save error state */}
+        {saveError && (
+          <div
+            role="alert"
+            className="p-3 rounded-xl border border-destructive/20 bg-destructive/10 text-destructive text-xs font-medium flex items-center gap-2"
+          >
+            <AlertCircle className="w-4 h-4 shrink-0" />
+            <span>{saveError}</span>
+          </div>
+        )}
+
         {/* Loading state */}
         {isLoading && (
           <div className="p-8 text-center bg-card rounded-2xl border border-border space-y-3">
@@ -604,10 +617,24 @@ export function CandidateSolutions({
                       <button
                         type="button"
                         onClick={() => {
+                          const contextPayload = {
+                            schema_version: 1,
+                            source_type: 'candidate_solution',
+                            solution_id: sol.id,
+                            solution_status: sol.status,
+                          }
+                          const validation = validateCandidateSolutionContext(contextPayload)
+                          if (!validation.ok) {
+                            setSaveError(`Không thể tạo context: ${validation.error}`)
+                            return
+                          }
+                          setSaveError(null)
+
                           const riskPart = sol.risk_notes ? `\nGhi chú rủi ro: ${sol.risk_notes}` : ''
                           onSaveAsNote({
                             content: `[Giải pháp ứng viên: ${sol.title}]\nCơ chế: ${sol.mechanism}\nĐiểm mới: ${noveltyPercent}% | Tính khả thi: ${feasibilityPercent}%${riskPart}`,
                             note_type: sol.status === 'accepted' ? 'decision' : 'hypothesis',
+                            source_context: validation.data,
                           })
                         }}
                         className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold rounded-lg bg-primary/10 hover:bg-primary/20 text-primary border border-primary/20 transition-all cursor-pointer"
