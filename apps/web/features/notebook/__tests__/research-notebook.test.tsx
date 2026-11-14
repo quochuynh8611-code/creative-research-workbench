@@ -1,6 +1,6 @@
 /** @jest-environment jsdom */
 import React from 'react'
-import { render, screen, fireEvent, waitFor, act } from '@testing-library/react'
+import { render, screen, fireEvent, waitFor, act, within } from '@testing-library/react'
 import '@testing-library/jest-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { ResearchNotebook } from '../research-notebook'
@@ -772,7 +772,9 @@ describe('ResearchNotebook Component', () => {
       // Chờ dữ liệu load xong
       expect(await screen.findByText('Phát hiện cơ chế phân tán nhiệt qua cấu trúc tổ ong')).toBeInTheDocument()
 
-      const allBtn = screen.getByRole('button', { name: /tất cả/i })
+      const allBtn = within(
+        screen.getByRole('toolbar', { name: /bộ lọc danh sách/i })
+      ).getByRole('button', { name: /tất cả/i })
       const insightBtn = screen.getByRole('button', { name: /insight/i })
       const hypothesisBtn = screen.getByRole('button', { name: /hypothesis/i })
       const decisionBtn = screen.getByRole('button', { name: /decision/i })
@@ -870,7 +872,11 @@ describe('ResearchNotebook Component', () => {
       expect(screen.queryByText('Thử nghiệm phủ lớp graphene đa tầng')).not.toBeInTheDocument()
 
       // Chọn lại Tất cả
-      fireEvent.click(screen.getByRole('button', { name: /tất cả/i }))
+      fireEvent.click(
+        within(
+          screen.getByRole('toolbar', { name: /bộ lọc danh sách/i })
+        ).getByRole('button', { name: /tất cả/i })
+      )
 
       expect(screen.getByText('Phát hiện cơ chế phân tán nhiệt qua cấu trúc tổ ong')).toBeInTheDocument()
       expect(screen.getByText('Thử nghiệm phủ lớp graphene đa tầng')).toBeInTheDocument()
@@ -980,7 +986,9 @@ describe('ResearchNotebook Component', () => {
       fireEvent.change(searchInput, { target: { value: 'graphene' } })
 
       // Dù chỉ có 3 note khớp search, counters của các loại vẫn giữ nguyên theo toàn bộ session
-      const allBtn = screen.getByRole('button', { name: /tất cả/i })
+      const allBtn = within(
+        screen.getByRole('toolbar', { name: /bộ lọc danh sách/i })
+      ).getByRole('button', { name: /tất cả/i })
       const insightBtn = screen.getByRole('button', { name: /insight/i })
       const hypothesisBtn = screen.getByRole('button', { name: /hypothesis/i })
       const decisionBtn = screen.getByRole('button', { name: /decision/i })

@@ -36,6 +36,36 @@ const NOTE_TYPE_LABELS: Record<NoteType, string> = {
 
 type FilterType = NoteType | 'all'
 
+export type SourceFilter =
+  | 'all'
+  | 'triz_9_windows'
+  | 'triz_matrix'
+  | 'principle_suggestion'
+  | 'evidence'
+  | 'candidate_solution'
+  | 'manual'
+
+const SOURCE_FILTER_OPTIONS: { key: SourceFilter; label: string }[] = [
+  { key: 'all', label: 'Tất cả' },
+  { key: 'triz_9_windows', label: 'Lưới 9 màn hình' },
+  { key: 'triz_matrix', label: 'Ma trận TRIZ' },
+  { key: 'principle_suggestion', label: 'Gợi ý nguyên tắc' },
+  { key: 'evidence', label: 'Bằng chứng' },
+  { key: 'candidate_solution', label: 'Giải pháp ứng viên' },
+  { key: 'manual', label: 'Thủ công' },
+]
+
+function getNoteSourceType(note: ResearchNote): SourceFilter {
+  if (!note.source_context || typeof note.source_context !== 'object') {
+    return 'manual'
+  }
+  const validation = validateNoteSourceContext(note.source_context)
+  if (!validation.ok) {
+    return 'manual'
+  }
+  return validation.data.source_type
+}
+
 type CopyStatus = {
   noteId: string
   status: 'success' | 'error'
@@ -219,6 +249,7 @@ export function ResearchNotebook({
   }
 
   const [selectedType, setSelectedType] = useState<FilterType>('all')
+  const [selectedSource, setSelectedSource] = useState<SourceFilter>('all')
   const [searchQuery, setSearchQuery] = useState('')
 
   const notes = notesResponse?.data ?? []
@@ -232,16 +263,34 @@ export function ResearchNotebook({
     action: notes.filter((n) => n.note_type === 'action').length,
   }
 
+  const sourceCounters: Record<SourceFilter, number> = {
+    all: notes.length,
+    triz_9_windows: 0,
+    triz_matrix: 0,
+    principle_suggestion: 0,
+    evidence: 0,
+    candidate_solution: 0,
+    manual: 0,
+  }
+
+  notes.forEach((note) => {
+    const st = getNoteSourceType(note)
+    sourceCounters[st] = (sourceCounters[st] || 0) + 1
+  })
+
   const filteredNotes = notes.filter((note) => {
+    const matchesSource =
+      selectedSource === 'all' || getNoteSourceType(note) === selectedSource
     const matchesType = selectedType === 'all' || note.note_type === selectedType
     const matchesSearch =
       !searchQuery.trim() ||
       note.content.toLowerCase().includes(searchQuery.trim().toLowerCase())
-    return matchesType && matchesSearch
+    return matchesSource && matchesType && matchesSearch
   })
 
   const handleClearFilters = () => {
     setSelectedType('all')
+    setSelectedSource('all')
     setSearchQuery('')
   }
 
@@ -472,6 +521,29 @@ export function ResearchNotebook({
                     key={opt.key}
                     type="button"
                     onClick={() => setSelectedType(opt.key)}
+                    className={cn(
+                      'inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium rounded-lg border transition-colors cursor-pointer',
+                      isActive
+                        ? 'bg-indigo-600 text-white border-indigo-600 shadow-2xs font-semibold'
+                        : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700/50'
+                    )}
+                  >
+                    <span>{`${opt.label} (${count})`}</span>
+                  </button>
+                )
+              })}
+            </div>
+
+            {/* Source Filter Buttons */}
+            <div className="flex flex-wrap items-center gap-1.5" role="toolbar" aria-label="Bộ lọc nguồn">
+              {SOURCE_FILTER_OPTIONS.map((opt) => {
+                const isActive = selectedSource === opt.key
+                const count = sourceCounters[opt.key]
+                return (
+                  <button
+                    key={opt.key}
+                    type="button"
+                    onClick={() => setSelectedSource(opt.key)}
                     className={cn(
                       'inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium rounded-lg border transition-colors cursor-pointer',
                       isActive
