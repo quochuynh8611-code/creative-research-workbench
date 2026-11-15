@@ -109,6 +109,12 @@ export function ResearchNotebook({
   const copyTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const isMountedRef = useRef<boolean>(true)
 
+  const [summaryCopyStatus, setSummaryCopyStatus] = useState<
+    { status: 'success' | 'error'; message?: string } | null
+  >(null)
+  const latestSummaryRequestIdRef = useRef<number>(0)
+  const summaryCopyTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
   useEffect(() => {
     isMountedRef.current = true
     return () => {
@@ -116,6 +122,10 @@ export function ResearchNotebook({
       if (copyTimerRef.current) {
         clearTimeout(copyTimerRef.current)
         copyTimerRef.current = null
+      }
+      if (summaryCopyTimerRef.current) {
+        clearTimeout(summaryCopyTimerRef.current)
+        summaryCopyTimerRef.current = null
       }
     }
   }, [])
@@ -294,6 +304,66 @@ export function ResearchNotebook({
     setSearchQuery('')
   }
 
+  const handleCopySummary = async () => {
+    latestSummaryRequestIdRef.current += 1
+    const currentRequestId = latestSummaryRequestIdRef.current
+
+    if (summaryCopyTimerRef.current) {
+      clearTimeout(summaryCopyTimerRef.current)
+      summaryCopyTimerRef.current = null
+    }
+    setSummaryCopyStatus(null)
+
+    if (
+      typeof navigator === 'undefined' ||
+      !navigator.clipboard ||
+      typeof navigator.clipboard.writeText !== 'function'
+    ) {
+      if (isMountedRef.current && currentRequestId === latestSummaryRequestIdRef.current) {
+        setSummaryCopyStatus({
+          status: 'error',
+          message: 'Trình duyệt không hỗ trợ sao chép',
+        })
+      }
+      return
+    }
+
+    const summaryText = [
+      'Tổng hợp nguồn ghi chú:',
+      `- Tổng số ghi chú: ${sourceCounters.all}`,
+      `- Lưới 9 màn hình: ${sourceCounters.triz_9_windows}`,
+      `- Ma trận TRIZ: ${sourceCounters.triz_matrix}`,
+      `- Gợi ý nguyên tắc: ${sourceCounters.principle_suggestion}`,
+      `- Bằng chứng: ${sourceCounters.evidence}`,
+      `- Giải pháp ứng viên: ${sourceCounters.candidate_solution}`,
+      `- Thủ công: ${sourceCounters.manual}`,
+    ].join('\n')
+
+    try {
+      await navigator.clipboard.writeText(summaryText)
+
+      if (isMountedRef.current && currentRequestId === latestSummaryRequestIdRef.current) {
+        setSummaryCopyStatus({
+          status: 'success',
+        })
+
+        summaryCopyTimerRef.current = setTimeout(() => {
+          if (isMountedRef.current && currentRequestId === latestSummaryRequestIdRef.current) {
+            setSummaryCopyStatus(null)
+            summaryCopyTimerRef.current = null
+          }
+        }, 2000)
+      }
+    } catch {
+      if (isMountedRef.current && currentRequestId === latestSummaryRequestIdRef.current) {
+        setSummaryCopyStatus({
+          status: 'error',
+          message: 'Không thể sao chép vào bộ nhớ tạm',
+        })
+      }
+    }
+  }
+
   return (
     <div className={`space-y-6 ${className}`}>
       {/* Creation Form Card */}
@@ -431,6 +501,77 @@ export function ResearchNotebook({
             </span>
           </h4>
         </div>
+
+        {/* Source Provenance Summary Panel (chỉ render khi notes.length > 0) */}
+        {!isLoading && !isError && notes.length > 0 && (
+          <div
+            role="region"
+            aria-label="Tổng quan nguồn gốc ghi chú"
+            className="p-3.5 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700/80 space-y-2.5"
+          >
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+                Tổng quan nguồn gốc
+              </span>
+
+              <div className="flex items-center gap-2">
+                {summaryCopyStatus?.status === 'success' && (
+                  <span
+                    className="inline-flex items-center gap-1 text-xs font-medium text-emerald-600 dark:text-emerald-400 px-1.5 py-0.5 rounded bg-emerald-50 dark:bg-emerald-950/40"
+                    role="status"
+                    aria-live="polite"
+                  >
+                    <Check className="w-3.5 h-3.5" />
+                    <span>Đã chép tổng hợp</span>
+                  </span>
+                )}
+
+                {summaryCopyStatus?.status === 'error' && (
+                  <span
+                    className="inline-flex items-center gap-1 text-xs font-medium text-rose-600 dark:text-rose-400 px-1.5 py-0.5 rounded bg-rose-50 dark:bg-rose-950/40"
+                    role="alert"
+                  >
+                    <span>{summaryCopyStatus.message}</span>
+                  </span>
+                )}
+
+                <button
+                  type="button"
+                  onClick={handleCopySummary}
+                  aria-label="Sao chép tổng hợp"
+                  className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors cursor-pointer shadow-2xs"
+                >
+                  <Copy className="w-3.5 h-3.5" />
+                  <span>Sao chép tổng hợp</span>
+                </button>
+              </div>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-1.5 text-xs text-slate-600 dark:text-slate-400">
+              <span className="px-2 py-0.5 rounded bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 font-medium">
+                {`Tổng số: ${sourceCounters.all}`}
+              </span>
+              <span className="px-2 py-0.5 rounded bg-sky-50 dark:bg-sky-950/40 text-sky-700 dark:text-sky-300 border border-sky-200 dark:border-sky-800 font-medium">
+                {`Lưới 9 màn hình: ${sourceCounters.triz_9_windows}`}
+              </span>
+              <span className="px-2 py-0.5 rounded bg-teal-50 dark:bg-teal-950/40 text-teal-700 dark:text-teal-300 border border-teal-200 dark:border-teal-800 font-medium">
+                {`Ma trận TRIZ: ${sourceCounters.triz_matrix}`}
+              </span>
+              <span className="px-2 py-0.5 rounded bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800 font-medium">
+                {`Gợi ý nguyên tắc: ${sourceCounters.principle_suggestion}`}
+              </span>
+              <span className="px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 font-medium">
+                {`Bằng chứng: ${sourceCounters.evidence}`}
+              </span>
+              <span className="px-2 py-0.5 rounded bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800 font-medium">
+                {`Giải pháp ứng viên: ${sourceCounters.candidate_solution}`}
+              </span>
+              <span className="px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-700 font-medium">
+                {`Thủ công: ${sourceCounters.manual}`}
+              </span>
+            </div>
+          </div>
+        )}
 
         {/* Loading state */}
         {isLoading && (
