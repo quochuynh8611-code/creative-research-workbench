@@ -1,5 +1,8 @@
+import { PHASE_DEVELOPMENT_SERVER } from 'next/constants.js'
+
 /** @type {import('next').NextConfig} */
-const nextConfig = {
+const nextConfig = (phase) => ({
+  distDir: phase === PHASE_DEVELOPMENT_SERVER ? '.next-dev' : '.next',
   output: 'standalone',
   async rewrites() {
     return [
@@ -11,6 +14,6 @@ const nextConfig = {
       },
     ]
   },
-}
+})
 
 export default nextConfig
