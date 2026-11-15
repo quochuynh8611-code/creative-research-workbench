@@ -175,7 +175,7 @@ export function calculateResultMetrics(
     if (checkDirectKeywordMatch(query, item.excerpt, item.source_ref)) {
       keywordMatchCount++
     }
-    if (item.metadata?.golden) {
+    if (item.metadata?.golden === true) {
       goldenCount++
     }
   }
@@ -903,14 +903,14 @@ export function SemanticSearchExplorer() {
                     {/* Result Distribution Metrics Chips */}
                     {metrics.keywordMatchCount > 0 && (
                       <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-medium bg-violet-500/10 text-violet-600 dark:text-violet-400 border border-violet-500/20">
-                        <Sparkles className="w-2.5 h-2.5" />
+                        <Sparkles className="w-2.5 h-2.5" aria-hidden="true" />
                         <span>{metrics.keywordMatchCount} khớp từ khóa</span>
                       </span>
                     )}
 
                     {goldenCount > 0 && (
                       <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-medium bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20">
-                        <Star className="w-2.5 h-2.5 fill-amber-500 text-amber-500" />
+                        <Star className="w-2.5 h-2.5 fill-amber-500 text-amber-500" aria-hidden="true" />
                         <span>{goldenCount} chuẩn vàng</span>
                       </span>
                     )}
