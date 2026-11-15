@@ -44,12 +44,29 @@ export function RelatedSessionsPanel({
     staleTime: 60_000,
   })
 
-  const matchedSessions: MatchedSessionItem[] = data?.matched_sessions || []
+  const rawMatched = data?.matched_sessions
+  const isMalformed =
+    data !== undefined &&
+    data !== null &&
+    (typeof data !== 'object' ||
+      !Array.isArray(rawMatched) ||
+      typeof data.has_problem_frame !== 'boolean')
+
+  const effectiveIsError = isError || isMalformed
+  const matchedSessions: MatchedSessionItem[] = Array.isArray(rawMatched)
+    ? rawMatched.filter(
+        (item) => item && typeof item === 'object' && typeof item.session_id === 'string'
+      )
+    : []
   const hasProblemFrame = data?.has_problem_frame ?? true
   const reason = data?.reason
 
   return (
-    <div className={cn('space-y-4 pt-4 border-t border-border', className)}>
+    <div
+      role="region"
+      aria-label="Khám phá phiên nghiên cứu liên quan"
+      className={cn('space-y-4 pt-4 border-t border-border', className)}
+    >
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
@@ -71,12 +88,13 @@ export function RelatedSessionsPanel({
           </p>
         </div>
 
-        {hasProblemFrame && !isLoading && (
+        {hasProblemFrame && !isLoading && !effectiveIsError && (
           <button
             type="button"
             onClick={() => refetch()}
             disabled={isFetching}
-            className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium text-muted-foreground hover:text-foreground rounded-lg border border-border bg-background hover:bg-accent transition-colors self-start sm:self-auto disabled:opacity-50"
+            aria-label="Làm mới danh sách phiên liên quan"
+            className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium text-muted-foreground hover:text-foreground rounded-lg border border-border bg-background hover:bg-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-1 transition-colors self-start sm:self-auto disabled:opacity-50 cursor-pointer"
             title="Làm mới danh sách phiên liên quan"
           >
             <RefreshCw className={cn('w-3.5 h-3.5', isFetching && 'animate-spin')} />
@@ -96,18 +114,24 @@ export function RelatedSessionsPanel({
       )}
 
       {/* Error State */}
-      {isError && (
-        <div className="p-4 rounded-xl border border-destructive/30 bg-destructive/10 flex items-center justify-between gap-3 text-xs text-destructive">
+      {effectiveIsError && (
+        <div
+          role="alert"
+          className="p-4 rounded-xl border border-destructive/30 bg-destructive/10 flex items-center justify-between gap-3 text-xs text-destructive"
+        >
           <div className="flex items-center gap-2">
             <AlertCircle className="w-4 h-4 shrink-0" />
             <span>
-              Không thể truy xuất các phiên liên quan: {(error as any)?.message || 'Lỗi kết nối máy chủ'}
+              {isMalformed
+                ? 'Không thể truy xuất các phiên liên quan: Dữ liệu phản hồi không hợp lệ'
+                : `Không thể truy xuất các phiên liên quan: ${(error as any)?.message || 'Lỗi kết nối máy chủ'}`}
             </span>
           </div>
           <button
             type="button"
             onClick={() => refetch()}
-            className="px-2.5 py-1 rounded-md bg-destructive text-destructive-foreground font-semibold hover:opacity-90 shrink-0"
+            aria-label="Thử lại truy xuất phiên liên quan"
+            className="px-2.5 py-1 rounded-md bg-destructive text-destructive-foreground font-semibold hover:opacity-90 focus:outline-none focus-visible:ring-2 focus-visible:ring-destructive focus-visible:ring-offset-1 shrink-0 cursor-pointer"
           >
             Thử lại
           </button>
@@ -115,7 +139,7 @@ export function RelatedSessionsPanel({
       )}
 
       {/* No Problem Frame Notice */}
-      {!isLoading && !isError && (!hasProblemFrame || reason === 'no_problem_frame') && (
+      {!isLoading && !effectiveIsError && (!hasProblemFrame || reason === 'no_problem_frame') && (
         <div className="p-6 rounded-xl border border-dashed border-border bg-muted/20 text-center space-y-2">
           <Brain className="w-8 h-8 text-primary/60 mx-auto" />
           <h4 className="text-xs font-semibold text-foreground">
@@ -128,7 +152,7 @@ export function RelatedSessionsPanel({
       )}
 
       {/* Empty Matched List State */}
-      {!isLoading && !isError && hasProblemFrame && reason !== 'no_problem_frame' && matchedSessions.length === 0 && (
+      {!isLoading && !effectiveIsError && hasProblemFrame && reason !== 'no_problem_frame' && matchedSessions.length === 0 && (
         <div className="p-6 rounded-xl border border-dashed border-border bg-muted/10 text-center space-y-1.5">
           <Layers className="w-7 h-7 text-muted-foreground/60 mx-auto" />
           <h4 className="text-xs font-semibold text-foreground">
@@ -144,7 +168,7 @@ export function RelatedSessionsPanel({
       )}
 
       {/* Matched Sessions Cards */}
-      {!isLoading && !isError && matchedSessions.length > 0 && (
+      {!isLoading && !effectiveIsError && matchedSessions.length > 0 && (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
           {matchedSessions.map((item) => {
             const scorePercent = Math.round(item.similarity_score * 100)
@@ -163,7 +187,8 @@ export function RelatedSessionsPanel({
                   <div className="flex items-start justify-between gap-2">
                     <Link
                       href={`/sessions/${item.session_id}`}
-                      className="font-semibold text-xs sm:text-sm text-foreground hover:text-primary transition-colors line-clamp-2"
+                      aria-label={`Mở phiên nghiên cứu: ${item.title}`}
+                      className="font-semibold text-xs sm:text-sm text-foreground hover:text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded transition-colors line-clamp-2"
                     >
                       {item.title}
                     </Link>
@@ -214,11 +239,33 @@ export function RelatedSessionsPanel({
                   </div>
                 )}
 
+                {/* Shared TRIZ Principles */}
+                {item.shared_parameters?.shared_principles &&
+                  item.shared_parameters.shared_principles.length > 0 && (
+                    <div className="space-y-1 pt-1.5 border-t border-border/50">
+                      <div className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1">
+                        <Tag className="w-3 h-3 text-primary" />
+                        <span>Nguyên tắc TRIZ trùng khớp:</span>
+                      </div>
+                      <div className="flex flex-wrap items-center gap-1 text-[11px]">
+                        {item.shared_parameters.shared_principles.map((principleId) => (
+                          <span
+                            key={principleId}
+                            className="px-1.5 py-0.5 rounded-md bg-primary/10 text-primary border border-primary/20 font-medium"
+                          >
+                            #{principleId}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
                 {/* Card Action Link */}
                 <div className="pt-2 flex justify-end">
                   <Link
                     href={`/sessions/${item.session_id}`}
-                    className="inline-flex items-center gap-1 text-[11px] font-semibold text-primary hover:underline"
+                    aria-label={`Xem phiên nghiên cứu: ${item.title}`}
+                    className="inline-flex items-center gap-1 text-[11px] font-semibold text-primary hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded"
                   >
                     <span>Xem phiên nghiên cứu</span>
                     <ExternalLink className="w-3 h-3" />
