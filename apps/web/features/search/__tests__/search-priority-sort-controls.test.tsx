@@ -62,11 +62,12 @@ describe('Feature: In-view result ordering and priority sort controls (Batch C16
   beforeEach(() => {
     jest.clearAllMocks()
     mockSearchParams = new URLSearchParams('q=ma+sát')
-    mockedListResearchNotes.mockResolvedValue({ items: [], total: 0 })
+    mockedListResearchNotes.mockResolvedValue({ data: [], meta: { total: 0 } })
     mockedGetSession.mockResolvedValue({
       id: 'sess-1',
       title: 'Phiên nghiên cứu ma sát',
       domain: 'engineering',
+      tags: [],
       status: 'active',
       created_at: '2026-11-15T00:00:00Z',
       updated_at: '2026-11-15T00:00:00Z',
@@ -340,9 +341,8 @@ describe('Feature: In-view result ordering and priority sort controls (Batch C16
       mockedCreateResearchNote.mockResolvedValue({
         id: 'note-2',
         session_id: 'sess-1',
-        note_type: 'evidence',
+        note_type: 'insight',
         content: 'Mới gắn',
-        context_json: {},
         created_at: '2026-11-15T00:00:00Z',
       })
 
