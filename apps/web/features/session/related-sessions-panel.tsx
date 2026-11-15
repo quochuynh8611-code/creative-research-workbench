@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useMemo } from 'react'
 import Link from 'next/link'
 import {
   Compass,
@@ -15,6 +15,9 @@ import {
   Layers,
   ChevronDown,
   ChevronUp,
+  Filter,
+  RotateCcw,
+  X,
 } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import { findRelatedSessions } from '@/lib/api-client'
@@ -64,24 +67,69 @@ export function RelatedSessionsPanel({
   const reason = data?.reason
 
   const [isExpanded, setIsExpanded] = useState<boolean>(false)
+  const [domainFilter, setDomainFilter] = useState<string>('all')
+  const [statusFilter, setStatusFilter] = useState<string>('all')
 
   useEffect(() => {
     setIsExpanded(false)
+    setDomainFilter('all')
+    setStatusFilter('all')
   }, [sessionId])
 
-  const sortedSessions = [...matchedSessions].sort((a, b) => {
-    if (b.similarity_score !== a.similarity_score) {
-      return b.similarity_score - a.similarity_score
-    }
-    return (a.title || '').localeCompare(b.title || '', undefined, { sensitivity: 'base' })
-  })
+  useEffect(() => {
+    setIsExpanded(false)
+  }, [domainFilter, statusFilter])
+
+  const sortedSessions = useMemo(() => {
+    return [...matchedSessions].sort((a, b) => {
+      if (b.similarity_score !== a.similarity_score) {
+        return b.similarity_score - a.similarity_score
+      }
+      return (a.title || '').localeCompare(b.title || '', undefined, { sensitivity: 'base' })
+    })
+  }, [matchedSessions])
+
+  const availableDomains = useMemo(() => {
+    const set = new Set<string>()
+    matchedSessions.forEach((s) => {
+      if (s.domain) set.add(s.domain)
+    })
+    return Array.from(set).sort()
+  }, [matchedSessions])
+
+  const availableStatuses = useMemo(() => {
+    const set = new Set<string>()
+    matchedSessions.forEach((s) => {
+      if (s.status) set.add(s.status)
+    })
+    return Array.from(set).sort()
+  }, [matchedSessions])
+
+  const filteredSessions = useMemo(() => {
+    return sortedSessions.filter((session) => {
+      if (domainFilter !== 'all' && session.domain !== domainFilter) {
+        return false
+      }
+      if (statusFilter !== 'all' && session.status !== statusFilter) {
+        return false
+      }
+      return true
+    })
+  }, [sortedSessions, domainFilter, statusFilter])
 
   const INITIAL_LIMIT = 5
-  const hasMore = sortedSessions.length > INITIAL_LIMIT
-  const remainingCount = sortedSessions.length - INITIAL_LIMIT
+  const hasMore = filteredSessions.length > INITIAL_LIMIT
+  const remainingCount = filteredSessions.length - INITIAL_LIMIT
   const visibleSessions = isExpanded
-    ? sortedSessions
-    : sortedSessions.slice(0, INITIAL_LIMIT)
+    ? filteredSessions
+    : filteredSessions.slice(0, INITIAL_LIMIT)
+
+  const hasActiveFilters = domainFilter !== 'all' || statusFilter !== 'all'
+
+  const handleClearFilters = () => {
+    setDomainFilter('all')
+    setStatusFilter('all')
+  }
 
   return (
     <div
@@ -99,9 +147,9 @@ export function RelatedSessionsPanel({
             <h3 className="text-base font-bold text-foreground">
               Phiên nghiên cứu liên quan (Cross-Session Knowledge Discovery)
             </h3>
-            {sortedSessions.length > 0 && (
+            {matchedSessions.length > 0 && (
               <span className="px-2 py-0.5 rounded-full text-[11px] font-semibold bg-primary/10 text-primary">
-                {sortedSessions.length} phiên tương đồng
+                {filteredSessions.length} phiên tương đồng
               </span>
             )}
           </div>
@@ -124,6 +172,135 @@ export function RelatedSessionsPanel({
           </button>
         )}
       </div>
+
+      {/* Scope & Active Filters Bar */}
+      {hasProblemFrame && !isLoading && !effectiveIsError && (
+        <div className="p-3 rounded-lg border border-border/80 bg-muted/20 space-y-2">
+          {/* Scope Information Row */}
+          <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="inline-flex items-center gap-1 text-[11px] font-semibold bg-primary/10 text-primary border border-primary/20 rounded-md px-2 py-0.5">
+                <span>Phạm vi: Phiên hiện tại</span>
+              </span>
+              {data?.total_candidates_analyzed !== undefined && (
+                <span className="text-[11px] text-muted-foreground font-medium">
+                  • Đã phân tích: {data.total_candidates_analyzed} phiên ứng viên
+                </span>
+              )}
+            </div>
+
+            {/* Active Filters Display */}
+            <div className="flex flex-wrap items-center gap-1.5 text-[11px]">
+              <span className="text-muted-foreground font-medium">
+                Bộ lọc:
+              </span>
+              {!hasActiveFilters ? (
+                <span className="text-muted-foreground italic">
+                  Tất cả (chưa áp dụng bộ lọc)
+                </span>
+              ) : (
+                <div className="flex flex-wrap items-center gap-1.5">
+                  {domainFilter !== 'all' && (
+                    <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-primary/10 text-primary border border-primary/20 text-[10px] font-medium">
+                      Lĩnh vực: {(DOMAIN_LABELS as Record<string, string>)[domainFilter] || domainFilter}
+                      <button
+                        type="button"
+                        onClick={() => setDomainFilter('all')}
+                        aria-label="Gỡ lọc lĩnh vực"
+                        className="hover:text-primary/70 focus:outline-none"
+                      >
+                        <X className="w-2.5 h-2.5" />
+                      </button>
+                    </span>
+                  )}
+                  {statusFilter !== 'all' && (
+                    <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-primary/10 text-primary border border-primary/20 text-[10px] font-medium">
+                      Trạng thái: {(STATUS_LABELS as Record<string, string>)[statusFilter] || statusFilter}
+                      <button
+                        type="button"
+                        onClick={() => setStatusFilter('all')}
+                        aria-label="Gỡ lọc trạng thái"
+                        className="hover:text-primary/70 focus:outline-none"
+                      >
+                        <X className="w-2.5 h-2.5" />
+                      </button>
+                    </span>
+                  )}
+                  <button
+                    type="button"
+                    onClick={handleClearFilters}
+                    aria-label="Xóa tất cả bộ lọc"
+                    className="text-[10px] text-muted-foreground hover:text-foreground underline ml-1 focus:outline-none focus-visible:ring-1 focus-visible:ring-primary rounded cursor-pointer"
+                  >
+                    Xóa tất cả
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Filter Controls Row */}
+          {matchedSessions.length > 0 && (
+            <div className="pt-2 border-t border-border/50 flex flex-wrap items-center justify-between gap-2.5">
+              <div className="flex flex-wrap items-center gap-2.5">
+                {/* Domain Filter */}
+                <div className="flex items-center gap-1.5">
+                  <label htmlFor="domain-filter-select" className="text-[11px] font-medium text-muted-foreground">
+                    Lĩnh vực:
+                  </label>
+                  <select
+                    id="domain-filter-select"
+                    aria-label="Lọc theo lĩnh vực"
+                    value={domainFilter}
+                    onChange={(e) => setDomainFilter(e.target.value)}
+                    className="text-xs h-7 px-2 py-0.5 rounded-md border border-border bg-background text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-1 cursor-pointer"
+                  >
+                    <option value="all">Tất cả lĩnh vực</option>
+                    {availableDomains.map((dom) => (
+                      <option key={dom} value={dom}>
+                        {(DOMAIN_LABELS as Record<string, string>)[dom] || dom}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Status Filter */}
+                <div className="flex items-center gap-1.5">
+                  <label htmlFor="status-filter-select" className="text-[11px] font-medium text-muted-foreground">
+                    Trạng thái:
+                  </label>
+                  <select
+                    id="status-filter-select"
+                    aria-label="Lọc theo trạng thái"
+                    value={statusFilter}
+                    onChange={(e) => setStatusFilter(e.target.value)}
+                    className="text-xs h-7 px-2 py-0.5 rounded-md border border-border bg-background text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-1 cursor-pointer"
+                  >
+                    <option value="all">Tất cả trạng thái</option>
+                    {availableStatuses.map((stat) => (
+                      <option key={stat} value={stat}>
+                        {(STATUS_LABELS as Record<string, string>)[stat] || stat}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              {hasActiveFilters && filteredSessions.length > 0 && (
+                <button
+                  type="button"
+                  onClick={handleClearFilters}
+                  aria-label="Đặt lại bộ lọc"
+                  className="inline-flex items-center gap-1 px-2 py-1 text-[11px] font-medium text-muted-foreground hover:text-foreground rounded border border-border bg-background hover:bg-accent transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-1 cursor-pointer"
+                >
+                  <RotateCcw className="w-3 h-3" />
+                  <span>Đặt lại</span>
+                </button>
+              )}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Loading State */}
       {isLoading && (
@@ -173,7 +350,7 @@ export function RelatedSessionsPanel({
         </div>
       )}
 
-      {/* Empty Matched List State */}
+      {/* Empty Matched List State (No matches in DB at all) */}
       {!isLoading && !effectiveIsError && hasProblemFrame && reason !== 'no_problem_frame' && matchedSessions.length === 0 && (
         <div className="p-6 rounded-xl border border-dashed border-border bg-muted/10 text-center space-y-1.5">
           <Layers className="w-7 h-7 text-muted-foreground/60 mx-auto" />
@@ -189,8 +366,32 @@ export function RelatedSessionsPanel({
         </div>
       )}
 
+      {/* Filtered-out Empty State (Matches exist, but filters excluded everything) */}
+      {!isLoading && !effectiveIsError && hasProblemFrame && matchedSessions.length > 0 && filteredSessions.length === 0 && (
+        <div className="p-6 rounded-xl border border-dashed border-border bg-muted/10 text-center space-y-2">
+          <Filter className="w-7 h-7 text-muted-foreground/60 mx-auto" />
+          <h4 className="text-xs font-semibold text-foreground">
+            Bộ lọc đã loại bỏ tất cả kết quả
+          </h4>
+          <p className="text-[11px] text-muted-foreground max-w-md mx-auto">
+            Không có phiên nghiên cứu nào phù hợp với các bộ lọc đang chọn (trong tổng số {matchedSessions.length} phiên tương đồng).
+          </p>
+          <div className="pt-1">
+            <button
+              type="button"
+              onClick={handleClearFilters}
+              aria-label="Xóa bộ lọc"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-primary hover:text-primary/90 bg-primary/10 hover:bg-primary/20 rounded-lg transition-colors cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-1"
+            >
+              <RotateCcw className="w-3.5 h-3.5" />
+              <span>Xóa bộ lọc</span>
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Matched Sessions Cards */}
-      {!isLoading && !effectiveIsError && sortedSessions.length > 0 && (
+      {!isLoading && !effectiveIsError && filteredSessions.length > 0 && (
         <div className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
             {visibleSessions.map((item) => {
