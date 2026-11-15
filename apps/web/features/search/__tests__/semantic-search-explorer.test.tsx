@@ -964,9 +964,9 @@ describe('SemanticSearchExplorer Component Tests (Phase 10.3 Increment 1 - 6)', 
       expect(screen.getByText('Đoạn trích Case Study 1.')).toBeInTheDocument()
 
       // Segment Tabs
-      expect(screen.getByRole('button', { name: /Tất cả/i })).toBeInTheDocument()
-      expect(screen.getByRole('button', { name: /Golden Knowledge Base/i })).toBeInTheDocument()
-      expect(screen.getByRole('button', { name: /Case Study/i })).toBeInTheDocument()
+      expect(screen.getByRole('tab', { name: /Tất cả/i })).toBeInTheDocument()
+      expect(screen.getByRole('tab', { name: /Golden Knowledge Base/i })).toBeInTheDocument()
+      expect(screen.getByRole('tab', { name: /Case Study/i })).toBeInTheDocument()
     })
 
     it('Scenario 29: Click chọn tab nguồn lọc kết quả client-side mà không gọi lại API', async () => {
@@ -981,7 +981,7 @@ describe('SemanticSearchExplorer Component Tests (Phase 10.3 Increment 1 - 6)', 
 
       await screen.findByText('Đoạn trích Golden 1.')
 
-      const caseStudyTab = screen.getByRole('button', { name: /Case Study/i })
+      const caseStudyTab = screen.getByRole('tab', { name: /Case Study/i })
       fireEvent.click(caseStudyTab)
 
       // Chỉ còn hiển thị Case Study
@@ -1062,12 +1062,12 @@ describe('SemanticSearchExplorer Component Tests (Phase 10.3 Increment 1 - 6)', 
       expect(excerptEl).not.toHaveClass('line-clamp-3')
 
       // Chuyển sang tab Case Study
-      const caseStudyTab = screen.getByRole('button', { name: /Case Study/i })
+      const caseStudyTab = screen.getByRole('tab', { name: /Case Study/i })
       fireEvent.click(caseStudyTab)
       expect(screen.queryByText(longExcerpt1)).not.toBeInTheDocument()
 
       // Chuyển lại tab Tất cả
-      const allTab = screen.getByRole('button', { name: /Tất cả/i })
+      const allTab = screen.getByRole('tab', { name: /Tất cả/i })
       fireEvent.click(allTab)
 
       // Đoạn trích vẫn giữ trạng thái mở rộng
@@ -1321,7 +1321,7 @@ describe('SemanticSearchExplorer Component Tests (Phase 10.3 Increment 1 - 6)', 
       fireEvent.change(sortSelect, { target: { value: 'golden_first' } })
 
       // Chọn tab Case Study
-      const caseStudyTab = screen.getByRole('button', { name: /Case Study/i })
+      const caseStudyTab = screen.getByRole('tab', { name: /Case Study/i })
       fireEvent.click(caseStudyTab)
 
       // Chỉ hiển thị 2 case studies và chk-cs-2 (golden) lên trước chk-cs-1
@@ -1493,14 +1493,14 @@ describe('SemanticSearchExplorer Component Tests (Phase 10.3 Increment 1 - 6)', 
       expect(screen.queryByText(/Hiển thị \d+ \/ \d+ mục/i)).not.toBeInTheDocument()
 
       // Click tab Case Study
-      const caseStudyTab = screen.getByRole('button', { name: /Case Study/i })
+      const caseStudyTab = screen.getByRole('tab', { name: /Case Study/i })
       fireEvent.click(caseStudyTab)
 
       // Hiển thị 2 / 4 mục
       expect(screen.getByText('Hiển thị 2 / 4 mục')).toBeInTheDocument()
 
       // Click quay lại tab Tất cả
-      const allTab = screen.getByRole('button', { name: /Tất cả/i })
+      const allTab = screen.getByRole('tab', { name: /Tất cả/i })
       fireEvent.click(allTab)
 
       // Chip Hiển thị D / N bị ẩn
@@ -1580,8 +1580,8 @@ describe('SemanticSearchExplorer Component Tests (Phase 10.3 Increment 1 - 6)', 
       expect(screen.getByText('4 chuẩn vàng')).toBeInTheDocument()
 
       // Segment tabs render dựa trên backend facet_counts
-      expect(screen.getByRole('button', { name: /Golden Knowledge Base/i })).toBeInTheDocument()
-      expect(screen.getByRole('button', { name: /Case Study/i })).toBeInTheDocument()
+      expect(screen.getByRole('tab', { name: /Golden Knowledge Base/i })).toBeInTheDocument()
+      expect(screen.getByRole('tab', { name: /Case Study/i })).toBeInTheDocument()
     })
   })
 

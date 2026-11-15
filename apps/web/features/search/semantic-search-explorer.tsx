@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect, useMemo } from 'react'
+import React, { useState, useEffect, useMemo, useRef } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import {
@@ -210,6 +210,7 @@ export function SemanticSearchExplorer() {
   const [attachingChunkId, setAttachingChunkId] = useState<string | null>(null)
   const [copiedChunkId, setCopiedChunkId] = useState<string | null>(null)
   const [activeSourceBucket, setActiveSourceBucket] = useState<string>('all')
+  const bucketTabRefs = useRef<Array<HTMLButtonElement | null>>([])
   const [sortBy, setSortBy] = useState<SearchSortMode>('relevance')
   const [accumulatedResults, setAccumulatedResults] = useState<SearchResultItem[]>([])
   const [isLoadingMore, setIsLoadingMore] = useState(false)
@@ -524,6 +525,26 @@ export function SemanticSearchExplorer() {
   const availableSourceBuckets = useMemo(() => {
     return Object.keys(sourceCounts).filter((st) => (sourceCounts[st] || 0) > 0)
   }, [sourceCounts])
+
+  const totalBucketTabs = 1 + availableSourceBuckets.length
+  const handleBucketKeyDown = (e: React.KeyboardEvent<HTMLButtonElement>, index: number) => {
+    if (totalBucketTabs <= 1) return
+    let nextIndex: number | null = null
+    if (e.key === 'ArrowRight') {
+      nextIndex = (index + 1) % totalBucketTabs
+    } else if (e.key === 'ArrowLeft') {
+      nextIndex = (index - 1 + totalBucketTabs) % totalBucketTabs
+    } else if (e.key === 'Home') {
+      nextIndex = 0
+    } else if (e.key === 'End') {
+      nextIndex = totalBucketTabs - 1
+    }
+
+    if (nextIndex !== null) {
+      e.preventDefault()
+      bucketTabRefs.current[nextIndex]?.focus()
+    }
+  }
 
   const displayedResults = useMemo(() => {
     let list = results
@@ -980,12 +1001,24 @@ export function SemanticSearchExplorer() {
               <div className="flex flex-wrap items-center justify-between gap-3">
                 {/* In-View Source Segment Tabs */}
                 {availableSourceBuckets.length >= 2 ? (
-                  <div className="flex items-center gap-1.5 p-1 rounded-xl bg-muted/40 border border-border overflow-x-auto max-w-full">
+                  <div
+                    role="tablist"
+                    aria-label="Phân loại nguồn kết quả"
+                    className="flex items-center gap-1.5 p-1 rounded-xl bg-muted/40 border border-border overflow-x-auto max-w-full"
+                  >
                     <button
+                      ref={(el) => {
+                        bucketTabRefs.current[0] = el
+                      }}
                       type="button"
+                      role="tab"
+                      aria-selected={activeSourceBucket === 'all'}
+                      aria-label={`Tất cả (${results.length} kết quả)`}
+                      tabIndex={activeSourceBucket === 'all' ? 0 : -1}
                       onClick={() => setActiveSourceBucket('all')}
+                      onKeyDown={(e) => handleBucketKeyDown(e, 0)}
                       className={cn(
-                        'px-3 py-1.5 rounded-lg text-xs font-semibold transition-all whitespace-nowrap cursor-pointer',
+                        'px-3 py-1.5 rounded-lg text-xs font-semibold transition-all whitespace-nowrap cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-1',
                         activeSourceBucket === 'all'
                           ? 'bg-background text-foreground shadow-sm'
                           : 'text-muted-foreground hover:text-foreground'
@@ -996,19 +1029,28 @@ export function SemanticSearchExplorer() {
                         {results.length}
                       </span>
                     </button>
-                    {availableSourceBuckets.map((st) => {
+                    {availableSourceBuckets.map((st, idx) => {
                       const opt = SOURCE_TYPE_OPTIONS.find((o) => o.value === st)
                       const label = opt ? opt.label : st
                       const count = sourceCounts[st]
                       const isActive = activeSourceBucket === st
+                      const tabIndex = idx + 1
 
                       return (
                         <button
                           key={st}
+                          ref={(el) => {
+                            bucketTabRefs.current[tabIndex] = el
+                          }}
                           type="button"
+                          role="tab"
+                          aria-selected={isActive}
+                          aria-label={`${label} (${count} kết quả)`}
+                          tabIndex={isActive ? 0 : -1}
                           onClick={() => setActiveSourceBucket(st)}
+                          onKeyDown={(e) => handleBucketKeyDown(e, tabIndex)}
                           className={cn(
-                            'px-3 py-1.5 rounded-lg text-xs font-semibold transition-all whitespace-nowrap cursor-pointer',
+                            'px-3 py-1.5 rounded-lg text-xs font-semibold transition-all whitespace-nowrap cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-1',
                             isActive
                               ? 'bg-background text-foreground shadow-sm'
                               : 'text-muted-foreground hover:text-foreground'
@@ -1045,9 +1087,33 @@ export function SemanticSearchExplorer() {
                 </div>
               </div>
 
-              {/* Cards List */}
+              {/* Cards List or Zero-Result Bucket Empty State */}
               <div className="space-y-3.5">
-                {displayedResults.map((item) => {
+                {displayedResults.length === 0 ? (
+                  <div className="p-8 rounded-2xl border border-dashed border-border bg-muted/10 text-center space-y-2.5">
+                    <Layers className="w-7 h-7 text-muted-foreground/60 mx-auto" />
+                    <h4 className="text-sm font-semibold text-foreground">
+                      Không có kết quả nào thuộc nguồn{' '}
+                      {SOURCE_TYPE_OPTIONS.find((o) => o.value === activeSourceBucket)?.label ||
+                        activeSourceBucket}
+                    </h4>
+                    <p className="text-xs text-muted-foreground max-w-md mx-auto">
+                      Không có kết quả nào khớp với loại nguồn đã chọn trong danh sách hiện tải (có{' '}
+                      {results.length} kết quả ở các nguồn khác).
+                    </p>
+                    <div className="pt-1">
+                      <button
+                        type="button"
+                        onClick={() => setActiveSourceBucket('all')}
+                        className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-primary/10 text-primary hover:bg-primary/20 text-xs font-semibold transition-colors cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-1"
+                      >
+                        <RotateCcw className="w-3.5 h-3.5" />
+                        <span>Xem tất cả kết quả ({results.length})</span>
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  displayedResults.map((item) => {
                   const meta = item.metadata || {}
                   const tierInfo = getRelevanceTierInfo(item.score)
                   const isKeywordMatch = checkDirectKeywordMatch(
@@ -1194,7 +1260,8 @@ export function SemanticSearchExplorer() {
                       </div>
                     </article>
                   )
-                })}
+                })
+                )}
               </div>
 
               {/* Load More Button */}
