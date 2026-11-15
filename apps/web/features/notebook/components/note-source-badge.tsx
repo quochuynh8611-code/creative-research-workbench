@@ -66,7 +66,13 @@ export function NoteSourceBadge({ sourceContext, className }: NoteSourceBadgePro
     return null
   }
 
-  const validation = validateNoteSourceContext(sourceContext)
+  let validation
+  try {
+    validation = validateNoteSourceContext(sourceContext)
+  } catch {
+    return null
+  }
+
   if (!validation.ok) {
     return null
   }
