@@ -275,13 +275,14 @@ export function ResearchNotebook({
 
   const counters: Record<FilterType, number> = {
     all: notes.length,
-    insight: notes.filter((n) => n.note_type === 'insight').length,
-    hypothesis: notes.filter((n) => n.note_type === 'hypothesis').length,
-    decision: notes.filter((n) => n.note_type === 'decision').length,
-    question: notes.filter((n) => n.note_type === 'question').length,
-    action: notes.filter((n) => n.note_type === 'action').length,
+    insight: notes.filter((n) => n?.note_type === 'insight').length,
+    hypothesis: notes.filter((n) => n?.note_type === 'hypothesis').length,
+    decision: notes.filter((n) => n?.note_type === 'decision').length,
+    question: notes.filter((n) => n?.note_type === 'question').length,
+    action: notes.filter((n) => n?.note_type === 'action').length,
   }
 
+  let summaryCalculationError: string | null = null
   const sourceCounters: Record<SourceFilter, number> = {
     all: notes.length,
     triz_9_windows: 0,
@@ -292,14 +293,33 @@ export function ResearchNotebook({
     manual: 0,
   }
 
-  notes.forEach((note) => {
-    const st = getNoteSourceType(note)
-    sourceCounters[st] = (sourceCounters[st] || 0) + 1
-  })
+  try {
+    notes.forEach((note) => {
+      if (note && typeof note === 'object') {
+        const st = getNoteSourceType(note)
+        sourceCounters[st] = (sourceCounters[st] || 0) + 1
+      }
+    })
+  } catch {
+    summaryCalculationError = 'Không thể tổng hợp dữ liệu nguồn gốc'
+  }
+
+  const hasValidatedContexts =
+    sourceCounters.triz_9_windows > 0 ||
+    sourceCounters.triz_matrix > 0 ||
+    sourceCounters.principle_suggestion > 0 ||
+    sourceCounters.evidence > 0 ||
+    sourceCounters.candidate_solution > 0
 
   const filteredNotes = notes.filter((note) => {
+    let noteSource: SourceFilter = 'manual'
+    try {
+      noteSource = getNoteSourceType(note)
+    } catch {
+      noteSource = 'manual'
+    }
     const matchesSource =
-      selectedSource === 'all' || getNoteSourceType(note) === selectedSource
+      selectedSource === 'all' || noteSource === selectedSource
     const matchesType = selectedType === 'all' || note.note_type === selectedType
     const matchesSearch =
       !searchQuery.trim() ||
@@ -322,6 +342,16 @@ export function ResearchNotebook({
       summaryCopyTimerRef.current = null
     }
     setSummaryCopyStatus(null)
+
+    if (summaryCalculationError) {
+      if (isMountedRef.current && currentRequestId === latestSummaryRequestIdRef.current) {
+        setSummaryCopyStatus({
+          status: 'error',
+          message: 'Không thể tổng hợp dữ liệu nguồn gốc',
+        })
+      }
+      return
+    }
 
     if (
       typeof navigator === 'undefined' ||
@@ -421,6 +451,18 @@ export function ResearchNotebook({
     }
     setSummaryExportStatus(null)
 
+    if (summaryCalculationError || !sourceCounters || sourceCounters.all === 0) {
+      if (isMountedRef.current) {
+        setSummaryExportStatus({
+          status: 'error',
+          message: summaryCalculationError
+            ? 'Không thể tổng hợp dữ liệu nguồn gốc để xuất'
+            : 'Không có dữ liệu nguồn gốc để xuất',
+        })
+      }
+      return
+    }
+
     try {
       const now = new Date()
       const timestampStr = formatExportTimestamp(now)
@@ -476,6 +518,18 @@ export function ResearchNotebook({
       summaryExportTimerRef.current = null
     }
     setSummaryExportStatus(null)
+
+    if (summaryCalculationError || !sourceCounters || sourceCounters.all === 0) {
+      if (isMountedRef.current) {
+        setSummaryExportStatus({
+          status: 'error',
+          message: summaryCalculationError
+            ? 'Không thể tổng hợp dữ liệu nguồn gốc để xuất'
+            : 'Không có dữ liệu nguồn gốc để xuất',
+        })
+      }
+      return
+    }
 
     try {
       const now = new Date()
@@ -664,188 +718,208 @@ export function ResearchNotebook({
             aria-label="Tổng quan nguồn gốc ghi chú"
             className="p-3.5 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700/80 space-y-2.5"
           >
-            <div className="flex items-center justify-between gap-2">
-              <span className="text-xs font-semibold text-slate-700 dark:text-slate-300">
-                Tổng quan nguồn gốc
-              </span>
-
-              <div className="flex flex-wrap items-center gap-2">
-                {summaryCopyStatus?.status === 'success' && (
-                  <span
-                    className="inline-flex items-center gap-1 text-xs font-medium text-emerald-600 dark:text-emerald-400 px-1.5 py-0.5 rounded bg-emerald-50 dark:bg-emerald-950/40"
-                    role="status"
-                    aria-live="polite"
-                  >
-                    <Check className="w-3.5 h-3.5" />
-                    <span>Đã chép tổng hợp</span>
-                  </span>
-                )}
-
-                {summaryCopyStatus?.status === 'error' && (
-                  <span
-                    className="inline-flex items-center gap-1 text-xs font-medium text-rose-600 dark:text-rose-400 px-1.5 py-0.5 rounded bg-rose-50 dark:bg-rose-950/40"
-                    role="alert"
-                  >
-                    <span>{summaryCopyStatus.message}</span>
-                  </span>
-                )}
-
-                {summaryExportStatus?.status === 'success' && (
-                  <span
-                    className="inline-flex items-center gap-1 text-xs font-medium text-emerald-600 dark:text-emerald-400 px-1.5 py-0.5 rounded bg-emerald-50 dark:bg-emerald-950/40"
-                    role="status"
-                    aria-live="polite"
-                  >
-                    <Check className="w-3.5 h-3.5" />
-                    <span>{summaryExportStatus.message}</span>
-                  </span>
-                )}
-
-                {summaryExportStatus?.status === 'error' && (
-                  <span
-                    className="inline-flex items-center gap-1 text-xs font-medium text-rose-600 dark:text-rose-400 px-1.5 py-0.5 rounded bg-rose-50 dark:bg-rose-950/40"
-                    role="alert"
-                    aria-live="polite"
-                  >
-                    <span>{summaryExportStatus.message}</span>
-                  </span>
-                )}
-
-                <button
-                  type="button"
-                  onClick={handleCopySummary}
-                  onKeyDown={(e) => handleKeyActivation(e, handleCopySummary)}
-                  aria-label="Sao chép tổng hợp"
-                  className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-1 transition-colors cursor-pointer shadow-2xs"
-                >
-                  <Copy className="w-3.5 h-3.5" />
-                  <span>Sao chép tổng hợp</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={handleExportCSV}
-                  onKeyDown={(e) => handleKeyActivation(e, handleExportCSV)}
-                  aria-label="Xuất CSV"
-                  className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-1 transition-colors cursor-pointer shadow-2xs"
-                >
-                  <Download className="w-3.5 h-3.5" />
-                  <span>Xuất CSV</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={handleExportJSON}
-                  onKeyDown={(e) => handleKeyActivation(e, handleExportJSON)}
-                  aria-label="Xuất JSON"
-                  className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-1 transition-colors cursor-pointer shadow-2xs"
-                >
-                  <Download className="w-3.5 h-3.5" />
-                  <span>Xuất JSON</span>
-                </button>
+            {summaryCalculationError ? (
+              <div
+                role="alert"
+                className="text-xs text-rose-700 dark:text-rose-300 bg-rose-50 dark:bg-rose-950/40 p-3 rounded-lg border border-rose-200 dark:border-rose-800"
+              >
+                {summaryCalculationError}
               </div>
-            </div>
+            ) : (
+              <>
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+                    Tổng quan nguồn gốc
+                  </span>
 
-            <div className="flex flex-wrap items-center gap-1.5 text-xs text-slate-600 dark:text-slate-400">
-              <button
-                type="button"
-                onClick={() => setSelectedSource('all')}
-                onKeyDown={(e) => handleKeyActivation(e, () => setSelectedSource('all'))}
-                aria-label={`Tất cả: ${sourceCounters.all}`}
-                aria-pressed={selectedSource === 'all'}
-                className={`px-2 py-0.5 rounded font-medium transition-all cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 ${
-                  selectedSource === 'all'
-                    ? 'bg-indigo-600 text-white border border-indigo-600 shadow-2xs ring-1 ring-indigo-500'
-                    : 'bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700'
-                }`}
-              >
-                {`Tổng số: ${sourceCounters.all}`}
-              </button>
-              <button
-                type="button"
-                onClick={() => setSelectedSource('triz_9_windows')}
-                onKeyDown={(e) => handleKeyActivation(e, () => setSelectedSource('triz_9_windows'))}
-                aria-label={`Lưới 9 màn hình: ${sourceCounters.triz_9_windows}`}
-                aria-pressed={selectedSource === 'triz_9_windows'}
-                className={`px-2 py-0.5 rounded font-medium transition-all cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 ${
-                  selectedSource === 'triz_9_windows'
-                    ? 'bg-sky-600 text-white border border-sky-600 shadow-2xs ring-1 ring-sky-500'
-                    : 'bg-sky-50 dark:bg-sky-950/40 text-sky-700 dark:text-sky-300 border border-sky-200 dark:border-sky-800 hover:bg-sky-100 dark:hover:bg-sky-900/60'
-                }`}
-              >
-                {`Lưới 9 màn hình: ${sourceCounters.triz_9_windows}`}
-              </button>
-              <button
-                type="button"
-                onClick={() => setSelectedSource('triz_matrix')}
-                onKeyDown={(e) => handleKeyActivation(e, () => setSelectedSource('triz_matrix'))}
-                aria-label={`Ma trận TRIZ: ${sourceCounters.triz_matrix}`}
-                aria-pressed={selectedSource === 'triz_matrix'}
-                className={`px-2 py-0.5 rounded font-medium transition-all cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-500 ${
-                  selectedSource === 'triz_matrix'
-                    ? 'bg-teal-600 text-white border border-teal-600 shadow-2xs ring-1 ring-teal-500'
-                    : 'bg-teal-50 dark:bg-teal-950/40 text-teal-700 dark:text-teal-300 border border-teal-200 dark:border-teal-800 hover:bg-teal-100 dark:hover:bg-teal-900/60'
-                }`}
-              >
-                {`Ma trận TRIZ: ${sourceCounters.triz_matrix}`}
-              </button>
-              <button
-                type="button"
-                onClick={() => setSelectedSource('principle_suggestion')}
-                onKeyDown={(e) => handleKeyActivation(e, () => setSelectedSource('principle_suggestion'))}
-                aria-label={`Gợi ý nguyên tắc: ${sourceCounters.principle_suggestion}`}
-                aria-pressed={selectedSource === 'principle_suggestion'}
-                className={`px-2 py-0.5 rounded font-medium transition-all cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 ${
-                  selectedSource === 'principle_suggestion'
-                    ? 'bg-amber-600 text-white border border-amber-600 shadow-2xs ring-1 ring-amber-500'
-                    : 'bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800 hover:bg-amber-100 dark:hover:bg-amber-900/60'
-                }`}
-              >
-                {`Gợi ý nguyên tắc: ${sourceCounters.principle_suggestion}`}
-              </button>
-              <button
-                type="button"
-                onClick={() => setSelectedSource('evidence')}
-                onKeyDown={(e) => handleKeyActivation(e, () => setSelectedSource('evidence'))}
-                aria-label={`Bằng chứng: ${sourceCounters.evidence}`}
-                aria-pressed={selectedSource === 'evidence'}
-                className={`px-2 py-0.5 rounded font-medium transition-all cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-500 ${
-                  selectedSource === 'evidence'
-                    ? 'bg-slate-700 text-white border border-slate-700 shadow-2xs ring-1 ring-slate-600'
-                    : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 hover:bg-slate-200 dark:hover:bg-slate-700'
-                }`}
-              >
-                {`Bằng chứng: ${sourceCounters.evidence}`}
-              </button>
-              <button
-                type="button"
-                onClick={() => setSelectedSource('candidate_solution')}
-                onKeyDown={(e) => handleKeyActivation(e, () => setSelectedSource('candidate_solution'))}
-                aria-label={`Giải pháp ứng viên: ${sourceCounters.candidate_solution}`}
-                aria-pressed={selectedSource === 'candidate_solution'}
-                className={`px-2 py-0.5 rounded font-medium transition-all cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 ${
-                  selectedSource === 'candidate_solution'
-                    ? 'bg-indigo-600 text-white border border-indigo-600 shadow-2xs ring-1 ring-indigo-500'
-                    : 'bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800 hover:bg-indigo-100 dark:hover:bg-indigo-900/60'
-                }`}
-              >
-                {`Giải pháp ứng viên: ${sourceCounters.candidate_solution}`}
-              </button>
-              <button
-                type="button"
-                onClick={() => setSelectedSource('manual')}
-                onKeyDown={(e) => handleKeyActivation(e, () => setSelectedSource('manual'))}
-                aria-label={`Thủ công: ${sourceCounters.manual}`}
-                aria-pressed={selectedSource === 'manual'}
-                className={`px-2 py-0.5 rounded font-medium transition-all cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-500 ${
-                  selectedSource === 'manual'
-                    ? 'bg-slate-600 text-white border border-slate-600 shadow-2xs ring-1 ring-slate-500'
-                    : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-700 hover:bg-slate-200 dark:hover:bg-slate-700'
-                }`}
-              >
-                {`Thủ công: ${sourceCounters.manual}`}
-              </button>
-            </div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    {summaryCopyStatus?.status === 'success' && (
+                      <span
+                        className="inline-flex items-center gap-1 text-xs font-medium text-emerald-600 dark:text-emerald-400 px-1.5 py-0.5 rounded bg-emerald-50 dark:bg-emerald-950/40"
+                        role="status"
+                        aria-live="polite"
+                      >
+                        <Check className="w-3.5 h-3.5" />
+                        <span>Đã chép tổng hợp</span>
+                      </span>
+                    )}
+
+                    {summaryCopyStatus?.status === 'error' && (
+                      <span
+                        className="inline-flex items-center gap-1 text-xs font-medium text-rose-600 dark:text-rose-400 px-1.5 py-0.5 rounded bg-rose-50 dark:bg-rose-950/40"
+                        role="alert"
+                      >
+                        <span>{summaryCopyStatus.message}</span>
+                      </span>
+                    )}
+
+                    {summaryExportStatus?.status === 'success' && (
+                      <span
+                        className="inline-flex items-center gap-1 text-xs font-medium text-emerald-600 dark:text-emerald-400 px-1.5 py-0.5 rounded bg-emerald-50 dark:bg-emerald-950/40"
+                        role="status"
+                        aria-live="polite"
+                      >
+                        <Check className="w-3.5 h-3.5" />
+                        <span>{summaryExportStatus.message}</span>
+                      </span>
+                    )}
+
+                    {summaryExportStatus?.status === 'error' && (
+                      <span
+                        className="inline-flex items-center gap-1 text-xs font-medium text-rose-600 dark:text-rose-400 px-1.5 py-0.5 rounded bg-rose-50 dark:bg-rose-950/40"
+                        role="alert"
+                        aria-live="polite"
+                      >
+                        <span>{summaryExportStatus.message}</span>
+                      </span>
+                    )}
+
+                    <button
+                      type="button"
+                      onClick={handleCopySummary}
+                      onKeyDown={(e) => handleKeyActivation(e, handleCopySummary)}
+                      aria-label="Sao chép tổng hợp"
+                      className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-1 transition-colors cursor-pointer shadow-2xs"
+                    >
+                      <Copy className="w-3.5 h-3.5" />
+                      <span>Sao chép tổng hợp</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={handleExportCSV}
+                      onKeyDown={(e) => handleKeyActivation(e, handleExportCSV)}
+                      aria-label="Xuất CSV"
+                      className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-1 transition-colors cursor-pointer shadow-2xs"
+                    >
+                      <Download className="w-3.5 h-3.5" />
+                      <span>Xuất CSV</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={handleExportJSON}
+                      onKeyDown={(e) => handleKeyActivation(e, handleExportJSON)}
+                      aria-label="Xuất JSON"
+                      className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-1 transition-colors cursor-pointer shadow-2xs"
+                    >
+                      <Download className="w-3.5 h-3.5" />
+                      <span>Xuất JSON</span>
+                    </button>
+                  </div>
+                </div>
+
+                {!hasValidatedContexts && (
+                  <div
+                    role="status"
+                    className="text-xs text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-950/40 px-3 py-2 rounded-lg border border-amber-200 dark:border-amber-800 flex items-center gap-1.5"
+                  >
+                    <span>Chưa có ghi chú nào từ nguồn được xác thực</span>
+                  </div>
+                )}
+
+                <div className="flex flex-wrap items-center gap-1.5 text-xs text-slate-600 dark:text-slate-400">
+                  <button
+                    type="button"
+                    onClick={() => setSelectedSource('all')}
+                    onKeyDown={(e) => handleKeyActivation(e, () => setSelectedSource('all'))}
+                    aria-label={`Tất cả: ${sourceCounters.all}`}
+                    aria-pressed={selectedSource === 'all'}
+                    className={`px-2 py-0.5 rounded font-medium transition-all cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 ${
+                      selectedSource === 'all'
+                        ? 'bg-indigo-600 text-white border border-indigo-600 shadow-2xs ring-1 ring-indigo-500'
+                        : 'bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700'
+                    }`}
+                  >
+                    {`Tổng số: ${sourceCounters.all}`}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setSelectedSource('triz_9_windows')}
+                    onKeyDown={(e) => handleKeyActivation(e, () => setSelectedSource('triz_9_windows'))}
+                    aria-label={`Lưới 9 màn hình: ${sourceCounters.triz_9_windows}`}
+                    aria-pressed={selectedSource === 'triz_9_windows'}
+                    className={`px-2 py-0.5 rounded font-medium transition-all cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 ${
+                      selectedSource === 'triz_9_windows'
+                        ? 'bg-sky-600 text-white border border-sky-600 shadow-2xs ring-1 ring-sky-500'
+                        : 'bg-sky-50 dark:bg-sky-950/40 text-sky-700 dark:text-sky-300 border border-sky-200 dark:border-sky-800 hover:bg-sky-100 dark:hover:bg-sky-900/60'
+                    }`}
+                  >
+                    {`Lưới 9 màn hình: ${sourceCounters.triz_9_windows}`}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setSelectedSource('triz_matrix')}
+                    onKeyDown={(e) => handleKeyActivation(e, () => setSelectedSource('triz_matrix'))}
+                    aria-label={`Ma trận TRIZ: ${sourceCounters.triz_matrix}`}
+                    aria-pressed={selectedSource === 'triz_matrix'}
+                    className={`px-2 py-0.5 rounded font-medium transition-all cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-500 ${
+                      selectedSource === 'triz_matrix'
+                        ? 'bg-teal-600 text-white border border-teal-600 shadow-2xs ring-1 ring-teal-500'
+                        : 'bg-teal-50 dark:bg-teal-950/40 text-teal-700 dark:text-teal-300 border border-teal-200 dark:border-teal-800 hover:bg-teal-100 dark:hover:bg-teal-900/60'
+                    }`}
+                  >
+                    {`Ma trận TRIZ: ${sourceCounters.triz_matrix}`}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setSelectedSource('principle_suggestion')}
+                    onKeyDown={(e) => handleKeyActivation(e, () => setSelectedSource('principle_suggestion'))}
+                    aria-label={`Gợi ý nguyên tắc: ${sourceCounters.principle_suggestion}`}
+                    aria-pressed={selectedSource === 'principle_suggestion'}
+                    className={`px-2 py-0.5 rounded font-medium transition-all cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 ${
+                      selectedSource === 'principle_suggestion'
+                        ? 'bg-amber-600 text-white border border-amber-600 shadow-2xs ring-1 ring-amber-500'
+                        : 'bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800 hover:bg-amber-100 dark:hover:bg-amber-900/60'
+                    }`}
+                  >
+                    {`Gợi ý nguyên tắc: ${sourceCounters.principle_suggestion}`}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setSelectedSource('evidence')}
+                    onKeyDown={(e) => handleKeyActivation(e, () => setSelectedSource('evidence'))}
+                    aria-label={`Bằng chứng: ${sourceCounters.evidence}`}
+                    aria-pressed={selectedSource === 'evidence'}
+                    className={`px-2 py-0.5 rounded font-medium transition-all cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-500 ${
+                      selectedSource === 'evidence'
+                        ? 'bg-slate-700 text-white border border-slate-700 shadow-2xs ring-1 ring-slate-600'
+                        : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 hover:bg-slate-200 dark:hover:bg-slate-700'
+                    }`}
+                  >
+                    {`Bằng chứng: ${sourceCounters.evidence}`}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setSelectedSource('candidate_solution')}
+                    onKeyDown={(e) => handleKeyActivation(e, () => setSelectedSource('candidate_solution'))}
+                    aria-label={`Giải pháp ứng viên: ${sourceCounters.candidate_solution}`}
+                    aria-pressed={selectedSource === 'candidate_solution'}
+                    className={`px-2 py-0.5 rounded font-medium transition-all cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 ${
+                      selectedSource === 'candidate_solution'
+                        ? 'bg-indigo-600 text-white border border-indigo-600 shadow-2xs ring-1 ring-indigo-500'
+                        : 'bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800 hover:bg-indigo-100 dark:hover:bg-indigo-900/60'
+                    }`}
+                  >
+                    {`Giải pháp ứng viên: ${sourceCounters.candidate_solution}`}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setSelectedSource('manual')}
+                    onKeyDown={(e) => handleKeyActivation(e, () => setSelectedSource('manual'))}
+                    aria-label={`Thủ công: ${sourceCounters.manual}`}
+                    aria-pressed={selectedSource === 'manual'}
+                    className={`px-2 py-0.5 rounded font-medium transition-all cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-500 ${
+                      selectedSource === 'manual'
+                        ? 'bg-slate-600 text-white border border-slate-600 shadow-2xs ring-1 ring-slate-500'
+                        : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-700 hover:bg-slate-200 dark:hover:bg-slate-700'
+                    }`}
+                  >
+                    {`Thủ công: ${sourceCounters.manual}`}
+                  </button>
+                </div>
+              </>
+            )}
           </div>
         )}
 
