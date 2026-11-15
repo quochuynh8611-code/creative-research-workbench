@@ -1,6 +1,6 @@
 'use client'
 
-import React from 'react'
+import React, { useState, useEffect } from 'react'
 import Link from 'next/link'
 import {
   Compass,
@@ -13,6 +13,8 @@ import {
   Tag,
   CheckCircle2,
   Layers,
+  ChevronDown,
+  ChevronUp,
 } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import { findRelatedSessions } from '@/lib/api-client'
@@ -61,6 +63,26 @@ export function RelatedSessionsPanel({
   const hasProblemFrame = data?.has_problem_frame ?? true
   const reason = data?.reason
 
+  const [isExpanded, setIsExpanded] = useState<boolean>(false)
+
+  useEffect(() => {
+    setIsExpanded(false)
+  }, [sessionId])
+
+  const sortedSessions = [...matchedSessions].sort((a, b) => {
+    if (b.similarity_score !== a.similarity_score) {
+      return b.similarity_score - a.similarity_score
+    }
+    return (a.title || '').localeCompare(b.title || '', undefined, { sensitivity: 'base' })
+  })
+
+  const INITIAL_LIMIT = 5
+  const hasMore = sortedSessions.length > INITIAL_LIMIT
+  const remainingCount = sortedSessions.length - INITIAL_LIMIT
+  const visibleSessions = isExpanded
+    ? sortedSessions
+    : sortedSessions.slice(0, INITIAL_LIMIT)
+
   return (
     <div
       role="region"
@@ -77,9 +99,9 @@ export function RelatedSessionsPanel({
             <h3 className="text-base font-bold text-foreground">
               Phiên nghiên cứu liên quan (Cross-Session Knowledge Discovery)
             </h3>
-            {matchedSessions.length > 0 && (
+            {sortedSessions.length > 0 && (
               <span className="px-2 py-0.5 rounded-full text-[11px] font-semibold bg-primary/10 text-primary">
-                {matchedSessions.length} phiên tương đồng
+                {sortedSessions.length} phiên tương đồng
               </span>
             )}
           </div>
@@ -168,112 +190,142 @@ export function RelatedSessionsPanel({
       )}
 
       {/* Matched Sessions Cards */}
-      {!isLoading && !effectiveIsError && matchedSessions.length > 0 && (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
-          {matchedSessions.map((item) => {
-            const scorePercent = Math.round(item.similarity_score * 100)
-            const domainLabel = item.domain
-              ? (DOMAIN_LABELS as Record<string, string>)[item.domain] || item.domain
-              : null
-            const statusLabel = (STATUS_LABELS as Record<string, string>)[item.status] || item.status
+      {!isLoading && !effectiveIsError && sortedSessions.length > 0 && (
+        <div className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
+            {visibleSessions.map((item) => {
+              const scorePercent = Math.round(item.similarity_score * 100)
+              const domainLabel = item.domain
+                ? (DOMAIN_LABELS as Record<string, string>)[item.domain] || item.domain
+                : null
+              const statusLabel = (STATUS_LABELS as Record<string, string>)[item.status] || item.status
 
-            return (
-              <div
-                key={item.session_id}
-                className="p-4 rounded-xl border border-border bg-card hover:border-primary/40 hover:shadow-sm transition-all flex flex-col justify-between space-y-3"
-              >
-                {/* Card Top: Title & Badges */}
-                <div className="space-y-2">
-                  <div className="flex items-start justify-between gap-2">
-                    <Link
-                      href={`/sessions/${item.session_id}`}
-                      aria-label={`Mở phiên nghiên cứu: ${item.title}`}
-                      className="font-semibold text-xs sm:text-sm text-foreground hover:text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded transition-colors line-clamp-2"
-                    >
-                      {item.title}
-                    </Link>
-                    <span
-                      className={cn(
-                        'shrink-0 px-2 py-0.5 rounded-full text-[10px] font-bold',
-                        scorePercent >= 75
-                          ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20'
-                          : scorePercent >= 40
-                          ? 'bg-primary/10 text-primary border border-primary/20'
-                          : 'bg-muted text-muted-foreground'
-                      )}
-                    >
-                      {scorePercent}% tương đồng
-                    </span>
-                  </div>
-
-                  {/* Metadata Row */}
-                  <div className="flex flex-wrap items-center gap-2 text-[10px] text-muted-foreground">
-                    {domainLabel && (
-                      <span className="px-1.5 py-0.5 rounded bg-muted/60 font-medium">
-                        {domainLabel}
+              return (
+                <div
+                  key={item.session_id}
+                  className="p-4 rounded-xl border border-border bg-card hover:border-primary/40 hover:shadow-sm transition-all flex flex-col justify-between space-y-3"
+                >
+                  {/* Card Top: Title & Badges */}
+                  <div className="space-y-2">
+                    <div className="flex items-start justify-between gap-2">
+                      <Link
+                        href={`/sessions/${item.session_id}`}
+                        aria-label={`Mở phiên nghiên cứu: ${item.title}`}
+                        className="font-semibold text-xs sm:text-sm text-foreground hover:text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded transition-colors line-clamp-2"
+                      >
+                        {item.title}
+                      </Link>
+                      <span
+                        className={cn(
+                          'shrink-0 px-2 py-0.5 rounded-full text-[10px] font-bold',
+                          scorePercent >= 75
+                            ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20'
+                            : scorePercent >= 40
+                            ? 'bg-primary/10 text-primary border border-primary/20'
+                            : 'bg-muted text-muted-foreground'
+                        )}
+                      >
+                        {scorePercent}% tương đồng
                       </span>
-                    )}
-                    <span className="px-1.5 py-0.5 rounded bg-muted/60">
-                      {statusLabel}
-                    </span>
-                    {item.created_at && (
-                      <span>{formatDate(item.created_at)}</span>
-                    )}
-                  </div>
-                </div>
-
-                {/* Match Reasons */}
-                {item.match_reasons && item.match_reasons.length > 0 && (
-                  <div className="space-y-1 pt-1.5 border-t border-border/50">
-                    <div className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
-                      Cơ sở tương đồng:
                     </div>
-                    <ul className="space-y-0.5 text-[11px] text-foreground/90">
-                      {item.match_reasons.map((reasonText, idx) => (
-                        <li key={idx} className="flex items-start gap-1.5">
-                          <CheckCircle2 className="w-3.5 h-3.5 text-primary shrink-0 mt-0.5" />
-                          <span>{reasonText}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
 
-                {/* Shared TRIZ Principles */}
-                {item.shared_parameters?.shared_principles &&
-                  item.shared_parameters.shared_principles.length > 0 && (
+                    {/* Metadata Row */}
+                    <div className="flex flex-wrap items-center gap-2 text-[10px] text-muted-foreground">
+                      {domainLabel && (
+                        <span className="px-1.5 py-0.5 rounded bg-muted/60 font-medium">
+                          {domainLabel}
+                        </span>
+                      )}
+                      <span className="px-1.5 py-0.5 rounded bg-muted/60">
+                        {statusLabel}
+                      </span>
+                      {item.created_at && (
+                        <span>{formatDate(item.created_at)}</span>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Match Reasons */}
+                  {item.match_reasons && item.match_reasons.length > 0 && (
                     <div className="space-y-1 pt-1.5 border-t border-border/50">
-                      <div className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1">
-                        <Tag className="w-3 h-3 text-primary" />
-                        <span>Nguyên tắc TRIZ trùng khớp:</span>
+                      <div className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
+                        Cơ sở tương đồng:
                       </div>
-                      <div className="flex flex-wrap items-center gap-1 text-[11px]">
-                        {item.shared_parameters.shared_principles.map((principleId) => (
-                          <span
-                            key={principleId}
-                            className="px-1.5 py-0.5 rounded-md bg-primary/10 text-primary border border-primary/20 font-medium"
-                          >
-                            #{principleId}
-                          </span>
+                      <ul className="space-y-0.5 text-[11px] text-foreground/90">
+                        {item.match_reasons.map((reasonText, idx) => (
+                          <li key={idx} className="flex items-start gap-1.5">
+                            <CheckCircle2 className="w-3.5 h-3.5 text-primary shrink-0 mt-0.5" />
+                            <span>{reasonText}</span>
+                          </li>
                         ))}
-                      </div>
+                      </ul>
                     </div>
                   )}
 
-                {/* Card Action Link */}
-                <div className="pt-2 flex justify-end">
-                  <Link
-                    href={`/sessions/${item.session_id}`}
-                    aria-label={`Xem phiên nghiên cứu: ${item.title}`}
-                    className="inline-flex items-center gap-1 text-[11px] font-semibold text-primary hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded"
-                  >
-                    <span>Xem phiên nghiên cứu</span>
-                    <ExternalLink className="w-3 h-3" />
-                  </Link>
+                  {/* Shared TRIZ Principles */}
+                  {item.shared_parameters?.shared_principles &&
+                    item.shared_parameters.shared_principles.length > 0 && (
+                      <div className="space-y-1 pt-1.5 border-t border-border/50">
+                        <div className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1">
+                          <Tag className="w-3 h-3 text-primary" />
+                          <span>Nguyên tắc TRIZ trùng khớp:</span>
+                        </div>
+                        <div className="flex flex-wrap items-center gap-1 text-[11px]">
+                          {item.shared_parameters.shared_principles.map((principleId) => (
+                            <span
+                              key={principleId}
+                              className="px-1.5 py-0.5 rounded-md bg-primary/10 text-primary border border-primary/20 font-medium"
+                            >
+                              #{principleId}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                  {/* Card Action Link */}
+                  <div className="pt-2 flex justify-end">
+                    <Link
+                      href={`/sessions/${item.session_id}`}
+                      aria-label={`Xem phiên nghiên cứu: ${item.title}`}
+                      className="inline-flex items-center gap-1 text-[11px] font-semibold text-primary hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded"
+                    >
+                      <span>Xem phiên nghiên cứu</span>
+                      <ExternalLink className="w-3 h-3" />
+                    </Link>
+                  </div>
                 </div>
-              </div>
-            )
-          })}
+              )
+            })}
+          </div>
+
+          {/* Progressive Disclosure (Expand / Collapse) Control */}
+          {hasMore && (
+            <div className="pt-2 flex justify-center">
+              <button
+                type="button"
+                onClick={() => setIsExpanded((prev) => !prev)}
+                aria-label={
+                  isExpanded
+                    ? 'Thu gọn'
+                    : `Xem thêm ${remainingCount} phiên liên quan`
+                }
+                className="inline-flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-semibold text-primary hover:text-primary/90 bg-primary/10 hover:bg-primary/20 rounded-lg transition-colors cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-1"
+              >
+                {isExpanded ? (
+                  <>
+                    <span>Thu gọn</span>
+                    <ChevronUp className="w-3.5 h-3.5" />
+                  </>
+                ) : (
+                  <>
+                    <span>Xem thêm {remainingCount} phiên liên quan</span>
+                    <ChevronDown className="w-3.5 h-3.5" />
+                  </>
+                )}
+              </button>
+            </div>
+          )}
         </div>
       )}
     </div>
