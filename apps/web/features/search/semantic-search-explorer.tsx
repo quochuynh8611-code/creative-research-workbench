@@ -139,8 +139,8 @@ export function sortSearchResults(
   }
   if (sortMode === 'golden_first') {
     return [...items].sort((a, b) => {
-      const goldA = a.metadata?.golden ? 1 : 0
-      const goldB = b.metadata?.golden ? 1 : 0
+      const goldA = a.metadata?.golden === true ? 1 : 0
+      const goldB = b.metadata?.golden === true ? 1 : 0
       if (goldA !== goldB) {
         return goldB - goldA
       }
@@ -1071,7 +1071,7 @@ export function SemanticSearchExplorer() {
                 {/* Sort / Priority Mode Selector */}
                 <div className="flex items-center gap-2 ml-auto">
                   <span className="text-xs text-muted-foreground flex items-center gap-1">
-                    <SlidersHorizontal className="w-3 h-3 text-muted-foreground" />
+                    <SlidersHorizontal className="w-3 h-3 text-muted-foreground" aria-hidden="true" />
                     <span>Sắp xếp:</span>
                   </span>
                   <select
