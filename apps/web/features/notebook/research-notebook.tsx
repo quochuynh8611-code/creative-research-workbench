@@ -396,6 +396,24 @@ export function ResearchNotebook({
     }
   }
 
+  const formatExportTimestamp = (date: Date = new Date()): string => {
+    const pad = (n: number) => String(n).padStart(2, '0')
+    const YYYY = date.getUTCFullYear()
+    const MM = pad(date.getUTCMonth() + 1)
+    const DD = pad(date.getUTCDate())
+    const HH = pad(date.getUTCHours())
+    const mm = pad(date.getUTCMinutes())
+    const ss = pad(date.getUTCSeconds())
+    return `${YYYY}${MM}${DD}-${HH}${mm}${ss}`
+  }
+
+  const handleKeyActivation = (e: React.KeyboardEvent, action: () => void) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault()
+      action()
+    }
+  }
+
   const handleExportCSV = () => {
     if (summaryExportTimerRef.current) {
       clearTimeout(summaryExportTimerRef.current)
@@ -404,7 +422,18 @@ export function ResearchNotebook({
     setSummaryExportStatus(null)
 
     try {
-      const rows = [
+      const now = new Date()
+      const timestampStr = formatExportTimestamp(now)
+      const isoTime = now.toISOString()
+      const filename = `source-provenance-summary-${timestampStr}.csv`
+
+      const metadataRows = [
+        `# generatedAt: ${isoTime}`,
+        `# activeSourceFilter: ${selectedSource}`,
+        `# totalNotes: ${sourceCounters.all}`,
+      ].join('\n')
+
+      const dataRows = [
         ['key', 'label', 'count'],
         ...SOURCE_FILTER_OPTIONS.map((opt) => [
           opt.key,
@@ -412,16 +441,17 @@ export function ResearchNotebook({
           String(sourceCounters[opt.key] ?? 0),
         ]),
       ]
-      const csvContent = rows
         .map((row) => row.map((cell) => `"${cell.replace(/"/g, '""')}"`).join(','))
         .join('\n')
 
-      triggerFileDownload(csvContent, `source-summary-${sessionId}.csv`, 'text/csv;charset=utf-8;')
+      const csvContent = `${metadataRows}\n${dataRows}`
+
+      triggerFileDownload(csvContent, filename, 'text/csv;charset=utf-8;')
 
       if (isMountedRef.current) {
         setSummaryExportStatus({
           status: 'success',
-          message: 'Đã xuất CSV',
+          message: 'Đã xuất CSV thành công',
         })
         summaryExportTimerRef.current = setTimeout(() => {
           if (isMountedRef.current) {
@@ -434,7 +464,7 @@ export function ResearchNotebook({
       if (isMountedRef.current) {
         setSummaryExportStatus({
           status: 'error',
-          message: err instanceof Error ? err.message : 'Không thể xuất file CSV',
+          message: err instanceof Error ? `Không thể xuất file CSV: ${err.message}` : 'Không thể xuất file CSV',
         })
       }
     }
@@ -448,19 +478,29 @@ export function ResearchNotebook({
     setSummaryExportStatus(null)
 
     try {
-      const exportData = SOURCE_FILTER_OPTIONS.map((opt) => ({
-        key: opt.key,
-        label: opt.label,
-        count: sourceCounters[opt.key] ?? 0,
-      }))
+      const now = new Date()
+      const timestampStr = formatExportTimestamp(now)
+      const isoTime = now.toISOString()
+      const filename = `source-provenance-summary-${timestampStr}.json`
+
+      const exportData = {
+        generatedAt: isoTime,
+        activeSourceFilter: selectedSource,
+        totalNotes: sourceCounters.all,
+        sources: SOURCE_FILTER_OPTIONS.map((opt) => ({
+          key: opt.key,
+          label: opt.label,
+          count: sourceCounters[opt.key] ?? 0,
+        })),
+      }
       const jsonContent = JSON.stringify(exportData, null, 2)
 
-      triggerFileDownload(jsonContent, `source-summary-${sessionId}.json`, 'application/json')
+      triggerFileDownload(jsonContent, filename, 'application/json')
 
       if (isMountedRef.current) {
         setSummaryExportStatus({
           status: 'success',
-          message: 'Đã xuất JSON',
+          message: 'Đã xuất JSON thành công',
         })
         summaryExportTimerRef.current = setTimeout(() => {
           if (isMountedRef.current) {
@@ -473,7 +513,7 @@ export function ResearchNotebook({
       if (isMountedRef.current) {
         setSummaryExportStatus({
           status: 'error',
-          message: err instanceof Error ? err.message : 'Không thể xuất file JSON',
+          message: err instanceof Error ? `Không thể xuất file JSON: ${err.message}` : 'Không thể xuất file JSON',
         })
       }
     }
@@ -665,6 +705,7 @@ export function ResearchNotebook({
                   <span
                     className="inline-flex items-center gap-1 text-xs font-medium text-rose-600 dark:text-rose-400 px-1.5 py-0.5 rounded bg-rose-50 dark:bg-rose-950/40"
                     role="alert"
+                    aria-live="polite"
                   >
                     <span>{summaryExportStatus.message}</span>
                   </span>
@@ -673,8 +714,9 @@ export function ResearchNotebook({
                 <button
                   type="button"
                   onClick={handleCopySummary}
+                  onKeyDown={(e) => handleKeyActivation(e, handleCopySummary)}
                   aria-label="Sao chép tổng hợp"
-                  className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors cursor-pointer shadow-2xs"
+                  className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-1 transition-colors cursor-pointer shadow-2xs"
                 >
                   <Copy className="w-3.5 h-3.5" />
                   <span>Sao chép tổng hợp</span>
@@ -683,8 +725,9 @@ export function ResearchNotebook({
                 <button
                   type="button"
                   onClick={handleExportCSV}
+                  onKeyDown={(e) => handleKeyActivation(e, handleExportCSV)}
                   aria-label="Xuất CSV"
-                  className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors cursor-pointer shadow-2xs"
+                  className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-1 transition-colors cursor-pointer shadow-2xs"
                 >
                   <Download className="w-3.5 h-3.5" />
                   <span>Xuất CSV</span>
@@ -693,8 +736,9 @@ export function ResearchNotebook({
                 <button
                   type="button"
                   onClick={handleExportJSON}
+                  onKeyDown={(e) => handleKeyActivation(e, handleExportJSON)}
                   aria-label="Xuất JSON"
-                  className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors cursor-pointer shadow-2xs"
+                  className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-1 transition-colors cursor-pointer shadow-2xs"
                 >
                   <Download className="w-3.5 h-3.5" />
                   <span>Xuất JSON</span>
@@ -706,9 +750,10 @@ export function ResearchNotebook({
               <button
                 type="button"
                 onClick={() => setSelectedSource('all')}
+                onKeyDown={(e) => handleKeyActivation(e, () => setSelectedSource('all'))}
                 aria-label={`Tất cả: ${sourceCounters.all}`}
                 aria-pressed={selectedSource === 'all'}
-                className={`px-2 py-0.5 rounded font-medium transition-all cursor-pointer ${
+                className={`px-2 py-0.5 rounded font-medium transition-all cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 ${
                   selectedSource === 'all'
                     ? 'bg-indigo-600 text-white border border-indigo-600 shadow-2xs ring-1 ring-indigo-500'
                     : 'bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700'
@@ -719,9 +764,10 @@ export function ResearchNotebook({
               <button
                 type="button"
                 onClick={() => setSelectedSource('triz_9_windows')}
+                onKeyDown={(e) => handleKeyActivation(e, () => setSelectedSource('triz_9_windows'))}
                 aria-label={`Lưới 9 màn hình: ${sourceCounters.triz_9_windows}`}
                 aria-pressed={selectedSource === 'triz_9_windows'}
-                className={`px-2 py-0.5 rounded font-medium transition-all cursor-pointer ${
+                className={`px-2 py-0.5 rounded font-medium transition-all cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 ${
                   selectedSource === 'triz_9_windows'
                     ? 'bg-sky-600 text-white border border-sky-600 shadow-2xs ring-1 ring-sky-500'
                     : 'bg-sky-50 dark:bg-sky-950/40 text-sky-700 dark:text-sky-300 border border-sky-200 dark:border-sky-800 hover:bg-sky-100 dark:hover:bg-sky-900/60'
@@ -732,9 +778,10 @@ export function ResearchNotebook({
               <button
                 type="button"
                 onClick={() => setSelectedSource('triz_matrix')}
+                onKeyDown={(e) => handleKeyActivation(e, () => setSelectedSource('triz_matrix'))}
                 aria-label={`Ma trận TRIZ: ${sourceCounters.triz_matrix}`}
                 aria-pressed={selectedSource === 'triz_matrix'}
-                className={`px-2 py-0.5 rounded font-medium transition-all cursor-pointer ${
+                className={`px-2 py-0.5 rounded font-medium transition-all cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-500 ${
                   selectedSource === 'triz_matrix'
                     ? 'bg-teal-600 text-white border border-teal-600 shadow-2xs ring-1 ring-teal-500'
                     : 'bg-teal-50 dark:bg-teal-950/40 text-teal-700 dark:text-teal-300 border border-teal-200 dark:border-teal-800 hover:bg-teal-100 dark:hover:bg-teal-900/60'
@@ -745,9 +792,10 @@ export function ResearchNotebook({
               <button
                 type="button"
                 onClick={() => setSelectedSource('principle_suggestion')}
+                onKeyDown={(e) => handleKeyActivation(e, () => setSelectedSource('principle_suggestion'))}
                 aria-label={`Gợi ý nguyên tắc: ${sourceCounters.principle_suggestion}`}
                 aria-pressed={selectedSource === 'principle_suggestion'}
-                className={`px-2 py-0.5 rounded font-medium transition-all cursor-pointer ${
+                className={`px-2 py-0.5 rounded font-medium transition-all cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 ${
                   selectedSource === 'principle_suggestion'
                     ? 'bg-amber-600 text-white border border-amber-600 shadow-2xs ring-1 ring-amber-500'
                     : 'bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800 hover:bg-amber-100 dark:hover:bg-amber-900/60'
@@ -758,9 +806,10 @@ export function ResearchNotebook({
               <button
                 type="button"
                 onClick={() => setSelectedSource('evidence')}
+                onKeyDown={(e) => handleKeyActivation(e, () => setSelectedSource('evidence'))}
                 aria-label={`Bằng chứng: ${sourceCounters.evidence}`}
                 aria-pressed={selectedSource === 'evidence'}
-                className={`px-2 py-0.5 rounded font-medium transition-all cursor-pointer ${
+                className={`px-2 py-0.5 rounded font-medium transition-all cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-500 ${
                   selectedSource === 'evidence'
                     ? 'bg-slate-700 text-white border border-slate-700 shadow-2xs ring-1 ring-slate-600'
                     : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 hover:bg-slate-200 dark:hover:bg-slate-700'
@@ -771,9 +820,10 @@ export function ResearchNotebook({
               <button
                 type="button"
                 onClick={() => setSelectedSource('candidate_solution')}
+                onKeyDown={(e) => handleKeyActivation(e, () => setSelectedSource('candidate_solution'))}
                 aria-label={`Giải pháp ứng viên: ${sourceCounters.candidate_solution}`}
                 aria-pressed={selectedSource === 'candidate_solution'}
-                className={`px-2 py-0.5 rounded font-medium transition-all cursor-pointer ${
+                className={`px-2 py-0.5 rounded font-medium transition-all cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 ${
                   selectedSource === 'candidate_solution'
                     ? 'bg-indigo-600 text-white border border-indigo-600 shadow-2xs ring-1 ring-indigo-500'
                     : 'bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800 hover:bg-indigo-100 dark:hover:bg-indigo-900/60'
@@ -784,9 +834,10 @@ export function ResearchNotebook({
               <button
                 type="button"
                 onClick={() => setSelectedSource('manual')}
+                onKeyDown={(e) => handleKeyActivation(e, () => setSelectedSource('manual'))}
                 aria-label={`Thủ công: ${sourceCounters.manual}`}
                 aria-pressed={selectedSource === 'manual'}
-                className={`px-2 py-0.5 rounded font-medium transition-all cursor-pointer ${
+                className={`px-2 py-0.5 rounded font-medium transition-all cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-500 ${
                   selectedSource === 'manual'
                     ? 'bg-slate-600 text-white border border-slate-600 shadow-2xs ring-1 ring-slate-500'
                     : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-700 hover:bg-slate-200 dark:hover:bg-slate-700'
