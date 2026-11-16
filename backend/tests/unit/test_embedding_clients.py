@@ -7,14 +7,12 @@ from __future__ import annotations
 import logging
 from unittest.mock import MagicMock, patch
 
-import pytest
-
 from app.core.config import Settings
 from app.services.embedding_client import (
     EMBEDDING_DIM,
-    EmbeddingClient,
     GeminiEmbeddingClient,
     MockEmbeddingClient,
+    OllamaEmbeddingClient,
     OpenAIEmbeddingClient,
     get_embedding_client,
 )
@@ -400,3 +398,75 @@ def test_openai_embedding_client_api_connection_error_retry_and_fallback(caplog)
         assert mock_instance.embeddings.create.call_count == 3
         for record in caplog.records:
             assert secret_key not in record.message
+
+
+def test_ollama_embedding_client_returns_768_dim_vector():
+    """Scenario: Ollama client returns 768-dim vector."""
+    fake_vector_768 = [0.123] * 768
+
+    with patch("httpx.Client") as mock_client_cls:
+        mock_http = MagicMock()
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {"embeddings": [fake_vector_768]}
+        mock_http.post.return_value = mock_response
+        mock_client_cls.return_value.__enter__.return_value = mock_http
+
+        client = OllamaEmbeddingClient(base_url="http://localhost:11434", model="nomic-embed-text")
+        vectors = client.embed(["Nghiên cứu nguyên lý TRIZ"])
+
+        assert len(vectors) == 1
+        assert len(vectors[0]) == 768
+        assert vectors[0] == fake_vector_768
+
+
+def test_ollama_embedding_client_standardize_dim_pads_to_1536():
+    """Scenario: Ollama vector is padded to 1536 for DB storage."""
+    vec_768 = [float(i) for i in range(768)]
+    padded_vec = OllamaEmbeddingClient._standardize_dim(vec_768)
+
+    assert len(padded_vec) == 1536
+    assert padded_vec[:768] == vec_768
+    assert padded_vec[768:] == [0.0] * (1536 - 768)
+
+
+def test_config_supports_ollama_provider():
+    """Scenario: Config supports ollama provider."""
+    settings_obj = Settings(
+        EMBEDDING_PROVIDER="ollama",
+        OLLAMA_EMBEDDING_MODEL="nomic-embed-text",
+    )
+    assert settings_obj.EMBEDDING_PROVIDER == "ollama"
+    assert settings_obj.OLLAMA_EMBEDDING_MODEL == "nomic-embed-text"
+
+    with patch("app.services.embedding_client.settings", settings_obj):
+        client = get_embedding_client("ollama")
+        assert isinstance(client, OllamaEmbeddingClient)
+        assert client.model == "nomic-embed-text"
+
+
+def test_graceful_degradation_when_ollama_unavailable(caplog):
+    """Scenario: Graceful degradation when Ollama unavailable."""
+    import httpx
+
+    with patch("httpx.Client") as mock_client_cls:
+        mock_http = MagicMock()
+        mock_http.post.side_effect = httpx.ConnectError("Connection refused to Ollama daemon")
+        mock_client_cls.return_value.__enter__.return_value = mock_http
+
+        with caplog.at_level(logging.WARNING):
+            client = OllamaEmbeddingClient(
+                base_url="http://localhost:11434",
+                model="nomic-embed-text",
+                max_retries=2,
+                retry_delay=0.01,
+                fallback_on_error=True,
+            )
+            vectors = client.embed(["Văn bản khi mất kết nối"])
+
+        assert len(vectors) == 1
+        assert len(vectors[0]) == 1536
+        assert all(v == 0.0 for v in vectors[0])
+        assert mock_http.post.call_count == 3  # 1 initial + 2 retries
+        assert any("Ollama embedding request failed" in record.message or "Falling back to MockEmbeddingClient" in record.message for record in caplog.records)
+

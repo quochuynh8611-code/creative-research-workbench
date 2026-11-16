@@ -26,7 +26,6 @@ import logging
 import pathlib
 import re
 import uuid
-from abc import ABC, abstractmethod
 from typing import Any
 
 import yaml
@@ -215,7 +214,6 @@ class MarkdownChunker:
 
 
 from app.services.embedding_client import (
-    EMBEDDING_DIM,
     EmbeddingClient,
     GeminiEmbeddingClient,
     MockEmbeddingClient,
@@ -294,7 +292,7 @@ class IngestionService:
             return self._process_bytes(raw_bytes, filename=path.name, filepath=str(path))
         except FrontmatterValidationError:
             raise
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             logger.exception("Lỗi khi ingest file %s", filepath)
             return IngestResult.error(str(exc))
 
@@ -320,7 +318,7 @@ class IngestionService:
             )
         except FrontmatterValidationError:
             raise
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             logger.exception("Lỗi khi ingest bytes %s", filename)
             return IngestResult.error(str(exc))
 
@@ -366,6 +364,20 @@ class IngestionService:
         texts = [text for text, _ in chunks_data]
         vectors = self.embedding_client.embed(texts)
 
+        # Chuẩn hóa kích thước vector về EMBEDDING_DIM (1536) cho PostgreSQL pgvector storage
+        standardize_fn = getattr(self.embedding_client, "_standardize_dim", None)
+        standardized_vectors: list[list[float]] = []
+        for v in vectors:
+            if len(v) != EMBEDDING_DIM:
+                if callable(standardize_fn):
+                    standardized_vectors.append(standardize_fn(v))
+                elif len(v) < EMBEDDING_DIM:
+                    standardized_vectors.append([float(x) for x in v] + [0.0] * (EMBEDDING_DIM - len(v)))
+                else:
+                    standardized_vectors.append([float(x) for x in v[:EMBEDDING_DIM]])
+            else:
+                standardized_vectors.append(v)
+
         # ── Build Chunks ──────────────────────
         chunk_objects = [
             Chunk(
@@ -377,7 +389,7 @@ class IngestionService:
                 embedding=vector,
             )
             for idx, ((text, token_count), vector) in enumerate(
-                zip(chunks_data, vectors)
+                zip(chunks_data, standardized_vectors)
             )
         ]
 

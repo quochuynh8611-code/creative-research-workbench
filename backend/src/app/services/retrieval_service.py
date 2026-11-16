@@ -30,13 +30,13 @@ import logging
 import uuid
 from typing import Any
 
-from sqlalchemy import Engine, Float, Integer, Select, cast, func, select, text
+from sqlalchemy import Engine, Float, Select, cast, func, select
 from sqlalchemy.orm import Session
 
 from app.domain.models import Chunk, Document, SearchResult
 from app.services.embedding_client import (
+    EMBEDDING_DIM,
     EmbeddingClient,
-    MockEmbeddingClient,
     get_embedding_client,
 )
 
@@ -242,6 +242,7 @@ class RetrievalService:
             session=session,
             query=query,
             top_k=top_k,
+            offset=0,
             n_candidates=n_candidates,
             filters=filters,
         )
@@ -298,6 +299,13 @@ class RetrievalService:
         # Kiểm tra zero-vector: không có tín hiệu — skip để tránh nhiễu
         if all(v == 0.0 for v in query_vector):
             return []
+
+        # Chuẩn hóa độ dài query_vector về EMBEDDING_DIM nếu cần (ví dụ từ Ollama 768 dims)
+        if len(query_vector) != EMBEDDING_DIM:
+            if len(query_vector) < EMBEDDING_DIM:
+                query_vector = [float(x) for x in query_vector] + [0.0] * (EMBEDDING_DIM - len(query_vector))
+            else:
+                query_vector = [float(x) for x in query_vector[:EMBEDDING_DIM]]
 
         # Cosine distance: <=> trả về [0, 2] (0 = giống hệt, 2 = đối lập)
         # similarity = 1 - distance ∈ [-1, 1]; clip về [0, 1]
