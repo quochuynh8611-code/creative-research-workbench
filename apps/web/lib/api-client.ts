@@ -18,6 +18,7 @@ import type {
   DocumentDetail,
   DocumentListResponse,
   DocumentUploadResponse,
+  EmbeddingStatusResponse,
   ImportSessionResponse,
   NextStepResponse,
   ProblemFrame,
@@ -41,6 +42,7 @@ import type {
   TrizParametersResponse,
   TrizPrinciplesResponse,
   UpdateCandidateSolutionInput,
+  WorkflowRunResponse,
 } from './types'
 
 export const apiClient = axios.create({
@@ -471,4 +473,29 @@ export async function getTrizNineWindows(
     }
   )
   return response.data
+}
+
+/**
+ * 34. Lấy trạng thái và tiến độ nhúng embedding của toàn bộ Knowledge Base (Batch C21).
+ */
+export async function getEmbeddingStatus(): Promise<EmbeddingStatusResponse> {
+  const response = await apiClient.get<{ data?: EmbeddingStatusResponse } & EmbeddingStatusResponse>(
+    '/api/v1/documents/embedding-status'
+  )
+  return response.data.data ?? response.data
+}
+
+/**
+ * 35. Thực thi toàn diện quy trình nghiên cứu end-to-end (Batch C21).
+ * Pipeline: ingest -> embed -> retrieve -> recommend_principles.
+ */
+export async function runSessionWorkflow(
+  sessionId: string,
+  payload?: { problem_statement?: string; query?: string; domain?: string }
+): Promise<WorkflowRunResponse> {
+  const response = await apiClient.post<{ data?: WorkflowRunResponse } & WorkflowRunResponse>(
+    `/api/v1/sessions/${sessionId}/run-workflow`,
+    payload
+  )
+  return response.data.data ?? response.data
 }

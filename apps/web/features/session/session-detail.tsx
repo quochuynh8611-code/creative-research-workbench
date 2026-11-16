@@ -18,10 +18,12 @@ import {
   Check,
   RotateCcw,
   ChevronDown,
+  Play,
+  CheckCircle2,
 } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import { DOMAIN_LABELS, STATUS_LABELS, STAGE_LABELS, WORKFLOW_STAGES, formatDate, cn } from '@/lib/utils'
-import { getSession, getSessionRecommendations, exportSessionMarkdown, exportSessionJson, generateAIResearchReport } from '@/lib/api-client'
+import { getSession, getSessionRecommendations, exportSessionMarkdown, exportSessionJson, generateAIResearchReport, runSessionWorkflow } from '@/lib/api-client'
 import { IntakeForm } from '@/features/intake/intake-form'
 import { NormalizedView } from '@/features/structuring/normalized-view'
 import { WorkflowStepper } from '@/features/session/workflow-stepper'
@@ -29,8 +31,10 @@ import { PrincipleSuggestions } from '@/features/ideation/principle-suggestions'
 import { CandidateSolutions } from '@/features/ideation/candidate-solutions'
 import { EvidencePanel } from '@/features/retrieval/evidence-panel'
 import { TrizMatrixLookup } from '@/features/triz/triz-matrix-lookup'
+import { TrizMatrixPanel } from '@/features/triz/triz-matrix-panel'
 import { ResearchNotebook } from '@/features/notebook/research-notebook'
 import { RelatedSessionsPanel } from '@/features/session/related-sessions-panel'
+import { EmbeddingStatusPanel } from '@/features/session/embedding-status-panel'
 
 import type {
   AIResearchReport,
@@ -39,6 +43,7 @@ import type {
   RecommendedMethod,
   NoteDraft,
   NoteType,
+  WorkflowRunResponse,
 } from '@/lib/types'
 
 const TABS = [
@@ -103,7 +108,24 @@ export function SessionDetail({ sessionId }: SessionDetailProps) {
   const [isGeneratingReport, setIsGeneratingReport] = useState<boolean>(false)
   const [reportError, setReportError] = useState<string | null>(null)
   const [hasCopied, setHasCopied] = useState<boolean>(false)
+  const [isRunningWorkflow, setIsRunningWorkflow] = useState<boolean>(false)
+  const [workflowResult, setWorkflowResult] = useState<WorkflowRunResponse | null>(null)
+  const [workflowError, setWorkflowError] = useState<string | null>(null)
   const exportMenuRef = useRef<HTMLDivElement>(null)
+
+  const handleRunWorkflow = async () => {
+    if (isRunningWorkflow) return
+    setIsRunningWorkflow(true)
+    setWorkflowError(null)
+    try {
+      const result = await runSessionWorkflow(sessionId)
+      setWorkflowResult(result)
+    } catch (err: any) {
+      setWorkflowError(err?.message || 'Có lỗi xảy ra khi thực thi quy trình')
+    } finally {
+      setIsRunningWorkflow(false)
+    }
+  }
 
   // Đóng export dropdown khi nhấn phím Escape hoặc click ra ngoài menu
   useEffect(() => {
@@ -442,8 +464,29 @@ export function SessionDetail({ sessionId }: SessionDetailProps) {
           </div>
         </div>
 
-        {/* Header Actions - Unified Export Dropdown */}
-        <div ref={exportMenuRef} className="relative inline-block text-left no-print">
+        {/* Header Actions */}
+        <div className="flex flex-wrap items-center gap-2.5 no-print">
+          <button
+            type="button"
+            onClick={handleRunWorkflow}
+            disabled={isRunningWorkflow}
+            className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-semibold bg-primary text-primary-foreground hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-sm cursor-pointer"
+          >
+            {isRunningWorkflow ? (
+              <>
+                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                <span>Đang chạy quy trình...</span>
+              </>
+            ) : (
+              <>
+                <Play className="w-3.5 h-3.5 fill-current" />
+                <span>Run Full Workflow</span>
+              </>
+            )}
+          </button>
+
+          {/* Unified Export Dropdown */}
+          <div ref={exportMenuRef} className="relative inline-block text-left">
           <button
             type="button"
             onClick={() => setIsExportOpen(!isExportOpen)}
@@ -516,6 +559,7 @@ export function SessionDetail({ sessionId }: SessionDetailProps) {
             </div>
           )}
         </div>
+        </div>
       </div>
 
       {/* Export Error Alert */}
@@ -566,6 +610,112 @@ export function SessionDetail({ sessionId }: SessionDetailProps) {
           }
         }}
       />
+
+      {/* Workflow Error Alert */}
+      {workflowError && (
+        <div className="p-3 rounded-xl border border-destructive/30 bg-destructive/10 text-xs text-destructive flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2">
+            <AlertCircle className="w-4 h-4 shrink-0" />
+            <span>{workflowError}</span>
+          </div>
+          <button
+            type="button"
+            onClick={() => setWorkflowError(null)}
+            className="text-destructive hover:underline text-[11px] font-medium"
+          >
+            Đóng
+          </button>
+        </div>
+      )}
+
+      {/* Workflow Running Card */}
+      {isRunningWorkflow && (
+        <div className="p-4 rounded-xl border border-primary/30 bg-primary/5 space-y-2">
+          <div className="flex items-center gap-2 text-xs font-bold text-primary">
+            <Loader2 className="w-4 h-4 animate-spin" />
+            <span>Đang thực thi quy trình end-to-end (ingest → embed → retrieve → recommend)...</span>
+          </div>
+        </div>
+      )}
+
+      {/* Workflow Result Card */}
+      {workflowResult && (
+        <div className="p-5 rounded-2xl border border-border bg-card/70 backdrop-blur-sm space-y-4 shadow-sm">
+          <div className="flex items-center justify-between pb-2 border-b border-border">
+            <div className="flex items-center gap-2">
+              <CheckCircle2 className="w-4 h-4 text-emerald-500" />
+              <h3 className="text-sm font-bold text-foreground">
+                Kết quả thực thi quy trình (Pipeline Latency: {workflowResult.total_duration_ms}ms)
+              </h3>
+            </div>
+            <button
+              type="button"
+              onClick={() => setWorkflowResult(null)}
+              className="text-xs text-muted-foreground hover:text-foreground cursor-pointer"
+            >
+              Đóng
+            </button>
+          </div>
+
+          {/* Steps Progress */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+            {workflowResult.steps.map((st) => (
+              <div
+                key={st.step}
+                data-testid={`workflow-step-${st.step}`}
+                className="p-2.5 rounded-lg border border-border bg-background/50 space-y-1"
+              >
+                <div className="flex items-center justify-between text-[11px] font-semibold text-foreground uppercase">
+                  <span>{st.step}</span>
+                  <span className="text-emerald-500 font-bold">{st.status}</span>
+                </div>
+                <div className="text-[10px] text-muted-foreground">
+                  {st.duration_ms}ms
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Output Principles */}
+          {workflowResult.principles && workflowResult.principles.length > 0 && (
+            <div className="space-y-3 pt-2">
+              <h4 className="text-xs font-bold text-foreground uppercase tracking-wider flex items-center gap-1.5">
+                <Sparkles className="w-3.5 h-3.5 text-amber-500" />
+                <span>Nguyên tắc sáng tạo gợi ý ({workflowResult.principles.length})</span>
+              </h4>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                {workflowResult.principles.map((principle: any) => {
+                  const pid = principle.principle_id || principle.id
+                  return (
+                    <div
+                      key={`wf-principle-${pid}`}
+                      className="p-3.5 rounded-xl border border-border bg-card/80 space-y-1.5 shadow-sm"
+                    >
+                      <div className="flex items-center justify-between">
+                        <span className="px-2 py-0.5 rounded text-[11px] font-bold bg-amber-500/15 text-amber-600 border border-amber-500/25">
+                          #{pid}
+                        </span>
+                        <span className="text-xs text-muted-foreground truncate max-w-[150px]">
+                          {principle.name_en || principle.title}
+                        </span>
+                      </div>
+                      <div className="text-xs font-bold text-foreground">
+                        {principle.name_vi || principle.title}
+                      </div>
+                      <p className="text-[11px] text-muted-foreground line-clamp-2">
+                        {principle.description}
+                      </p>
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Embedding Status Panel */}
+      <EmbeddingStatusPanel />
 
       {/* Tab Navigation */}
       <div className="border-b border-border">
@@ -661,6 +811,12 @@ export function SessionDetail({ sessionId }: SessionDetailProps) {
 
         {activeTab === 'ideation' && (
           <div className="space-y-8">
+            <TrizMatrixPanel
+              improvingParameter={effectiveProblemFrame?.improving_parameter}
+              worseningParameter={effectiveProblemFrame?.worsening_parameter}
+              onSelectPrinciple={handleApplyPrincipleToSolution}
+              onSaveAsNote={handleSaveAsNote}
+            />
             <TrizMatrixLookup
               improvingParameter={effectiveProblemFrame?.improving_parameter}
               worseningParameter={effectiveProblemFrame?.worsening_parameter}

@@ -670,3 +670,40 @@ export interface TrizNineWindowsResponse {
   grid: TrizNineWindowsCell[]
   meta: TrizNineWindowsMeta
 }
+
+// ──────────────────────────────────────────────
+// Embedding Status & Workflow Execution Types (Batch C21)
+// ──────────────────────────────────────────────
+
+export interface EmbeddingStatusResponse {
+  total_documents: number
+  embedded_documents: number
+  total_chunks?: number
+  embedded_chunks?: number
+  provider: string
+  model: string
+  progress_text: string
+}
+
+export interface WorkflowStepProgress {
+  step: 'ingest' | 'embed' | 'retrieve' | 'recommend_principles' | string
+  status: 'pending' | 'in_progress' | 'completed' | 'failed'
+  duration_ms?: number
+  details?: Record<string, any>
+}
+
+export interface WorkflowRunResponse {
+  session_id: string
+  status: string
+  total_duration_ms: number
+  steps: WorkflowStepProgress[]
+  principles: RecommendedMethod[] | Array<{
+    id: number
+    principle_id: number
+    title: string
+    name_vi?: string
+    name_en?: string
+    description: string
+    explanation?: string
+  }>
+}
