@@ -14,7 +14,6 @@ from __future__ import annotations
 import logging
 import time
 from abc import ABC, abstractmethod
-from typing import Any, Optional
 
 import httpx
 
@@ -24,6 +23,7 @@ logger = logging.getLogger(__name__)
 
 # Kích thước vector chuẩn toàn hệ thống
 EMBEDDING_DIM: int = 1536
+OLLAMA_EMBED_DIM: int = 768
 
 
 # ──────────────────────────────────────────────
@@ -70,8 +70,8 @@ class OpenAIEmbeddingClient(EmbeddingClient):
 
     def __init__(
         self,
-        api_key: Optional[str] = None,
-        model: Optional[str] = None,
+        api_key: str | None = None,
+        model: str | None = None,
         dimensions: int = EMBEDDING_DIM,
         max_retries: int = 2,
         retry_delay: float = 0.5,
@@ -116,7 +116,7 @@ class OpenAIEmbeddingClient(EmbeddingClient):
                 # Kiểm tra và chuẩn hóa kích thước vector nếu cần
                 return [self._standardize_dim(v) for v in vectors]
 
-            except Exception as exc:  # noqa: BLE001
+            except Exception as exc:
                 attempts += 1
                 if attempts <= self.max_retries:
                     sleep_time = self.retry_delay * (2 ** (attempts - 1))
@@ -161,8 +161,8 @@ class GeminiEmbeddingClient(EmbeddingClient):
 
     def __init__(
         self,
-        api_key: Optional[str] = None,
-        model: Optional[str] = None,
+        api_key: str | None = None,
+        model: str | None = None,
         max_retries: int = 2,
         retry_delay: float = 0.5,
         fallback_on_error: bool = True,
@@ -214,7 +214,7 @@ class GeminiEmbeddingClient(EmbeddingClient):
                     vectors = [item.get("values", []) for item in embeddings_raw]
                     return [self._standardize_dim(v) for v in vectors]
 
-                except Exception as exc:  # noqa: BLE001
+                except Exception as exc:
                     attempts += 1
                     if attempts <= self.max_retries:
                         sleep_time = self.retry_delay * (2 ** (attempts - 1))
@@ -249,13 +249,118 @@ class GeminiEmbeddingClient(EmbeddingClient):
 
 
 # ──────────────────────────────────────────────
+# Ollama Embedding Client
+# ──────────────────────────────────────────────
+
+class OllamaEmbeddingClient(EmbeddingClient):
+    """
+    Ollama Embedding Client sử dụng model nomic-embed-text (768 dimensions) qua Ollama REST API.
+    Hỗ trợ retry có exponential backoff và graceful degradation về Mock khi daemon không khả dụng.
+    Cung cấp phương thức _standardize_dim để pad 768 -> 1536 khi lưu vào PostgreSQL pgvector.
+    """
+
+    def __init__(
+        self,
+        base_url: str | None = None,
+        model: str | None = None,
+        max_retries: int = 2,
+        retry_delay: float = 0.5,
+        fallback_on_error: bool = True,
+    ) -> None:
+        self.base_url = (
+            base_url
+            if base_url is not None
+            else getattr(settings, "OLLAMA_BASE_URL", "http://localhost:11434")
+        ).rstrip("/")
+        self.model = (
+            model
+            or getattr(settings, "OLLAMA_EMBEDDING_MODEL", None)
+            or getattr(settings, "EMBEDDING_MODEL_NAME", None)
+            or "nomic-embed-text"
+        )
+        self.max_retries = max_retries
+        self.retry_delay = retry_delay
+        self.fallback_on_error = fallback_on_error
+        self._mock_fallback = MockEmbeddingClient()
+
+    def embed(self, texts: list[str]) -> list[list[float]]:
+        if not texts:
+            return []
+
+        attempts = 0
+        with httpx.Client(timeout=30.0) as http_client:
+            while True:
+                try:
+                    # Thử batch embed endpoint trước (/api/embed)
+                    embed_url = f"{self.base_url}/api/embed"
+                    resp = http_client.post(
+                        embed_url,
+                        json={"model": self.model, "input": texts},
+                    )
+                    if resp.status_code == 200:
+                        data = resp.json()
+                        raw_embeddings = data.get("embeddings", [])
+                        if len(raw_embeddings) == len(texts):
+                            return [[float(x) for x in v] for v in raw_embeddings]
+
+                    # Fallback sang /api/embeddings per-prompt nếu /api/embed không khả dụng
+                    embeddings_per_prompt = []
+                    for t in texts:
+                        single_url = f"{self.base_url}/api/embeddings"
+                        single_resp = http_client.post(
+                            single_url,
+                            json={"model": self.model, "prompt": t},
+                        )
+                        if single_resp.status_code != 200:
+                            raise RuntimeError(
+                                f"Ollama API returned status {single_resp.status_code}: {single_resp.text}"
+                            )
+                        single_data = single_resp.json()
+                        vec = single_data.get("embedding", [])
+                        embeddings_per_prompt.append([float(x) for x in vec])
+                    return embeddings_per_prompt
+
+                except Exception as exc:
+                    attempts += 1
+                    if attempts <= self.max_retries:
+                        sleep_time = self.retry_delay * (2 ** (attempts - 1))
+                        logger.warning(
+                            "Ollama embedding request failed (attempt %d/%d): %s. Retrying in %.2fs...",
+                            attempts,
+                            self.max_retries,
+                            exc,
+                            sleep_time,
+                        )
+                        time.sleep(sleep_time)
+                    else:
+                        logger.error(
+                            "Ollama embedding request failed after %d retries: %s. Falling back to MockEmbeddingClient (fallback_on_error=%s).",
+                            self.max_retries,
+                            exc,
+                            self.fallback_on_error,
+                        )
+                        if self.fallback_on_error:
+                            return self._mock_fallback.embed(texts)
+                        raise
+
+    @staticmethod
+    def _standardize_dim(vector: list[float]) -> list[float]:
+        """Chuẩn hóa vector (ví dụ 768 chiều từ Ollama) thành 1536 chiều bằng cách pad 0.0 để lưu vào PostgreSQL pgvector."""
+        if len(vector) == EMBEDDING_DIM:
+            return [float(x) for x in vector]
+        if len(vector) < EMBEDDING_DIM:
+            return [float(x) for x in vector] + [0.0] * (EMBEDDING_DIM - len(vector))
+        return [float(x) for x in vector[:EMBEDDING_DIM]]
+
+
+# ──────────────────────────────────────────────
 # Factory
 # ──────────────────────────────────────────────
 
-def get_embedding_client(provider: Optional[str] = None) -> EmbeddingClient:
+def get_embedding_client(provider: str | None = None) -> EmbeddingClient:
     """
     Factory tạo EmbeddingClient dựa trên cấu hình provider.
-    Mặc định: settings.EMBEDDING_PROVIDER ('mock' | 'openai' | 'gemini').
+    Mặc định: settings.EMBEDDING_PROVIDER ('mock' | 'openai' | 'gemini' | 'ollama').
     """
     target_provider = (
         provider if provider is not None else settings.EMBEDDING_PROVIDER
@@ -268,6 +373,8 @@ def get_embedding_client(provider: Optional[str] = None) -> EmbeddingClient:
         return OpenAIEmbeddingClient()
     elif clean_provider == "gemini":
         return GeminiEmbeddingClient()
+    elif clean_provider == "ollama":
+        return OllamaEmbeddingClient()
     else:
         logger.warning(
             "Unknown EMBEDDING_PROVIDER '%s'. Falling back to MockEmbeddingClient.",

@@ -6,6 +6,7 @@ from __future__ import annotations
 
 import pathlib
 import uuid
+from typing import ClassVar
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -535,7 +536,7 @@ class DeterministicSemanticEmbeddingClient(EmbeddingClient):
     Deterministic Semantic Embedding Client for golden benchmark tests (Recall@5 & Latency).
     Generates non-zero normalized 1536-dimensional vectors using semantic topic projection.
     """
-    TOPICS = [
+    TOPICS: ClassVar[list[str]] = [
         "architecture",
         "api",
         "domain",
@@ -697,14 +698,14 @@ golden: true
 
         # Đo latency riêng của FTS (Leg 1)
         t0 = time.perf_counter()
-        fts_res = retriever._fts_search(query_str, top_k=5)
+        _ = retriever._fts_search(db_session, query_str, limit=5, filters=None)
         fts_latency_ms = (time.perf_counter() - t0) * 1000
         max_fts_latency = max(max_fts_latency, fts_latency_ms)
 
         # Đo latency riêng của Vector Search (Leg 2)
         q_vec = semantic_client.embed([query_str])[0]
         t1 = time.perf_counter()
-        vec_res = retriever._vector_search(q_vec, top_k=5)
+        _ = retriever._vector_search(db_session, q_vec, limit=5, filters=None)
         vec_latency_ms = (time.perf_counter() - t1) * 1000
         max_vec_latency = max(max_vec_latency, vec_latency_ms)
 

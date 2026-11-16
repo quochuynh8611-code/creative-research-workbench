@@ -7,12 +7,9 @@ from __future__ import annotations
 import logging
 from unittest.mock import MagicMock, patch
 
-import pytest
-
 from app.core.config import Settings
 from app.services.embedding_client import (
     EMBEDDING_DIM,
-    EmbeddingClient,
     GeminiEmbeddingClient,
     MockEmbeddingClient,
     OllamaEmbeddingClient,
