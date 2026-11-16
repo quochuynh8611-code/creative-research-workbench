@@ -463,7 +463,7 @@ export function SemanticSearchExplorer() {
     selectedTopic || selectedSourceType || goldenOnly || selectedPhase || topK !== 10
   )
 
-  const totalHits = data?.total_hits !== undefined ? data.total_hits : results.length
+  const totalHits = data?.total_hits ?? results.length
   const hasMore =
     hasMoreState !== undefined
       ? hasMoreState
@@ -558,10 +558,7 @@ export function SemanticSearchExplorer() {
     return calculateResultMetrics(results, submittedQuery)
   }, [results, submittedQuery])
 
-  const goldenCount =
-    data?.facet_counts?.golden?.['true'] !== undefined
-      ? data.facet_counts.golden['true']
-      : metrics.goldenCount
+  const goldenCount = data?.facet_counts?.golden?.['true'] ?? metrics.goldenCount
 
   return (
     <div className="space-y-6 max-w-6xl mx-auto px-4 py-8">
