@@ -26,6 +26,7 @@ const MOCK_PARAMETERS_RESPONSE: TrizParametersResponse = {
     { id: 1, code: 'weight_moving', name_vi: 'Trọng lượng vật thể di động', name_en: 'Weight of moving object' },
     { id: 9, code: 'speed', name_vi: 'Tốc độ / Vận tốc', name_en: 'Speed' },
   ],
+  meta: { total: 3 },
 }
 
 const MOCK_LOOKUP_RESPONSE: TrizLookupResponse = {
@@ -108,7 +109,7 @@ describe('TrizMatrixPanel (Batch C21 - TRIZ Matrix Integration)', () => {
       expect(screen.getByText(/Phân đoạn/i)).toBeInTheDocument()
     })
 
-    const applyButton = screen.getByRole('button', { name: /áp dụng nguyên tắc #1/i })
+    const applyButton = screen.getByRole('button', { name: /áp dụng nguyên tắc #1\b/i })
     fireEvent.click(applyButton)
     expect(handleSelect).toHaveBeenCalledWith(expect.objectContaining({ id: 1 }))
   })

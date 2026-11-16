@@ -122,10 +122,10 @@ describe('Session Workflow Execution (Batch C21)', () => {
 
     // Verify step progress is shown in UI
     await waitFor(() => {
-      expect(screen.getByText(/ingest/i)).toBeInTheDocument()
-      expect(screen.getByText(/embed/i)).toBeInTheDocument()
-      expect(screen.getByText(/retrieve/i)).toBeInTheDocument()
-      expect(screen.getByText(/recommend/i)).toBeInTheDocument()
+      expect(screen.getByTestId('workflow-step-ingest')).toBeInTheDocument()
+      expect(screen.getByTestId('workflow-step-embed')).toBeInTheDocument()
+      expect(screen.getByTestId('workflow-step-retrieve')).toBeInTheDocument()
+      expect(screen.getByTestId('workflow-step-recommend_principles')).toBeInTheDocument()
     })
 
     // Verify recommended TRIZ principles are displayed in final output

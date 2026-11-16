@@ -27,6 +27,7 @@ from sqlalchemy import func, or_, select
 from sqlalchemy.orm import Session
 
 from app.api.v1.endpoints.sessions import get_db
+from app.core.config import settings
 from app.domain.models import Chunk, Document, DocumentStatus, JobStatus, JobType
 from app.services.ingestion_service import IngestionService
 from app.services.job_service import JobService
@@ -139,6 +140,41 @@ async def list_documents(
             "limit": limit,
             "offset": offset,
         },
+    }
+
+
+@router.get("/embedding-status", response_model=None)
+async def get_embedding_status(
+    db: Session = Depends(get_db),
+) -> dict[str, Any]:
+    """
+    Trả về tiến độ embedding hiện tại của toàn bộ Knowledge Base và model nhúng đang kích hoạt.
+    """
+    total_docs = db.scalar(select(func.count(Document.id))) or 0
+    embedded_docs = db.scalar(
+        select(func.count(func.distinct(Chunk.document_id))).where(Chunk.embedding.isnot(None))
+    ) or 0
+    total_chunks = db.scalar(select(func.count(Chunk.id))) or 0
+    embedded_chunks = db.scalar(
+        select(func.count(Chunk.id)).where(Chunk.embedding.isnot(None))
+    ) or 0
+
+    provider = getattr(settings, "EMBEDDING_PROVIDER", "mock")
+    model = (
+        getattr(settings, "EMBEDDING_MODEL_NAME", None)
+        or (getattr(settings, "OLLAMA_EMBEDDING_MODEL", "nomic-embed-text") if provider == "ollama" else provider)
+    )
+
+    return {
+        "data": {
+            "total_documents": total_docs,
+            "embedded_documents": embedded_docs,
+            "total_chunks": total_chunks,
+            "embedded_chunks": embedded_chunks,
+            "provider": provider,
+            "model": model,
+            "progress_text": f"{embedded_docs}/{total_docs} documents embedded",
+        }
     }
 
 

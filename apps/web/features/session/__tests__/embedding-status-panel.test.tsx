@@ -43,7 +43,8 @@ describe('EmbeddingStatusPanel (Batch C21 - UI Execution)', () => {
 
     // Verify progress text and model display
     expect(screen.getByText(/10\/10 documents embedded/i)).toBeInTheDocument()
-    expect(screen.getByText(/ollama/i)).toBeInTheDocument()
+    expect(screen.getAllByText(/ollama/i).length).toBeGreaterThanOrEqual(1)
+    expect(screen.getByTestId('embedding-model-badge')).toBeInTheDocument()
     expect(screen.getByTestId('embedding-status-panel')).toBeInTheDocument()
   })
 
@@ -67,6 +68,7 @@ describe('EmbeddingStatusPanel (Batch C21 - UI Execution)', () => {
     await waitFor(() => {
       expect(screen.getByText(/8\/10 documents embedded/i)).toBeInTheDocument()
     })
-    expect(screen.getByText(/mock/i)).toBeInTheDocument()
+    expect(screen.getAllByText(/mock/i).length).toBeGreaterThanOrEqual(1)
+    expect(screen.getByTestId('embedding-model-badge')).toBeInTheDocument()
   })
 })
