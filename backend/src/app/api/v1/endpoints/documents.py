@@ -5,11 +5,14 @@ Cung cấp:
   - GET    /api/v1/documents       : Liệt kê danh sách tài liệu kèm phân trang và bộ lọc
   - GET    /api/v1/documents/{id}  : Lấy chi tiết tài liệu kèm danh sách chunks
   - POST   /api/v1/documents/upload: Nạp tài liệu Markdown / Text vào Knowledge Base
+  - PUT    /api/v1/documents/{id}  : Cập nhật nội dung tài liệu (re-chunk, re-embed nguyên tử)
   - DELETE /api/v1/documents/{id}  : Xóa tài liệu thường (chặn xóa Golden Documents)
 """
 from __future__ import annotations
 
+import hashlib
 import uuid
+from datetime import datetime, timezone
 from typing import Any, Optional
 
 from fastapi import (
@@ -23,16 +26,37 @@ from fastapi import (
     UploadFile,
     status,
 )
+from pydantic import BaseModel, Field
 from sqlalchemy import func, or_, select
 from sqlalchemy.orm import Session
 
 from app.api.v1.endpoints.sessions import get_db
 from app.core.config import settings
 from app.domain.models import Chunk, Document, DocumentStatus, JobStatus, JobType
-from app.services.ingestion_service import IngestionService
+from app.services.embedding_client import get_embedding_client
+from app.services.ingestion_service import (
+    DEFAULT_CHUNK_TOKENS,
+    DEFAULT_OVERLAP_TOKENS,
+    EMBEDDING_DIM,
+    FrontmatterParser,
+    FrontmatterValidationError,
+    IngestionService,
+    MarkdownChunker,
+)
 from app.services.job_service import JobService
 
 router = APIRouter()
+
+
+# ──────────────────────────────────────────────
+# Request Schemas
+# ──────────────────────────────────────────────
+
+class DocumentUpdateRequest(BaseModel):
+    content: str = Field(..., min_length=1, description="Nội dung Markdown hoặc text mới")
+    title: Optional[str] = Field(None, description="Tiêu đề mới (tùy chọn)")
+    topic: Optional[str] = Field(None, description="Topic mới (tùy chọn)")
+    tags: Optional[list[str]] = Field(None, description="Danh sách tags mới (tùy chọn)")
 
 
 # ──────────────────────────────────────────────
@@ -309,6 +333,135 @@ async def upload_document(
             "chunks_created": result.chunks_created,
             "embeddings_created": result.embeddings_created,
         }
+    }
+
+
+@router.put("/{document_id}", response_model=None)
+async def update_document(
+    document_id: uuid.UUID,
+    payload: DocumentUpdateRequest,
+    db: Session = Depends(get_db),
+) -> dict[str, Any]:
+    """
+    Cập nhật nội dung tài liệu trong Knowledge Base (Phase 8).
+    - Chặn cập nhật Golden Documents (403 Forbidden).
+    - Parse frontmatter (nếu có) và tính SHA-256 hash mới.
+    - Kiểm tra hash trùng lặp với document khác (409 Conflict).
+    - Xóa chunks cũ, tạo chunks mới và sinh embeddings (1536 dim).
+    - Cập nhật document metadata nguyên tử trong 1 transaction.
+    """
+    document = db.get(Document, document_id)
+    if not document:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Document not found: {document_id}",
+        )
+
+    if document.golden:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Không thể cập nhật Golden Document chuẩn tắc của hệ thống.",
+        )
+
+    raw_bytes = payload.content.encode("utf-8")
+    new_hash = hashlib.sha256(raw_bytes).hexdigest()
+
+    # Kiểm tra xung đột hash với document khác
+    conflict_doc = db.execute(
+        select(Document).where(Document.content_hash == new_hash, Document.id != document_id)
+    ).scalar_one_or_none()
+    if conflict_doc:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=f"Tài liệu với nội dung tương tự đã tồn tại với ID: {conflict_doc.id}",
+        )
+
+    # Parse frontmatter và trích xuất body
+    try:
+        metadata, body = FrontmatterParser.parse(payload.content)
+    except FrontmatterValidationError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Lỗi cú pháp frontmatter: {exc}",
+        ) from exc
+
+    # Xóa chunks cũ
+    db.query(Chunk).filter(Chunk.document_id == document_id).delete()
+
+    # Chunking
+    chunker = MarkdownChunker(max_tokens=DEFAULT_CHUNK_TOKENS, overlap_tokens=DEFAULT_OVERLAP_TOKENS)
+    chunks_data = chunker.split(body)
+    if not chunks_data:
+        chunks_data = [(body.strip() or "(empty)", 1)]
+
+    # Embeddings
+    embedding_client = get_embedding_client()
+    texts = [text for text, _ in chunks_data]
+    vectors = embedding_client.embed(texts)
+
+    standardize_fn = getattr(embedding_client, "_standardize_dim", None)
+    standardized_vectors: list[list[float]] = []
+    for v in vectors:
+        if len(v) != EMBEDDING_DIM:
+            if callable(standardize_fn):
+                standardized_vectors.append(standardize_fn(v))
+            elif len(v) < EMBEDDING_DIM:
+                standardized_vectors.append([float(x) for x in v] + [0.0] * (EMBEDDING_DIM - len(v)))
+            else:
+                standardized_vectors.append([float(x) for x in v[:EMBEDDING_DIM]])
+        else:
+            standardized_vectors.append(v)
+
+    # Tạo chunks mới
+    new_chunks = [
+        Chunk(
+            id=uuid.uuid4(),
+            document_id=document_id,
+            content=text,
+            chunk_index=idx,
+            token_count=token_count,
+            embedding=vec,
+        )
+        for idx, ((text, token_count), vec) in enumerate(zip(chunks_data, standardized_vectors))
+    ]
+    db.add_all(new_chunks)
+
+    # Cập nhật metadata Document
+    document.content_hash = new_hash
+    if payload.title is not None:
+        document.title = payload.title
+    elif "title" in metadata:
+        document.title = str(metadata["title"])
+
+    if payload.topic is not None:
+        document.topic = payload.topic
+    elif "topic" in metadata:
+        document.topic = str(metadata["topic"])
+
+    if payload.tags is not None:
+        document.tags = payload.tags
+    elif "tags" in metadata:
+        raw_tags = metadata["tags"]
+        document.tags = list(raw_tags) if isinstance(raw_tags, list) else [str(raw_tags)]
+
+    if "source_type" in metadata:
+        document.source_type = str(metadata["source_type"])
+    if "language" in metadata:
+        document.language = str(metadata["language"])
+    if "phase" in metadata:
+        document.phase = str(metadata["phase"])
+    if "status" in metadata:
+        try:
+            document.status = DocumentStatus(str(metadata["status"]))
+        except ValueError:
+            pass
+
+    document.updated_at = datetime.now(timezone.utc)
+    db.commit()
+    db.refresh(document)
+
+    return {
+        "data": _serialize_document_detail(document, new_chunks)
     }
 
 
