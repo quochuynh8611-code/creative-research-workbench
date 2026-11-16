@@ -55,6 +55,10 @@ EMBEDDING_DIM: int = 1536
 _FRONTMATTER_RE = re.compile(r"^---\s*\n(.*?)\n---\s*\n", re.DOTALL)
 
 
+class FrontmatterValidationError(ValueError):
+    """Raised when markdown YAML frontmatter is malformed or not a mapping."""
+
+
 class FrontmatterParser:
     """
     Tách YAML front-block (--- ... ---) khỏi nội dung Markdown.
@@ -71,10 +75,17 @@ class FrontmatterParser:
             return {}, raw_text
 
         try:
-            metadata: dict[str, Any] = yaml.safe_load(match.group(1)) or {}
+            parsed = yaml.safe_load(match.group(1))
         except yaml.YAMLError as exc:
             logger.warning("Frontmatter YAML parse error: %s", exc)
-            metadata = {}
+            raise FrontmatterValidationError(f"Invalid YAML frontmatter: {exc}") from exc
+
+        if parsed is None:
+            metadata: dict[str, Any] = {}
+        elif isinstance(parsed, dict):
+            metadata = parsed
+        else:
+            raise FrontmatterValidationError("Frontmatter YAML must be a mapping")
 
         body = raw_text[match.end():]
         return metadata, body
@@ -281,6 +292,8 @@ class IngestionService:
         try:
             raw_bytes = path.read_bytes()
             return self._process_bytes(raw_bytes, filename=path.name, filepath=str(path))
+        except FrontmatterValidationError:
+            raise
         except Exception as exc:  # noqa: BLE001
             logger.exception("Lỗi khi ingest file %s", filepath)
             return IngestResult.error(str(exc))
@@ -305,6 +318,8 @@ class IngestionService:
                 filename=filename,
                 filepath=filepath or filename,
             )
+        except FrontmatterValidationError:
+            raise
         except Exception as exc:  # noqa: BLE001
             logger.exception("Lỗi khi ingest bytes %s", filename)
             return IngestResult.error(str(exc))
