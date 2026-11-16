@@ -208,7 +208,7 @@ class RetrievalService:
                 topic_counts[str(row[0])] = topic_counts.get(str(row[0]), 0) + 1
             if row[1]:
                 source_type_counts[str(row[1])] = source_type_counts.get(str(row[1]), 0) + 1
-            if row[2] is not None:
+            if row[2] is not None and str(row[2]).strip() != "":
                 phase_counts[str(row[2])] = phase_counts.get(str(row[2]), 0) + 1
             if row[3] is not None:
                 g_key = "true" if row[3] else "false"
