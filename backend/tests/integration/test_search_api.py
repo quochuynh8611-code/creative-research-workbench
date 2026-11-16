@@ -414,3 +414,103 @@ async def test_search_api_pagination_offset_and_has_more(
         assert not set(page1_ids).intersection(set(page2_ids))
         assert data2["total_hits"] == data1["total_hits"]
         assert data2["facet_counts"] == data1["facet_counts"]
+
+
+@pytest.mark.asyncio
+async def test_search_api_empty_or_whitespace_query_returns_zero_aggregates(
+    override_retrieval_service_dependency,
+    db_session: Session,
+    sample_document: Document,
+    sample_chunks: list[Chunk],
+    mock_openai_embedding,
+):
+    """Batch C18: Query rỗng hoặc chỉ chứa khoảng trắng trả về results=[], total_hits=0, facet_counts rỗng."""
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        for q in ("", "   "):
+            resp = await client.post("/api/v1/search", json={"query": q, "top_k": 5})
+            assert resp.status_code == 200
+            data = resp.json()
+            assert data["results"] == []
+            assert data["total_hits"] == 0
+            assert data["facet_counts"] == {
+                "topic": {},
+                "source_type": {},
+                "phase": {},
+                "golden": {},
+            }
+
+
+@pytest.mark.asyncio
+async def test_search_api_zero_results_returns_empty_aggregates(
+    override_retrieval_service_dependency,
+    db_session: Session,
+    sample_document: Document,
+    sample_chunks: list[Chunk],
+    mock_openai_embedding,
+):
+    """Batch C18: Khi không có kết quả khớp filter, trả về results=[], total_hits=0, facet_counts rỗng."""
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        resp = await client.post(
+            "/api/v1/search",
+            json={
+                "query": "mâu thuẫn",
+                "top_k": 5,
+                "filters": {"topic": "non_existent_topic_xyz"},
+            },
+        )
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["results"] == []
+    assert data["total_hits"] == 0
+    assert data["facet_counts"] == {
+        "topic": {},
+        "source_type": {},
+        "phase": {},
+        "golden": {},
+    }
+
+
+@pytest.mark.asyncio
+async def test_search_api_facets_reflect_full_candidate_set_and_skip_empty_phase(
+    override_retrieval_service_dependency,
+    db_session: Session,
+    sample_document: Document,
+    sample_chunks: list[Chunk],
+    mock_openai_embedding,
+):
+    """Batch C18: facet_counts phản ánh toàn bộ candidate set trước khi cắt top_k và bỏ qua phase rỗng."""
+    for i in range(3):
+        d = Document(
+            filename=f"facet_full_{i}.md",
+            filepath=f"docs/facet_full_{i}.md",
+            title=f"Facet Full {i}",
+            topic="contradiction",
+            source_type="case_study",
+            phase="" if i == 0 else "2",
+            golden=False,
+            content_hash=f"hash_facet_full_{i}",
+        )
+        db_session.add(d)
+        db_session.flush()
+        c = Chunk(
+            document_id=d.id,
+            content=f"Phân tích mâu thuẫn hệ thống số {i}",
+            chunk_index=0,
+            embedding=[0.0] * 1536,
+        )
+        db_session.add(c)
+    db_session.commit()
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        resp = await client.post(
+            "/api/v1/search",
+            json={"query": "mâu thuẫn", "top_k": 2},
+        )
+    assert resp.status_code == 200
+    data = resp.json()
+    assert len(data["results"]) == 2
+    assert data["total_hits"] >= 4
+    facets = data["facet_counts"]
+    assert facets["source_type"].get("case_study", 0) >= 3
+    assert facets["golden"].get("false", 0) >= 3
+    assert "" not in facets["phase"]
