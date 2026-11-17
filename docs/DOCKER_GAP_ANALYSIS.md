@@ -1,8 +1,8 @@
 # DOCKERIZATION GAP ANALYSIS & DEPLOYMENT READINESS
 
 **Dự án:** Creative Research Workbench  
-**Trạng thái:** Bản phân tích kỹ thuật (Technical Audit)  
-**Mục tiêu:** Đánh giá khoảng cách giữa Docker stack local-dev hiện tại và tiêu chuẩn Deployable Production Stack.
+**Trạng thái:** ✅ **ĐÃ GIẢI QUYẾT & ĐÓNG (RESOLVED / CLOSED — Phase 12.1 & Phase 12.4)**  
+**Mục tiêu:** Bản phân tích kỹ thuật lịch sử (Technical Audit). Toàn bộ 5 khoảng cách nhận diện trong tài liệu này đã được giải quyết triệt để và được kiểm chứng qua Docker Compose hardening, multi-stage Next.js runner, backend healthcheck và runtime migration guards. Vận hành chính thức tham chiếu tại [DEPLOYMENT_GUIDE.md](DEPLOYMENT_GUIDE.md).
 
 ---
 

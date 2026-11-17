@@ -1,8 +1,8 @@
 # DOCKER DEPLOYMENT PLAN & ARCHITECTURE STRATEGY
 
 **Dự án:** Creative Research Workbench  
-**Trạng thái:** Kế hoạch kỹ thuật đề xuất — Chờ phê duyệt trước khi thực thi  
-**Nguyên tắc:** Blast radius thấp, an toàn dữ liệu, giữ nguyên port 3000 host cho phần mềm khác.
+**Trạng thái:** ✅ **ĐÃ THỰC THI (IMPLEMENTED — Option A: Unified Hardened Compose)**  
+**Nguyên tắc:** Blast radius thấp, an toàn dữ liệu, giữ nguyên port 3000 host cho phần mềm khác. Vận hành chính thức tham chiếu tại [DEPLOYMENT_GUIDE.md](DEPLOYMENT_GUIDE.md).
 
 ---
 
