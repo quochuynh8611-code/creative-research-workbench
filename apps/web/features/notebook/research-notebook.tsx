@@ -12,6 +12,7 @@ import {
 import { validateNoteSourceContext } from '@/lib/note-source-context-validator'
 import { extractApiErrorMessage } from '@/lib/api-error-message'
 import { NoteSourceBadge } from './components/note-source-badge'
+import { ConfirmationModal } from '@/components/confirmation-modal'
 import type { NoteType, CreateResearchNoteInput, ResearchNote, NoteDraft } from '@/lib/types'
 
 interface ResearchNotebookProps {
@@ -103,6 +104,7 @@ export function ResearchNotebook({
   const queryClient = useQueryClient()
   const [validationError, setValidationError] = useState<string | null>(null)
   const [actionError, setActionError] = useState<string | null>(null)
+  const [noteToDelete, setNoteToDelete] = useState<ResearchNote | null>(null)
 
   const [copyStatus, setCopyStatus] = useState<CopyStatus>(null)
   const latestRequestIdRef = useRef<number>(0)
@@ -227,6 +229,7 @@ export function ResearchNotebook({
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['sessions', sessionId, 'notes'] })
       setActionError(null)
+      setNoteToDelete(null)
     },
     onError: (err: any) => {
       setActionError(err?.message || 'Không thể xóa ghi chú. Vui lòng thử lại.')
@@ -263,8 +266,13 @@ export function ResearchNotebook({
     createMutation.mutate(payload)
   }
 
-  const handleDelete = (noteId: string) => {
-    deleteMutation.mutate(noteId)
+  const handleDelete = (noteOrId: ResearchNote | string) => {
+    if (typeof noteOrId === 'string') {
+      const found = notes.find((n) => n.id === noteOrId) || ({ id: noteOrId, content: noteOrId } as ResearchNote)
+      setNoteToDelete(found)
+    } else {
+      setNoteToDelete(noteOrId)
+    }
   }
 
   const [selectedType, setSelectedType] = useState<FilterType>('all')
@@ -1154,6 +1162,21 @@ export function ResearchNotebook({
           </div>
         )}
       </div>
+
+      <ConfirmationModal
+        isOpen={Boolean(noteToDelete)}
+        title="Xác nhận xóa ghi chú"
+        description={`Bạn có chắc chắn muốn xóa ghi chú này không?\n\n"${noteToDelete?.content.slice(0, 100)}${noteToDelete && noteToDelete.content.length > 100 ? '...' : ''}"\n\nThao tác này không thể hoàn tác.`}
+        confirmLabel="Xác nhận xóa"
+        cancelLabel="Hủy bỏ"
+        isLoading={deleteMutation.isPending}
+        onCancel={() => setNoteToDelete(null)}
+        onConfirm={() => {
+          if (noteToDelete) {
+            deleteMutation.mutate(noteToDelete.id)
+          }
+        }}
+      />
     </div>
   )
 }

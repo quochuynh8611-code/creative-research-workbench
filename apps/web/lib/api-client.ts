@@ -3,6 +3,7 @@ import type {
   AIProblemAnalysisRequest,
   AIProblemAnalysisResponse,
   AIResearchReport,
+  AIStatusResponse,
   AnalyticsOverviewResponse,
   CandidateSolution,
   CandidateSolutionsResponse,
@@ -498,4 +499,12 @@ export async function runSessionWorkflow(
     payload
   )
   return response.data.data ?? response.data
+}
+
+/**
+ * 36. Lấy trạng thái hoạt động và cấu hình AI an toàn (Batch C30 PR 2).
+ */
+export async function getAIStatus(): Promise<AIStatusResponse> {
+  const response = await apiClient.get<AIStatusResponse>('/api/v1/system/ai-status')
+  return response.data
 }

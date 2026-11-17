@@ -120,18 +120,21 @@ async def global_exception_handler(request: Request, exc: Exception):
 
 ---
 
-### 2.2 Frontend UX & Onboarding Architecture
+### 2.2 Frontend UX & Onboarding Architecture (PR 2 Implementation)
 
 #### A. Component `AIStatusBadge`
-- Đặt tại góc phải thanh Header chính (`apps/web/app/page.tsx` và session layout).
-- Hiển thị pill badge:
-  - 🟢 Xanh lá: "AI thực tế (OpenAI / Gemini / Ollama)"
-  - 🔵 Xanh dương: "Mock Mode"
-  - 🟠 Hổ phách: "AI tạm thời suy giảm / Fallback"
-- Khi hover/click: Hiển thị tooltip mô tả ngắn gọn về tình trạng LLM & Embedding.
+- Đặt tại góc phải thanh Header trang Sessions (`apps/web/features/session/session-list.tsx`).
+- React Query cấu hình tối ưu: `staleTime: 60_000` (60s), `retry: 1`.
+- Không block việc render trang khi endpoint `/ai-status` bị lỗi mạng.
+- Hiển thị nhãn trực quan:
+  - 🟢 Xanh lá: "AI thực tế" (`status === 'ready'`)
+  - 🔵 Xanh dương: "Mock mode" (`status === 'mock'`)
+  - 🟠 Hổ phách/Đỏ: "AI tạm thời không khả dụng" (`status === 'degraded'` | `'unavailable'` | error)
+- Khi hover/click: Hiển thị tooltip mô tả ngắn gọn về tình trạng LLM & Embedding model.
+- Bảo mật: Tuyệt đối không hiển thị API key, secret token, stack trace hay query trong DOM.
 
 #### B. Component `OnboardingWorkflowBanner`
-- Hiển thị tại đầu trang `SessionList` (có nút bấm thu gọn/mở rộng hoặc lưu trạng thái xem vào localStorage).
+- Hiển thị trực quan tại đầu trang Sessions khi `sessions.length === 0`.
 - Trình bày 6 chặng của chu trình giải quyết bài toán sáng tạo:
   1. **Intake**: Nhập tình huống khó khăn dạng "Muốn... Nhưng..."
   2. **Structuring**: Phân tách mâu thuẫn kỹ thuật / vật lý & thông số Altshuller.
@@ -141,15 +144,21 @@ async def global_exception_handler(request: Request, exc: Exception):
   6. **Synthesis**: Xuất báo cáo nghiên cứu hoàn chỉnh (Markdown / JSON / PDF Safe Print).
 
 #### C. Quick-Start Sample Session ("Bắt đầu phiên mẫu")
-- Nút CTA nổi bật tại Onboarding Banner và Empty State của Sessions: "🚀 Thử ngay phiên mẫu: Tối ưu Tốc độ Giao hàng & Chi phí".
-- Khi bấm: Tự động gọi `createSessionFromTemplate("tpl-business-logistics")` và chuyển hướng thẳng vào session mới tạo để Founder/người dùng trải nghiệm ngay lập tức.
+- Nút CTA nổi bật tại Onboarding Banner: "🚀 Bắt đầu phiên mẫu".
+- Quy tắc chọn mẫu (Strict Fallback Rule):
+  1. Ưu tiên 1: Template `business_delivery_speed_cost` (hoặc alias logistics).
+  2. Fallback 2: Template `personal_healthy_meal_time_cost` (hoặc alias nutrition).
+  3. Tuyệt đối **KHÔNG dùng `templates[0]`** làm fallback.
+  4. Nếu không tìm thấy cả 2 template: Hiển thị thông báo lỗi thân thiện, **KHÔNG tạo session**, **KHÔNG điều hướng**.
+- Khi tạo thành công: Tự động chuyển hướng tới `/sessions/${newSession.id}`.
 
 #### D. Safe Destructive Actions (Confirmation Dialogs)
 - **Candidate Solutions**: Khi bấm nút "Xóa", hiển thị modal xác nhận:
   *"Bạn có chắc chắn muốn xóa giải pháp [Tên giải pháp]? Thao tác này không thể hoàn tác."*
-  Các nút: [Hủy bỏ] và [Xác nhận xóa].
+  Các nút: [Hủy bỏ] (đóng modal, không gọi API) và [Xác nhận xóa] (mới gọi API xóa).
 - **Research Notes**: Khi bấm nút "Xóa ghi chú", hiển thị modal xác nhận:
-  *"Bạn có chắc chắn muốn xóa ghi chú nghiên cứu này không?"*
+  *"Bạn có chắc chắn muốn xóa ghi chú này không?"*
+  Các nút: [Hủy bỏ] (đóng modal, không gọi API) và [Xác nhận xóa] (mới gọi API xóa).
 
 ---
 

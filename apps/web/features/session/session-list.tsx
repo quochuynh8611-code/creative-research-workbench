@@ -34,6 +34,8 @@ import {
 import { DOMAIN_LABELS, STATUS_LABELS, STAGE_LABELS, formatDate } from '@/lib/utils'
 import { cn } from '@/lib/utils'
 import type { DomainType } from '@/lib/types'
+import { AIStatusBadge } from '@/features/system/ai-status-badge'
+import { OnboardingWorkflowBanner } from '@/features/session/onboarding-workflow-banner'
 
 const STATUS_COLORS: Record<string, string> = {
   draft: 'bg-muted text-muted-foreground',
@@ -310,7 +312,10 @@ export function SessionList() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold">Research Sessions</h1>
+          <div className="flex items-center gap-3">
+            <h1 className="text-2xl font-bold">Research Sessions</h1>
+            <AIStatusBadge />
+          </div>
           <p className="text-muted-foreground text-sm mt-1">
             {counterText}
           </p>
@@ -817,33 +822,38 @@ export function SessionList() {
 
       {/* 3. Empty State */}
       {!isLoading && !isError && filtered.length === 0 && (
-        <div className="text-center py-16 text-muted-foreground space-y-3">
-          <Brain className="w-10 h-10 mx-auto mb-3 opacity-40" />
-          <p className="font-medium">
-            {activeTab === 'archived'
-              ? 'Không có session nào được lưu trữ'
-              : sessions.length === 0
-              ? 'Chưa có session nào'
-              : 'Không tìm thấy session nào'}
-          </p>
-          <p className="text-sm mt-1">
-            {activeTab === 'archived'
-              ? 'Các session được lưu trữ an toàn sẽ xuất hiện tại đây'
-              : sessions.length === 0
-              ? 'Tạo session đầu tiên để bắt đầu nghiên cứu'
-              : 'Thử tìm kiếm với từ khóa khác'}
-          </p>
-          {sessions.length > 0 && normalizedQuery && (
-            <div className="pt-2">
-              <button
-                onClick={() => setSearch('')}
-                className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-md text-xs font-medium border border-input hover:bg-muted transition-colors text-foreground"
-              >
-                <X className="w-3.5 h-3.5" />
-                Xóa tìm kiếm
-              </button>
-            </div>
+        <div className="space-y-6">
+          {sessions.length === 0 && activeTab === 'active' && (
+            <OnboardingWorkflowBanner />
           )}
+          <div className="text-center py-12 text-muted-foreground space-y-3">
+            <Brain className="w-10 h-10 mx-auto mb-3 opacity-40" />
+            <p className="font-medium">
+              {activeTab === 'archived'
+                ? 'Không có session nào được lưu trữ'
+                : sessions.length === 0
+                ? 'Chưa có session nào'
+                : 'Không tìm thấy session nào'}
+            </p>
+            <p className="text-sm mt-1">
+              {activeTab === 'archived'
+                ? 'Các session được lưu trữ an toàn sẽ xuất hiện tại đây'
+                : sessions.length === 0
+                ? 'Tạo session đầu tiên để bắt đầu nghiên cứu'
+                : 'Thử tìm kiếm với từ khóa khác'}
+            </p>
+            {sessions.length > 0 && normalizedQuery && (
+              <div className="pt-2">
+                <button
+                  onClick={() => setSearch('')}
+                  className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-md text-xs font-medium border border-input hover:bg-muted transition-colors text-foreground"
+                >
+                  <X className="w-3.5 h-3.5" />
+                  Xóa tìm kiếm
+                </button>
+              </div>
+            )}
+          </div>
         </div>
       )}
 
