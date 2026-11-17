@@ -115,6 +115,10 @@ class LLMClient(ABC):
         """Sinh báo cáo nghiên cứu tổng hợp từ dữ liệu session."""
         raise NotImplementedError("generate_report is not implemented on base LLMClient.")
 
+    def generate_coach_suggestions(self, context_data: dict[str, Any]) -> dict[str, Any]:
+        """Sinh gợi ý phân tích và giải pháp từ AI Coach (Batch C31)."""
+        raise NotImplementedError("generate_coach_suggestions is not implemented on base LLMClient.")
+
 
 # ──────────────────────────────────────────────
 # Mock Client
@@ -185,6 +189,70 @@ class MockLLMClient(LLMClient):
             "markdown_content": f"# BÁO CÁO TỔNG HỢP NGHIÊN CỨU: {title}\n\nNội dung chi tiết...",
         }
 
+    def generate_coach_suggestions(self, context_data: dict[str, Any]) -> dict[str, Any]:
+        """Sinh gợi ý từ AI Coach phục vụ mock / offline testing (tối đa 4-5 gợi ý)."""
+        session_title = context_data.get("session_title", "Bài toán nghiên cứu")
+        frame = context_data.get("problem_frame") or {}
+        improving = frame.get("improving_parameter") or "speed"
+        worsening = frame.get("worsening_parameter") or "cost"
+        principles = context_data.get("recommended_principles", [])
+        top_principle = principles[0] if principles else {"principle_id": 1, "name": "Phân nhỏ (Segmentation)"}
+
+        p_name = top_principle.get("name") if isinstance(top_principle, dict) else str(top_principle)
+        p_id = top_principle.get("principle_id", 1) if isinstance(top_principle, dict) else 1
+
+        return {
+            "summary": f"AI Coach nhận định bài toán '{session_title}' có mâu thuẫn cốt lõi giữa {improving} và {worsening}.",
+            "suggestions": [
+                {
+                    "category": "possible_cause",
+                    "title": f"Nút thắt xung đột giữa {improving} và {worsening}",
+                    "description": f"Hệ thống đang cố gắng tối ưu {improving} dẫn đến suy giảm {worsening} do hạn chế kiến trúc hiện hành.",
+                    "source_grounding": {
+                        "source_type": "contradiction",
+                        "source_reference": f"Mâu thuẫn kỹ thuật: Cải thiện {improving} làm suy giảm {worsening}"
+                    },
+                    "actionable_payload": None,
+                },
+                {
+                    "category": "relevant_principle",
+                    "title": f"Áp dụng Nguyên tắc #{p_id}: {p_name}",
+                    "description": f"Sử dụng nguyên tắc {p_name} để tách biệt các yêu cầu đối lập trong không gian hoặc thời gian.",
+                    "source_grounding": {
+                        "source_type": "principle",
+                        "source_reference": f"Nguyên tắc sáng tạo TRIZ #{p_id}: {p_name}"
+                    },
+                    "actionable_payload": None,
+                },
+                {
+                    "category": "solution_candidate",
+                    "title": f"Giải pháp ứng dụng {p_name}",
+                    "description": f"Đề xuất tái cấu trúc quy trình theo hướng {p_name} để triệt tiêu tổn thất tài nguyên.",
+                    "source_grounding": {
+                        "source_type": "principle",
+                        "source_reference": f"Nguyên tắc sáng tạo TRIZ #{p_id}: {p_name}"
+                    },
+                    "actionable_payload": {
+                        "title": f"Giải pháp mô đun hóa dựa trên {p_name}",
+                        "mechanism": f"Phân tách cấu trúc thành các thành phần độc lập hoạt động phối hợp để tối ưu {improving} mà không tăng {worsening}."
+                    },
+                },
+                {
+                    "category": "clarifying_question",
+                    "title": f"Xác minh ngưỡng chấp nhận của {worsening}",
+                    "description": f"Mức độ ảnh hưởng thực tế khi {worsening} tăng 10% có thể bù đắp bằng lợi thế từ {improving} không?",
+                    "source_grounding": {
+                        "source_type": "contradiction",
+                        "source_reference": f"Mâu thuẫn tham số: {improving} vs {worsening}"
+                    },
+                    "actionable_payload": {
+                        "content": f"Câu hỏi làm rõ: Đo lường chính xác tỷ lệ bù trừ lợi ích giữa {improving} và {worsening}.",
+                        "note_type": "hypothesis"
+                    },
+                },
+            ]
+        }
+
 
 # ──────────────────────────────────────────────
 # System Prompt & Instructions
@@ -214,6 +282,31 @@ QUY TẮC BẮT BUỘC:
    ease_of_manufacture, ease_of_operation, ease_of_repair, flexibility, complexity, difficulty_detecting,
    extent_of_automation, productivity.
    Nếu không xác định được, hãy đặt là null.
+"""
+
+_COACH_SYSTEM_PROMPT = """Bạn là AI Solution Coach chuyên nghiệp về phương pháp luận sáng tạo TRIZ.
+Nhiệm vụ của bạn là xem xét ngữ cảnh phiên nghiên cứu và đề xuất tối đa 5 gợi ý (suggestions) theo JSON schema bắt buộc:
+{
+  "summary": "Tóm lược 1-2 câu nhận định của Coach về bài toán và mâu thuẫn hiện tại",
+  "suggestions": [
+    {
+      "category": "possible_cause" | "contradiction_direction" | "relevant_principle" | "clarifying_question" | "solution_candidate",
+      "title": "Tiêu đề ngắn gọn, rõ ràng",
+      "description": "Mô tả chi tiết góc nhìn phân tích hoặc ý tưởng đề xuất",
+      "source_grounding": {
+        "source_type": "contradiction" | "principle" | "evidence" | "note",
+        "source_reference": "Trích dẫn căn cứ lý luận hoặc tham số cụ thể"
+      },
+      "actionable_payload": null
+    }
+  ]
+}
+
+QUY TẮC BẮT BUỘC:
+1. Trả về tối đa 5 gợi ý, ưu tiên chất lượng và khả năng kiểm chứng.
+2. source_grounding.source_type bắt buộc phải thuộc một trong 4 loại: "contradiction", "principle", "evidence", "note".
+3. source_grounding.source_reference không được để trống.
+4. Chỉ trả về duy nhất 1 JSON object hợp lệ.
 """
 
 
@@ -269,6 +362,43 @@ class OpenAILLMClient(LLMClient):
                     time.sleep(1.0 * (attempt + 1))
 
         raise RuntimeError(f"OpenAILLMClient exhausted {self.max_retries + 1} attempts. Error: {last_err}") from last_err
+
+    def generate_coach_suggestions(self, context_data: dict[str, Any]) -> dict[str, Any]:
+        """Sinh gợi ý từ OpenAI với JSON mode (Batch C31)."""
+        prompt_content = (
+            f"Thông tin phiên: {context_data.get('session_title', '')}\n"
+            f"Lĩnh vực: {context_data.get('domain', 'general')}\n"
+            f"Problem Frame: {json.dumps(context_data.get('problem_frame', {}), ensure_ascii=False)}\n"
+            f"Nguyên tắc TRIZ gợi ý: {json.dumps(context_data.get('recommended_principles', []), ensure_ascii=False)}\n"
+            f"Giải pháp hiện có: {json.dumps(context_data.get('existing_solutions', []), ensure_ascii=False)}\n"
+            f"Ghi chú liên quan: {json.dumps(context_data.get('existing_notes', []), ensure_ascii=False)}"
+        )
+
+        last_err: Exception | None = None
+        for attempt in range(self.max_retries + 1):
+            try:
+                response = self._client.chat.completions.create(
+                    model=self.model_name,
+                    messages=[
+                        {"role": "system", "content": _COACH_SYSTEM_PROMPT},
+                        {"role": "user", "content": prompt_content},
+                    ],
+                    response_format={"type": "json_object"},
+                    temperature=0.2,
+                    max_tokens=1200,
+                )
+                choice = response.choices[0]
+                content = choice.message.content or ""
+                return extract_json_block(content)
+            except Exception as e:
+                last_err = e
+                logger.warning(
+                    f"OpenAILLMClient coach attempt {attempt + 1}/{self.max_retries + 1} failed: {e}"
+                )
+                if attempt < self.max_retries:
+                    time.sleep(1.0 * (attempt + 1))
+
+        raise RuntimeError(f"OpenAILLMClient coach exhausted {self.max_retries + 1} attempts. Error: {last_err}") from last_err
 
 
 # ──────────────────────────────────────────────
@@ -421,6 +551,61 @@ class OllamaLLMClient(LLMClient):
 
         raise RuntimeError(
             f"OllamaLLMClient exhausted {self.max_retries + 1} attempts. Error: {last_err}"
+        ) from last_err
+
+    def generate_coach_suggestions(self, context_data: dict[str, Any]) -> dict[str, Any]:
+        """Sinh gợi ý từ Ollama với JSON mode (Batch C31)."""
+        prompt_content = (
+            f"{_COACH_SYSTEM_PROMPT}\n\n"
+            f"Thông tin phiên: {context_data.get('session_title', '')}\n"
+            f"Lĩnh vực: {context_data.get('domain', 'general')}\n"
+            f"Problem Frame: {json.dumps(context_data.get('problem_frame', {}), ensure_ascii=False)}\n"
+            f"Nguyên tắc TRIZ gợi ý: {json.dumps(context_data.get('recommended_principles', []), ensure_ascii=False)}\n"
+            f"Giải pháp hiện có: {json.dumps(context_data.get('existing_solutions', []), ensure_ascii=False)}\n"
+            f"Ghi chú liên quan: {json.dumps(context_data.get('existing_notes', []), ensure_ascii=False)}"
+        )
+        url = f"{self.base_url}/api/generate"
+        body = {
+            "model": self.model_name,
+            "prompt": prompt_content,
+            "stream": False,
+            "format": "json",
+            "options": {
+                "temperature": 0.2,
+            },
+        }
+
+        last_err: Exception | None = None
+        with httpx.Client(timeout=self.timeout) as http_client:
+            for attempt in range(self.max_retries + 1):
+                try:
+                    response = http_client.post(url, json=body)
+                    response.raise_for_status()
+                    data = response.json()
+                    raw_text = data.get("response", "")
+                    if not raw_text:
+                        raw_text = data.get("message", {}).get("content", "")
+                    if not raw_text:
+                        raise ValueError("No response text returned from Ollama API.")
+                    return extract_json_block(raw_text)
+                except Exception as e:
+                    last_err = e
+                    logger.warning(
+                        f"OllamaLLMClient coach attempt {attempt + 1}/{self.max_retries + 1} failed: {e}"
+                    )
+                    if attempt < self.max_retries:
+                        time.sleep(0.5 * (attempt + 1))
+
+        if self.fallback_on_error:
+            logger.error(
+                "OllamaLLMClient coach exhausted %d attempts. Falling back to MockLLMClient: %s",
+                self.max_retries + 1,
+                last_err,
+            )
+            return self._mock_fallback.generate_coach_suggestions(context_data)
+
+        raise RuntimeError(
+            f"OllamaLLMClient coach exhausted {self.max_retries + 1} attempts. Error: {last_err}"
         ) from last_err
 
 

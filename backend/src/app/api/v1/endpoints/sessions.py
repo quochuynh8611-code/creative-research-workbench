@@ -25,6 +25,7 @@ from app.domain.models import (
 )
 from app.schemas.note_context import NoteSourceContextUnion
 from app.services.ai_analysis_service import AIAnalysisService
+from app.services.ai_coach_service import AICoachService
 from app.services.ai_report_service import AIReportService
 from app.services.method_recommender import MethodRecommender
 from app.services.retrieval_service import RetrievalService
@@ -97,6 +98,11 @@ def get_ai_analysis_service() -> AIAnalysisService:
 def get_ai_report_service() -> AIReportService:
     """Dependency cung cấp AIReportService theo cấu hình LLM mặc định."""
     return AIReportService()
+
+
+def get_ai_coach_service() -> AICoachService:
+    """Dependency cung cấp AICoachService (Batch C31)."""
+    return AICoachService()
 
 
 
@@ -1515,6 +1521,40 @@ async def generate_ai_research_report(
     return {
         "data": report.model_dump(),
     }
+
+
+# ──────────────────────────────────────────────
+# AI Solution Coach Endpoint (Batch C31)
+# ──────────────────────────────────────────────
+
+@router.post("/{session_id}/coach/suggestions", status_code=status.HTTP_200_OK)
+async def get_coach_suggestions(
+    session_id: uuid.UUID,
+    db: Session | None = Depends(get_db),
+    coach_service: AICoachService = Depends(get_ai_coach_service),
+):
+    """
+    Sinh gợi ý phân tích & giải pháp TRIZ có cấu trúc (tối đa 5 gợi ý có căn cứ).
+    Chỉ sinh bản xem trước (preview), không tự động ghi dữ liệu vào session.
+    """
+    if db is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"ResearchSession with id '{session_id}' not found.",
+        )
+
+    try:
+        result = coach_service.get_coach_suggestions(session_id=session_id, db=db)
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(e),
+        )
+
+    return {
+        "data": result.model_dump(),
+    }
+
 
 
 # ──────────────────────────────────────────────
