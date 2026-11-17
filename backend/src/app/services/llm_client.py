@@ -331,6 +331,100 @@ class GeminiLLMClient(LLMClient):
 
 
 # ──────────────────────────────────────────────
+# Ollama LLM Client
+# ──────────────────────────────────────────────
+
+class OllamaLLMClient(LLMClient):
+    """
+    LLM client sử dụng Ollama REST API (mặc định: llama3.2 hoặc cấu hình qua settings).
+    Hỗ trợ retry và graceful degradation về MockLLMClient khi daemon không khả dụng.
+    """
+
+    def __init__(
+        self,
+        base_url: Optional[str] = None,
+        model_name: Optional[str] = None,
+        timeout: Optional[float] = None,
+        max_retries: Optional[int] = None,
+        fallback_on_error: bool = True,
+    ) -> None:
+        self.base_url = (
+            base_url
+            if base_url is not None
+            else getattr(settings, "OLLAMA_BASE_URL", "http://localhost:11434")
+        ).rstrip("/")
+        self.provider_name = "ollama"
+        self.model_name = (
+            model_name
+            or getattr(settings, "LLM_MODEL_NAME", None)
+            or "llama3.2"
+        )
+        self.timeout = (
+            timeout
+            if timeout is not None
+            else getattr(settings, "LLM_TIMEOUT_SECONDS", 10.0)
+        )
+        self.max_retries = (
+            max_retries
+            if max_retries is not None
+            else getattr(settings, "LLM_MAX_RETRIES", 2)
+        )
+        self.fallback_on_error = fallback_on_error
+        self._mock_fallback = MockLLMClient(model_name="mock-fallback")
+
+    def analyze(self, raw_statement: str, domain: Optional[str] = None) -> LLMAnalysisOutput:
+        full_prompt = (
+            f"{_SYSTEM_PROMPT}\n\n"
+            f"Phát biểu bài toán: {raw_statement}\n"
+            f"Lĩnh vực: {domain or 'general'}"
+        )
+        url = f"{self.base_url}/api/generate"
+        body = {
+            "model": self.model_name,
+            "prompt": full_prompt,
+            "stream": False,
+            "format": "json",
+            "options": {
+                "temperature": 0.1,
+            },
+        }
+
+        last_err: Exception | None = None
+        with httpx.Client(timeout=self.timeout) as http_client:
+            for attempt in range(self.max_retries + 1):
+                try:
+                    response = http_client.post(url, json=body)
+                    response.raise_for_status()
+                    data = response.json()
+                    raw_text = data.get("response", "")
+                    if not raw_text:
+                        raw_text = data.get("message", {}).get("content", "")
+                    if not raw_text:
+                        raise ValueError("No response text returned from Ollama API.")
+                    parsed_dict = extract_json_block(raw_text)
+                    return LLMAnalysisOutput(**parsed_dict)
+                except Exception as e:
+                    last_err = e
+                    logger.warning(
+                        f"OllamaLLMClient attempt {attempt + 1}/{self.max_retries + 1} failed: {e}"
+                    )
+                    if attempt < self.max_retries:
+                        time.sleep(0.5 * (attempt + 1))
+
+        if self.fallback_on_error:
+            logger.error(
+                "OllamaLLMClient exhausted %d attempts. Falling back to MockLLMClient: %s",
+                self.max_retries + 1,
+                last_err,
+            )
+            return self._mock_fallback.analyze(raw_statement, domain=domain)
+
+        raise RuntimeError(
+            f"OllamaLLMClient exhausted {self.max_retries + 1} attempts. Error: {last_err}"
+        ) from last_err
+
+
+# ──────────────────────────────────────────────
 # Polymorphic Factory
 # ──────────────────────────────────────────────
 
@@ -361,6 +455,11 @@ def get_llm_client(
             return MockLLMClient(model_name="mock-fallback")
         model = model_name or settings.LLM_MODEL_NAME or "gemini-1.5-flash"
         return GeminiLLMClient(api_key=key, model_name=model, timeout=t)
+
+    elif active_provider == "ollama":
+        base_url = settings.OLLAMA_BASE_URL
+        model = model_name or settings.LLM_MODEL_NAME or "llama3.2"
+        return OllamaLLMClient(base_url=base_url, model_name=model, timeout=t)
 
     elif active_provider == "mock":
         model = model_name or settings.LLM_MODEL_NAME or "mock-model"
