@@ -182,11 +182,11 @@ created: "2026-07-03"
 
 ## Phase 12 — Quality & Performance Hardening
 **Goal:** Đảm bảo độ tin cậy và hiệu năng cấp production
-> *Ghi chú đối soát (Batch C25): Phase 12.1 đã được hiện thực hóa đầy đủ qua migration `003_add_vector_cosine_index.py` (commit `a6ea28b`, 2026-10-04) và 3 test scenarios trong `test_alembic_migrations.py` (L391-496). Batch C25 xác nhận reconciliation: migration + tests đã tồn tại, chỉ cần cập nhật trạng thái spec/roadmap.*
+> *Ghi chú đối soát (Batch C25-C26): Phase 12.1 đã hoàn thành qua migration `003_add_vector_cosine_index.py`. Phase 12.2 và 12.4 đã được hiện thực hóa đầy đủ qua migration `004_create_background_jobs_table.py`, BackgroundJob model, JobService, async upload, entrypoint runner wiring và runtime verification. Batch C26 hoàn tất reconciliation: 12.1, 12.2, 12.4 hoàn tất; 12.3 (Caching Layer) là hạng mục duy nhất còn lại của Phase 12.*
 
 - [x] 12.1 IVFFlat Index cho pgvector khi dataset đạt ngưỡng quy mô (verified: migration 003_add_vector_cosine_index.py, test_alembic_migrations.py 3/3 scenarios PASS qua CI)
-- [ ] 12.2 Async Background Processing cho các tác vụ nặng
+- [x] 12.2 Async Background Processing cho các tác vụ nặng (verified: migration 004, BackgroundJob model, JobService, POST /upload?async=true trả về 202, GET /jobs/{id}, test_background_job_service.py 5/5 passed, integration tests PASS qua CI)
 - [ ] 12.3 Caching Layer cho Search và Analytics
-- [ ] 12.4 Migration Lifecycle & Schema Freshness Hardening
+- [x] 12.4 Migration Lifecycle & Schema Freshness Hardening (Phase 12.1A + 12.1C; verified: ADR-002, ADR-003, entrypoint.sh startup runner, test_migration_artifact_freshness.py, test_runtime_verification.py, CI image checks)
 
-**Acceptance Gate:** Trạng thái chưa hoàn tất (đang chờ kích hoạt sau Phase 11).
+**Acceptance Gate:** Trạng thái: 12.1, 12.2, 12.4 đã hoàn tất; 12.3 (Caching Layer) là hạng mục duy nhất còn lại.
