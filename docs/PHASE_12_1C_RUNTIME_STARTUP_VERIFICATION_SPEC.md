@@ -5,7 +5,7 @@ source_type: "specification"
 language: "vi"
 tags: ["spec", "database", "alembic", "migrations", "runtime", "startup", "lifecycle", "drift-detection"]
 phase: "12.1C"
-status: "draft"
+status: "accepted"
 created: "2026-10-04"
 ---
 
@@ -16,6 +16,8 @@ created: "2026-10-04"
 - **Giai đoạn:** Phase 12.1C (Quality & Performance Hardening — Migration Runtime Lifecycle)
 - **Tài liệu tham chiếu:** `docs/ADR-003-runtime-startup-migration-verification.md`, `docs/ADR-002-migration-artifact-freshness.md`, `docs/PHASE_12_1A_MIGRATION_ARTIFACT_FRESHNESS_SPEC.md`
 - **Kỷ luật áp dụng:** First-Principles Thinking, Spec-first, Test-first, Fail-closed Safety Guard, Non-hardcoded Lineage
+
+> **Ghi chú đối soát (Batch C26):** Phase 12.1C đã được hiện thực hóa đầy đủ qua `entrypoint.sh` wiring, `runner.py` (dynamic head discovery, fail-closed), và `runtime_verification.py` (postflight). Được verify qua 10 unit tests (`test_runtime_verification.py`), 8 unit tests (`test_migration_runner.py`), và integration tests PASS qua CI PR #59.
 
 ---
 

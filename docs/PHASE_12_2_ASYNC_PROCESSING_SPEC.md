@@ -5,7 +5,7 @@ source_type: "specification"
 language: "vi"
 tags: ["spec", "async", "background-tasks", "ingestion", "jobs", "fastapi", "performance"]
 phase: "12.2"
-status: "draft"
+status: "accepted"
 created: "2026-10-04"
 ---
 
@@ -16,6 +16,8 @@ created: "2026-10-04"
 - **Giai đoạn:** Phase 12.2 (Quality & Performance Hardening — Asynchronous Execution Layer)
 - **Tài liệu tham chiếu:** `docs/ADR-004-async-background-processing.md`, `docs/ADR-001-architecture.md`, `docs/PROFESSIONAL_UPGRADE_ROADMAP.md`
 - **Kỷ luật áp dụng:** First-Principles Thinking, Test-First (TDD), Fail-Closed & Fail-Visible Error Handling, Session Isolation
+
+> **Ghi chú đối soát (Batch C26):** Phase 12.2 đã được hiện thực hóa đầy đủ qua migration `004_create_background_jobs_table.py`, `BackgroundJob` model + Enums (`JobStatus`, `JobType`), `JobService`/`BackgroundJobRunner`, `POST /api/v1/documents/upload?async=true` (HTTP 202), `GET /api/v1/jobs/{job_id}`, session isolation, và fail-visible error handling. Được verify qua 5 unit tests (`test_background_job_service.py`) và integration tests (`test_async_documents_api.py`, `test_background_jobs_api.py`) PASS qua CI PR #59.
 
 ---
 
