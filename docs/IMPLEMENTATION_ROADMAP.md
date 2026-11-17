@@ -182,8 +182,9 @@ created: "2026-07-03"
 
 ## Phase 12 — Quality & Performance Hardening
 **Goal:** Đảm bảo độ tin cậy và hiệu năng cấp production
+> *Ghi chú đối soát (Batch C25): Phase 12.1 đã được hiện thực hóa đầy đủ qua migration `003_add_vector_cosine_index.py` (commit `a6ea28b`, 2026-10-04) và 3 test scenarios trong `test_alembic_migrations.py` (L391-496). Batch C25 xác nhận reconciliation: migration + tests đã tồn tại, chỉ cần cập nhật trạng thái spec/roadmap.*
 
-- [ ] 12.1 IVFFlat Index cho pgvector khi dataset đạt ngưỡng quy mô
+- [x] 12.1 IVFFlat Index cho pgvector khi dataset đạt ngưỡng quy mô (verified: migration 003_add_vector_cosine_index.py, test_alembic_migrations.py 3/3 scenarios PASS qua CI)
 - [ ] 12.2 Async Background Processing cho các tác vụ nặng
 - [ ] 12.3 Caching Layer cho Search và Analytics
 - [ ] 12.4 Migration Lifecycle & Schema Freshness Hardening

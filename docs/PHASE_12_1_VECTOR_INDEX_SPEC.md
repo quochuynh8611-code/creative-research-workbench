@@ -1,8 +1,10 @@
 # PHASE 12.1 — ALEMBIC REVISION 003: PGVECTOR COSINE INDEX SPECIFICATION
 - **Tài liệu:** Đặc tả kỹ thuật & Quyết định Kiến trúc Phase 12.1
 - **Dự án:** Creative Research Workbench
-- **Trạng thái:** 🟡 SPEC & RED PHASE (Chờ phê duyệt triển khai Migration)
+- **Trạng thái:** 🟢 ACCEPTED & VERIFIED
 - **Kỷ luật áp dụng:** Spec-first, Test-first, Read-before-write, Non-destructive Rollback
+
+> **Ghi chú đối soát (Batch C25):** Phase 12.1 đã được hiện thực hóa đầy đủ qua migration `003_add_vector_cosine_index.py` (commit `a6ea28b`, 2026-10-04) và 3 test scenarios trong `test_alembic_migrations.py` (L391-496). Batch C25 xác nhận reconciliation: migration + tests đã tồn tại, chỉ cần cập nhật trạng thái spec/roadmap.
 
 ---
 
