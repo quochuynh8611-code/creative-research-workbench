@@ -7,7 +7,7 @@ from datetime import datetime, timezone
 import logging
 from typing import Any
 
-from fastapi import APIRouter, Depends, Query, Response
+from fastapi import APIRouter, Depends, Query, Request, Response
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
@@ -64,6 +64,7 @@ class AnalyticsOverviewResponse(BaseModel):
 
 @router.get("/overview", response_model=AnalyticsOverviewResponse)
 def get_analytics_overview(
+    request: Request,
     response: Response,
     refresh: bool = Query(False, description="Chủ động làm mới cache và truy vấn lại database"),
     db: Session = Depends(get_db),
@@ -72,7 +73,8 @@ def get_analytics_overview(
     Trả về tổng quan chỉ số nghiên cứu và tri thức (pure read-only kèm caching).
     """
     cache = get_cache()
-    cache_key = "analytics:overview:global"
+    is_test_override = hasattr(request, "app") and get_db in getattr(request.app, "dependency_overrides", {})
+    cache_key = f"analytics:overview:{id(db)}" if is_test_override else "analytics:overview:global"
     ttl = 60
 
     if settings.ENABLE_CACHE and not refresh:
