@@ -8,7 +8,7 @@
 
 ## 1. Tổng quan & Mục tiêu Nghiệp vụ
 
-Module Analytics (Phase 11) cung cấp bảng thông tin trực quan hóa toàn diện và tự động tổng hợp dữ liệu nghiên cứu thời gian thực cho Creative Research Workbench. Người dùng có thể:
+Module Analytics (Phase 11) cung cấp bảng thông tin trực quan hóa toàn diện và tự động tổng hợp dữ liệu nghiên cứu theo yêu cầu (on-demand pull-based) cho Creative Research Workbench. Người dùng có thể:
 1. Nắm bắt tức thì toàn bộ quy mô hệ thống thông qua 4 chỉ số KPI cốt lõi: **Research Sessions**, **Candidate Solutions**, **Knowledge Base**, và **Mâu thuẫn TRIZ**.
 2. Khám phá các phân bố chi tiết theo từng giai đoạn nghiên cứu (workflow stages), loại nội dung, trạng thái giải pháp, định dạng tài liệu, và loại mâu thuẫn.
 3. Điều hướng liền mạch (contextual deep links) từ mọi chỉ số phân tích trực tiếp đến không gian làm việc chuyên sâu (`/sessions`, `/knowledge`, `/search`).
@@ -53,62 +53,65 @@ Module Analytics (Phase 11) cung cấp bảng thông tin trực quan hóa toàn 
 - **Path:** `/api/v1/analytics/overview`
 - **Authentication:** Public / Workspace Session Context
 
-### 3.2 Schema Payload Response
+### 3.2 Schema Payload Response (Production)
+
 ```json
 {
-  "sessions": {
-    "total_sessions": 12,
-    "by_status": {
-      "active": 8,
-      "completed": 3,
-      "archived": 1
+  "data": {
+    "sessions": {
+      "total": 12,
+      "by_status": {
+        "active": 8,
+        "paused": 2,
+        "archived": 2
+      },
+      "by_workflow_state": {
+        "structuring": 4,
+        "ideation": 2,
+        "idle": 2,
+        "retrieval": 3,
+        "evaluation": 1,
+        "synthesis": 0
+      },
+      "by_domain": {
+        "technical": 6,
+        "business": 4,
+        "unassigned": 2
+      }
     },
-    "by_stage": {
-      "intake": 2,
-      "structuring": 4,
-      "retrieval": 3,
-      "ideation": 2,
-      "evaluation": 1,
-      "synthesis": 0
-    }
-  },
-  "content": {
-    "total_pieces": 28,
-    "by_type": {
-      "problem_frame": 12,
-      "hypothesis": 8,
-      "insight": 6,
-      "synthesis": 2
-    }
-  },
-  "candidate_solutions": {
-    "total_solutions": 15,
-    "by_status": {
-      "draft": 5,
-      "under_review": 4,
-      "approved": 5,
-      "rejected": 1
-    }
-  },
-  "knowledge_base": {
-    "total_documents": 24,
-    "golden_documents": 10,
-    "by_file_type": {
-      "pdf": 14,
-      "markdown": 6,
-      "text": 4
-    }
-  },
-  "triz": {
-    "total_contradictions": 6,
-    "by_contradiction_type": {
-      "technical": 4,
-      "physical": 2
+    "content": {
+      "total_problem_frames": 12,
+      "total_research_notes": 28,
+      "notes_by_type": {
+        "insight": 6,
+        "hypothesis": 8,
+        "decision": 14
+      },
+      "total_candidate_solutions": 15,
+      "solutions_by_status": {
+        "candidate": 5,
+        "accepted": 8,
+        "rejected": 2
+      }
+    },
+    "knowledge_base": {
+      "total_documents": 24,
+      "golden_documents": 10,
+      "total_chunks": 60
+    },
+    "triz": {
+      "total_contradictions": 6,
+      "by_contradiction_type": {
+        "technical": 4,
+        "physical": 2
+      }
     }
   },
   "generated_at": "2026-10-03T22:30:00.000Z"
 }
 ```
+
+**Lưu ý:** Schema production sử dụng cấu trúc lồng `{ data, generated_at }` (không phải schema phẳng cũ). Toàn bộ 4 backend integration tests và 27 frontend tests đã xác nhận schema này. [cite:0]
 
 ---
 
@@ -123,12 +126,12 @@ Module Analytics (Phase 11) cung cấp bảng thông tin trực quan hóa toàn 
 
 ### 4.2 Hàng 4 Thẻ KPI Cốt lõi (Top KPI Cards)
 1. **Card 1: Research Sessions**
-   - Giá trị chính: `sessions.total_sessions`
+   - Giá trị chính: `sessions.total`
    - Subtitle: `"{active} đang chạy & {completed} hoàn tất"` (hoặc `"Chưa có session nào"`)
    - Chân thẻ: Link drilldown `"Xem danh sách" -> /sessions`
 2. **Card 2: Candidate Solutions**
-   - Giá trị chính: `candidate_solutions.total_solutions`
-   - Subtitle: `"{approved} giải pháp đã phê duyệt"` (hoặc `"Chưa có giải pháp nào"`)
+   - Giá trị chính: `content.total_candidate_solutions`
+   - Subtitle: `"{accepted} giải pháp đã phê duyệt"` (hoặc `"Chưa có giải pháp nào"`)
    - Chân thẻ: Link drilldown `"Xem giải pháp" -> /sessions`
 3. **Card 3: Knowledge Base**
    - Giá trị chính: `knowledge_base.total_documents`
@@ -140,7 +143,7 @@ Module Analytics (Phase 11) cung cấp bảng thông tin trực quan hóa toàn 
    - Chân thẻ: Link drilldown `"Tra cứu TRIZ" -> /search`
 
 ### 4.3 Actionable Empty-State Guidance Panel
-- Khi toàn bộ 4 chỉ số tổng đều bằng 0 (`total_sessions === 0 && total_pieces === 0 && total_documents === 0 && total_contradictions === 0`):
+- Khi toàn bộ 4 chỉ số tổng đều bằng 0 (`sessions.total === 0 && content.total_candidate_solutions === 0 && knowledge_base.total_documents === 0 && triz.total_contradictions === 0`):
   - Hiển thị banner `data-testid="analytics-empty-state"` với viền nét đứt (dashed border).
   - Cung cấp hướng dẫn bắt đầu nghiên cứu và 3 CTA buttons dẫn trực tiếp đến:
     - `"Tạo Session mới"` -> `/sessions`
