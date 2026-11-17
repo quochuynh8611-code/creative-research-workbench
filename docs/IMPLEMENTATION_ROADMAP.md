@@ -190,3 +190,14 @@ created: "2026-07-03"
 - [x] 12.4 Migration Lifecycle & Schema Freshness Hardening (Phase 12.1A + 12.1C; verified: ADR-002, ADR-003, entrypoint.sh startup runner, test_migration_artifact_freshness.py, test_runtime_verification.py, CI image checks)
 
 **Acceptance Gate:** Phase 12 Acceptance Gate PASS 100% ✅ (12.1, 12.2, 12.3, 12.4 hoàn tất đầy đủ và được kiểm chứng qua CI/CD).
+
+---
+
+## Phase 13 — Batch C30: Productization & AI Configuration
+**Goal:** Chuẩn bị CRW sẵn sàng sử dụng thực tế (Productization): AI provider an toàn (OpenAI/Ollama/Mock fallback), Onboarding UX 6 bước TRIZ, Confirmation Modals chống mất mát dữ liệu, và Standard Operating Runbook.
+
+- [x] **PR 1: Backend AI Safety & Status API** (Branch: `feat/c30-backend-ai-safety`, PR #63 merged vào `main` tại `0116765056993e738cb955ec1e1d233db2e03dc5`; verified: `GET /api/v1/system/ai-status` bảo mật, Ollama client, global exception shield, 518/518 backend tests PASS).
+- [x] **PR 2: Frontend UX, Onboarding Banner & Confirmation Dialogs** (Branch: `feat/c30-frontend-onboarding-ux`, PR #64 merged vào `main` tại `7811be584d197335a6f3266f1be07a0042758f02`; verified: `AIStatusBadge` kết nối `/ai-status`, `OnboardingWorkflowBanner` 6 bước TRIZ với quy tắc template fallback logistics -> nutrition -> error, `ConfirmationModal` trước khi xóa Solution và Note, 66/66 web suites, 767/767 tests PASS).
+- [ ] **PR 3: Docs & Operations Runbook** (Branch: `docs/c30-deployment-runbook`; phạm vi: chuẩn hóa `.env.example`, nâng cấp `docs/DEPLOYMENT_GUIDE.md` thành Standard Operating Runbook toàn diện với backup SHA-256 / restore / rollback / smoke test, rà soát Docker plan & gap docs) — **IN PROGRESS**.
+
+**Acceptance Gate:** Batch C30 Acceptance Gate sẽ được đánh dấu hoàn tất sau khi PR 3 được merge và 3/3 checks CI trên `main` PASS.

@@ -162,27 +162,30 @@ async def global_exception_handler(request: Request, exc: Exception):
 
 ---
 
-### 2.3 Environment & Deployment Specification
+### 2.3 Environment & Deployment Specification (PR 3 Implementation)
 
 #### A. Bảng Ma Trận Biến Môi Trường (.env Contract)
 
-| Tên Biến | Mặc Định | Kiểu | Mô Tả |
+| Tên Biến | Mặc Định / Placeholder | Kiểu | Mô Tả & Ngữ Cảnh Sử Dụng |
 | :--- | :--- | :---: | :--- |
-| `APP_ENV` | `development` | string | `development` \| `production` \| `test` |
-| `DEBUG` | `True` | boolean | Tắt debug ở production |
-| `DATABASE_URL` | `postgresql+asyncpg://...` | string | Kết nối PostgreSQL pgvector |
-| `LLM_PROVIDER` | `mock` | string | `mock` \| `openai` \| `gemini` \| `ollama` |
-| `LLM_MODEL_NAME` | `null` | string | Tùy chọn model (`gpt-4o-mini`, `gemini-1.5-flash`, v.v.) |
-| `LLM_TIMEOUT_SECONDS` | `10.0` | float | Thời gian chờ tối đa cho LLM |
-| `LLM_MAX_RETRIES` | `2` | int | Số lần thử lại trước khi fallback |
-| `EMBEDDING_PROVIDER` | `mock` | string | `mock` \| `openai` \| `gemini` \| `ollama` |
-| `EMBEDDING_MODEL_NAME` | `null` | string | Tùy chọn embedding model |
-| `OPENAI_API_KEY` | `""` | string | Secret key cho OpenAI |
-| `GEMINI_API_KEY` | `""` | string | Secret key cho Google Gemini |
-| `OLLAMA_BASE_URL` | `http://localhost:11434` | string | Địa chỉ máy chủ Ollama cục bộ |
-| `ALLOWED_ORIGINS` | `["..."]` | JSON list | Danh sách CORS origins được phép |
-| `ENABLE_CACHE` | `True` | boolean | Bật/tắt tầng đệm InMemoryTTLCache |
-| `NEXT_PUBLIC_API_URL`| `http://localhost:8000` | string | Địa chỉ Backend API cho Web frontend |
+| `DATABASE_URL` | `postgresql+asyncpg://crw_user:crw_password@localhost:5433/crw_dev` | string | Chuỗi kết nối PostgreSQL (Docker stack dùng `db:5432`; Host ngoài dùng `localhost:5433`) |
+| `ENVIRONMENT` | `development` | string | `development` \| `production` \| `test` |
+| `ALLOWED_ORIGINS` | `'["http://localhost:3011", ...]'` | JSON list | Danh sách CORS origins được phép truy cập backend FastAPI |
+| `NEXT_PUBLIC_API_URL`| `http://localhost:8000` | string | Địa chỉ Backend API cho Web frontend client browser |
+| `API_BASE_URL` | `http://api:8000` | string | Địa chỉ Backend API nội bộ cho container Next.js rewrite |
+| `LLM_PROVIDER` | `mock` | string | `mock` \| `openai` \| `ollama` (Gemini không nằm trong C30) |
+| `EMBEDDING_PROVIDER` | `mock` | string | `mock` \| `openai` \| `ollama` |
+| `OPENAI_API_KEY` | `sk-proj-placeholder-not-real-key` | string | Khóa API OpenAI (tùy chọn, chỉ cần khi provider = openai) |
+| `OLLAMA_BASE_URL` | `http://localhost:11434` | string | Địa chỉ máy chủ Ollama (Docker sang host: `http://host.docker.internal:11434`) |
+| `LLM_MODEL_NAME` | `null` | string | Tùy chọn model (`gpt-4o-mini`, v.v.) |
+| `EMBEDDING_MODEL_NAME` | `null` | string | Tùy chọn embedding model (`text-embedding-3-small`, v.v.) |
+| `LLM_TIMEOUT_SECONDS` | `10.0` | float | Thời gian chờ tối đa cho LLM (giây) |
+| `LLM_MAX_RETRIES` | `2` | int | Số lần thử lại trước khi fallback hoặc báo lỗi |
+| `ENABLE_CACHE` | `True` | boolean | Bật/tắt tầng đệm InMemoryTTLCache (Phase 12.3) |
+| `CACHE_DEFAULT_TTL` | `300` | int | Thời gian sống mặc định của cache (giây) |
+
+#### B. Standard Operating Runbook Reference
+Toàn bộ quy trình vận hành chi tiết (Prerequisites, Start/Stop, Health checks, Smoke tests, Database Backup với SHA-256, Restore, Rollback, Log inspection, Troubleshooting, và Secret handling rules) được quy chuẩn tại [DEPLOYMENT_GUIDE.md](DEPLOYMENT_GUIDE.md).
 
 ---
 
