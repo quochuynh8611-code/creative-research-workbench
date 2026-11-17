@@ -169,13 +169,14 @@ created: "2026-07-03"
 
 ## Phase 11 — Analytics & Research Intelligence
 **Goal:** Dashboard phân tích trực quan toàn bộ hệ thống tri thức và bài toán
+> *Ghi chú đối soát (Batch C24): Phase 11 đã được hiện thực hóa đầy đủ qua các batch nền tảng trước (`analytics_service.py`, `analytics.py`, `analytics-dashboard.tsx`). Batch C24 xác nhận 4/4 backend integration tests và 27/27 frontend tests PASS, type-check 0 lỗi; schema production là `{ data, generated_at }`.*
 
-- [ ] 11.1 Analytics Overview Aggregation Service & API (`GET /api/v1/analytics/overview`)
-- [ ] 11.2 Frontend Analytics Dashboard & Contextual Deep Links
-- [ ] 11.3 Actionable Empty-State Guidance & Quality Indicators
-- [ ] 11.4 Accessibility, Semantic Landmarks & Interactive Refresh Feedback
+- [x] 11.1 Analytics Overview Aggregation Service & API (`GET /api/v1/analytics/overview`; verified: `test_analytics_overview_api.py` 4/4 passed)
+- [x] 11.2 Frontend Analytics Dashboard & Contextual Deep Links (verified: `analytics-dashboard.test.tsx` 27/27 passed)
+- [x] 11.3 Actionable Empty-State Guidance & Quality Indicators (verified: `analytics-dashboard.test.tsx`)
+- [x] 11.4 Accessibility, Semantic Landmarks & Interactive Refresh Feedback (verified: `analytics-dashboard.test.tsx`)
 
-**Acceptance Gate:** Trạng thái chưa hoàn tất (đang triển khai theo kế hoạch tiếp theo).
+**Acceptance Gate:** Phase 11 Acceptance Gate PASS 100% ✅ (4/4 backend tests, 27/27 frontend tests, type-check 0 lỗi).
 
 ---
 
