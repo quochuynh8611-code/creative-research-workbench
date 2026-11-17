@@ -7,6 +7,7 @@ from app.api.v1.endpoints import (
     search,
     sessions,
     solutions,
+    system,
     triz,
 )
 
@@ -19,3 +20,4 @@ api_router.include_router(search.router, prefix="/search", tags=["search"])
 api_router.include_router(solutions.router, prefix="/solutions", tags=["solutions"])
 api_router.include_router(triz.router, prefix="/triz", tags=["triz"])
 api_router.include_router(analytics.router, prefix="/analytics", tags=["analytics"])
+api_router.include_router(system.router, prefix="/system", tags=["system"])
