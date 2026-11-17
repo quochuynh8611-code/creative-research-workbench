@@ -4,14 +4,19 @@ analytics.py — REST API endpoint cho Phase 11.1: Session Analytics & Research 
 from __future__ import annotations
 
 from datetime import datetime, timezone
+import logging
 from typing import Any
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query, Response
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
 from app.api.v1.endpoints.sessions import get_db
+from app.core.cache import get_cache
+from app.core.config import settings
 from app.services.analytics_service import AnalyticsService
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
@@ -59,20 +64,55 @@ class AnalyticsOverviewResponse(BaseModel):
 
 @router.get("/overview", response_model=AnalyticsOverviewResponse)
 def get_analytics_overview(
+    response: Response,
+    refresh: bool = Query(False, description="Chủ động làm mới cache và truy vấn lại database"),
     db: Session = Depends(get_db),
 ) -> AnalyticsOverviewResponse:
     """
-    Trả về tổng quan chỉ số nghiên cứu và tri thức (pure read-only).
+    Trả về tổng quan chỉ số nghiên cứu và tri thức (pure read-only kèm caching).
     """
+    cache = get_cache()
+    cache_key = "analytics:overview:global"
+    ttl = 60
+
+    if settings.ENABLE_CACHE and not refresh:
+        try:
+            cached = cache.safe_get(cache_key)
+            if cached is not None:
+                response.headers["X-Cache"] = "HIT"
+                return AnalyticsOverviewResponse(
+                    data=AnalyticsOverviewData(**cached["data"]),
+                    generated_at=cached["generated_at"],
+                )
+        except Exception as exc:
+            logger.warning(f"Analytics cache read failed gracefully: {exc}")
+
+    response.headers["X-Cache"] = "MISS"
     service = AnalyticsService(bind=db)
     raw_data = service.get_overview()
+    generated_at = datetime.now(timezone.utc).isoformat()
+
+    overview_data = AnalyticsOverviewData(
+        sessions=SessionAnalytics(**raw_data["sessions"]),
+        content=ContentAnalytics(**raw_data["content"]),
+        knowledge_base=KnowledgeBaseAnalytics(**raw_data["knowledge_base"]),
+        triz=TRIZAnalytics(**raw_data["triz"]),
+    )
+
+    if settings.ENABLE_CACHE:
+        try:
+            cache.safe_set(
+                cache_key,
+                {
+                    "data": overview_data.model_dump(),
+                    "generated_at": generated_at,
+                },
+                ttl=ttl,
+            )
+        except Exception as exc:
+            logger.warning(f"Analytics cache write failed gracefully: {exc}")
 
     return AnalyticsOverviewResponse(
-        data=AnalyticsOverviewData(
-            sessions=SessionAnalytics(**raw_data["sessions"]),
-            content=ContentAnalytics(**raw_data["content"]),
-            knowledge_base=KnowledgeBaseAnalytics(**raw_data["knowledge_base"]),
-            triz=TRIZAnalytics(**raw_data["triz"]),
-        ),
-        generated_at=datetime.now(timezone.utc).isoformat(),
+        data=overview_data,
+        generated_at=generated_at,
     )

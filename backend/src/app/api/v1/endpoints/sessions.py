@@ -11,6 +11,7 @@ from pydantic import BaseModel, Field, ValidationError, field_validator
 from sqlalchemy import and_, create_engine, func, select
 from sqlalchemy.orm import Session
 
+from app.core.cache import get_cache
 from app.core.config import settings
 from app.domain.models import (
     CandidateSolution,
@@ -275,6 +276,13 @@ class CandidateSolutionUpdate(BaseModel):
 # Routes
 # ──────────────────────────────────────────────
 
+def _invalidate_analytics() -> None:
+    try:
+        get_cache().invalidate_namespace("analytics")
+    except Exception:
+        pass
+
+
 @router.post("", status_code=status.HTTP_201_CREATED)
 async def create_session(
     body: SessionCreate,
@@ -295,6 +303,7 @@ async def create_session(
         db.flush()
         db.commit()
         db.refresh(session_record)
+        _invalidate_analytics()
 
         created_iso = (
             session_record.created_at.isoformat()
@@ -587,6 +596,7 @@ async def create_session_from_template(
     }
 
     new_session, _ = import_session_from_json(snapshot_from_tpl, db)
+    _invalidate_analytics()
 
     now_iso = datetime.now(timezone.utc).isoformat()
     created_iso = new_session.created_at.isoformat() if new_session.created_at else now_iso
@@ -666,6 +676,7 @@ async def archive_session(
     db.flush()
     db.commit()
     db.refresh(record)
+    _invalidate_analytics()
 
     payload = {
         "id": str(record.id),
@@ -1129,6 +1140,7 @@ async def create_research_note(
     db.flush()
     db.commit()
     db.refresh(note)
+    _invalidate_analytics()
 
     payload = {
         "id": str(note.id),
@@ -1181,6 +1193,7 @@ async def delete_research_note(
     db.delete(note)
     db.flush()
     db.commit()
+    _invalidate_analytics()
 
     return {
         "status": "deleted",
@@ -1273,6 +1286,7 @@ async def create_candidate_solution(
     db.flush()
     db.commit()
     db.refresh(solution)
+    _invalidate_analytics()
 
     return {
         "data": {
@@ -1338,6 +1352,7 @@ async def update_candidate_solution(
     db.flush()
     db.commit()
     db.refresh(solution)
+    _invalidate_analytics()
 
     return {
         "data": {
@@ -1389,6 +1404,7 @@ async def delete_candidate_solution(
     db.delete(solution)
     db.flush()
     db.commit()
+    _invalidate_analytics()
 
     return {
         "status": "deleted",
