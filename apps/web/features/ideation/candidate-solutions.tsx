@@ -26,6 +26,7 @@ import {
   deleteCandidateSolution,
 } from '@/lib/api-client'
 import { validateCandidateSolutionContext } from '@/lib/candidate-solution-context-validator'
+import { ConfirmationModal } from '@/components/confirmation-modal'
 import type {
   SolutionStatus,
   CandidateSolution,
@@ -70,6 +71,7 @@ export function CandidateSolutions({
   const [feasibilityScore, setFeasibilityScore] = useState<number>(0.5)
   const [riskNotes, setRiskNotes] = useState('')
   const [selectedStatusFilter, setSelectedStatusFilter] = useState<string>('all')
+  const [solutionToDelete, setSolutionToDelete] = useState<CandidateSolution | null>(null)
   const [validationError, setValidationError] = useState<string | null>(null)
   const [actionError, setActionError] = useState<string | null>(null)
   const [saveError, setSaveError] = useState<string | null>(null)
@@ -139,6 +141,7 @@ export function CandidateSolutions({
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['sessions', sessionId, 'solutions'] })
       setActionError(null)
+      setSolutionToDelete(null)
     },
     onError: (err: any) => {
       setActionError(err?.message || 'Không thể xóa giải pháp.')
@@ -489,7 +492,7 @@ export function CandidateSolutions({
                     <div className="flex items-center gap-1.5 self-end sm:self-auto shrink-0">
                       <button
                         type="button"
-                        onClick={() => deleteMutation.mutate(sol.id)}
+                        onClick={() => setSolutionToDelete(sol)}
                         disabled={deleteMutation.isPending}
                         aria-label="Xóa giải pháp"
                         title="Xóa giải pháp"
@@ -650,6 +653,21 @@ export function CandidateSolutions({
           </div>
         )}
       </div>
+
+      <ConfirmationModal
+        isOpen={Boolean(solutionToDelete)}
+        title="Xác nhận xóa giải pháp"
+        description={`Bạn có chắc chắn muốn xóa giải pháp "${solutionToDelete?.title}"? Thao tác này không thể hoàn tác.`}
+        confirmLabel="Xác nhận xóa"
+        cancelLabel="Hủy bỏ"
+        isLoading={deleteMutation.isPending}
+        onCancel={() => setSolutionToDelete(null)}
+        onConfirm={() => {
+          if (solutionToDelete) {
+            deleteMutation.mutate(solutionToDelete.id)
+          }
+        }}
+      />
     </div>
   )
 }

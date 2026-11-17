@@ -286,8 +286,8 @@ describe('CandidateSolutions Component', () => {
     })
   })
 
-  // 9. Delete solution
-  it('9. xóa giải pháp gọi deleteCandidateSolution với đúng session_id và solution_id', async () => {
+  // 9. Delete solution with confirmation modal
+  it('9. xóa giải pháp hiển thị modal xác nhận và chỉ gọi deleteCandidateSolution khi nhấn xác nhận', async () => {
     const mockResponse: CandidateSolutionsResponse = {
       data: [MOCK_SOLUTIONS[0]],
       meta: { total: 1, session_id: 'ses-123' },
@@ -310,6 +310,21 @@ describe('CandidateSolutions Component', () => {
 
     const deleteBtn = screen.getByRole('button', { name: /xóa giải pháp|xóa/i })
     fireEvent.click(deleteBtn)
+
+    // Modal hiển thị xác nhận
+    expect(screen.getByText('Xác nhận xóa giải pháp')).toBeInTheDocument()
+    expect(screen.getByText(/Bạn có chắc chắn muốn xóa giải pháp "Màng nano polymer tự phục hồi"\?/i)).toBeInTheDocument()
+
+    // Bấm hủy bỏ: không gọi API
+    const cancelBtn = screen.getByRole('button', { name: 'Hủy bỏ' })
+    fireEvent.click(cancelBtn)
+    expect(apiClient.deleteCandidateSolution).not.toHaveBeenCalled()
+    expect(screen.queryByText('Xác nhận xóa giải pháp')).not.toBeInTheDocument()
+
+    // Mở lại modal và bấm Xác nhận xóa
+    fireEvent.click(deleteBtn)
+    const confirmBtn = screen.getByRole('button', { name: 'Xác nhận xóa' })
+    fireEvent.click(confirmBtn)
 
     await waitFor(() => {
       expect(apiClient.deleteCandidateSolution).toHaveBeenCalledWith('ses-123', '550e8400-e29b-41d4-a716-446655440001')

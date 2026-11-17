@@ -182,6 +182,10 @@ describe('ResearchNotebook Component', () => {
     const deleteBtns = screen.getAllByRole('button', { name: /xóa|delete/i })
     fireEvent.click(deleteBtns[0])
 
+    // Modal xác nhận xuất hiện: bấm Xác nhận xóa
+    const confirmBtn = screen.getByRole('button', { name: 'Xác nhận xóa' })
+    fireEvent.click(confirmBtn)
+
     await waitFor(() => {
       expect(apiClient.deleteResearchNote).toHaveBeenCalledWith('ses-123', 'note-001')
     })
@@ -1046,6 +1050,10 @@ describe('ResearchNotebook Component', () => {
 
       const deleteButtons = screen.getAllByRole('button', { name: /xóa ghi chú/i })
       fireEvent.click(deleteButtons[0])
+
+      // Bấm Xác nhận xóa trên modal
+      const confirmBtn = screen.getByRole('button', { name: 'Xác nhận xóa' })
+      fireEvent.click(confirmBtn)
 
       await waitFor(() => {
         expect(apiClient.deleteResearchNote).toHaveBeenCalledWith('ses-c7a', 'c7a-1')

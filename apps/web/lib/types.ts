@@ -707,3 +707,27 @@ export interface WorkflowRunResponse {
     explanation?: string
   }>
 }
+
+// ──────────────────────────────────────────────
+// Safe AI Status Types (Batch C30)
+// ──────────────────────────────────────────────
+
+export interface AIProviderInfo {
+  provider: string
+  model: string
+  is_real: boolean
+  healthy: boolean
+}
+
+export interface AIStatusData {
+  status: 'ready' | 'mock' | 'degraded' | 'unavailable'
+  status_label: string
+  llm: AIProviderInfo
+  embedding: AIProviderInfo
+  fallback_active: boolean
+}
+
+export interface AIStatusResponse {
+  data: AIStatusData
+}
+
