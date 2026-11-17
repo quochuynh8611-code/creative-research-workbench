@@ -232,3 +232,25 @@ def mock_openai_embedding():
 
     with patch("openai.AsyncOpenAI", return_value=mock_client):
         yield mock_client
+
+
+# ──────────────────────────────────────────────
+# Cache Isolation Fixture (Phase 12.3 Refactor)
+# ──────────────────────────────────────────────
+
+@pytest.fixture(autouse=True)
+def isolated_cache():
+    """
+    Cache Isolation Fixture (Phase 12.3 Refactor).
+    Đảm bảo InMemoryTTLCache luôn sạch trước và sau mỗi test,
+    ngăn chặn triệt để cross-test cache pollution mà không cần
+    nhúng bất kỳ logic test-aware nào vào production code.
+    """
+    try:
+        from app.core.cache import get_cache
+        cache = get_cache()
+        cache.clear()
+        yield cache
+        cache.clear()
+    except Exception:
+        yield None

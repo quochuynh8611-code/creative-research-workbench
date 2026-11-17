@@ -224,3 +224,26 @@ async def test_caching_fail_safe_graceful_fallback(mock_retrieval_service, mock_
             with patch("app.services.analytics_service.AnalyticsService.get_overview", return_value=dummy_overview):
                 res_a = await client.get("/api/v1/analytics/overview")
                 assert res_a.status_code == 200
+
+
+def test_production_cache_key_is_pure_and_test_agnostic():
+    """
+    Scenario: Production cache key trong analytics.py là 'analytics:overview:global' thuần túy,
+    không chứa bất kỳ logic dependency_overrides hay id(db) nào.
+    """
+    import inspect
+    from app.api.v1.endpoints import analytics
+    source = inspect.getsource(analytics.get_analytics_overview)
+    assert "dependency_overrides" not in source, "get_analytics_overview không được chứa logic test-aware"
+    assert "id(db)" not in source, "get_analytics_overview không được chứa id(db) test-aware key"
+
+
+def test_cache_isolation_fixture_prevents_cross_test_pollution():
+    """
+    Scenario: Test isolation via fixture prevents cross-test pollution.
+    Mỗi test function đều bắt đầu với một cache instance hoàn toàn sạch.
+    """
+    cache = get_cache()
+    assert cache.get("analytics:overview:global") is None
+    cache.set("analytics:overview:global", {"polluted": True}, ttl=60)
+    assert cache.get("analytics:overview:global") == {"polluted": True}
