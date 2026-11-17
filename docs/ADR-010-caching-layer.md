@@ -5,7 +5,7 @@ source_type: "decision-record"
 language: "vi"
 tags: ["adr", "caching", "performance", "search", "analytics", "lru", "zero-dependency"]
 phase: "12.3"
-status: "proposed"
+status: "accepted"
 golden: true
 created: "2026-11-17"
 ---

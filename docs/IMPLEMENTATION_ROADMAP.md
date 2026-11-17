@@ -182,11 +182,11 @@ created: "2026-07-03"
 
 ## Phase 12 — Quality & Performance Hardening
 **Goal:** Đảm bảo độ tin cậy và hiệu năng cấp production
-> *Ghi chú đối soát (Batch C25-C26): Phase 12.1 đã hoàn thành qua migration `003_add_vector_cosine_index.py`. Phase 12.2 và 12.4 đã được hiện thực hóa đầy đủ qua migration `004_create_background_jobs_table.py`, BackgroundJob model, JobService, async upload, entrypoint runner wiring và runtime verification. Batch C26 hoàn tất reconciliation: 12.1, 12.2, 12.4 hoàn tất; 12.3 (Caching Layer) là hạng mục duy nhất còn lại của Phase 12.*
+> *Ghi chú đối soát (Batch C25-C28): Phase 12.1 đã hoàn thành qua migration `003_add_vector_cosine_index.py`. Phase 12.2 và 12.4 đã được hiện thực hóa qua migration `004_create_background_jobs_table.py`, BackgroundJob model, JobService, async upload, entrypoint runner wiring và runtime verification. Batch C28 hoàn tất 12.3: In-process LRU+TTL Caching Layer (`InMemoryTTLCache`) cho Search và Analytics với zero new dependencies, fail-safe degradation và mutation invalidation. Toàn bộ Phase 12 đã hoàn thành 100%.*
 
 - [x] 12.1 IVFFlat Index cho pgvector khi dataset đạt ngưỡng quy mô (verified: migration 003_add_vector_cosine_index.py, test_alembic_migrations.py 3/3 scenarios PASS qua CI)
 - [x] 12.2 Async Background Processing cho các tác vụ nặng (verified: migration 004, BackgroundJob model, JobService, POST /upload?async=true trả về 202, GET /jobs/{id}, test_background_job_service.py 5/5 passed, integration tests PASS qua CI)
-- [ ] 12.3 Caching Layer cho Search và Analytics
+- [x] 12.3 Caching Layer cho Search và Analytics (verified: `InMemoryTTLCache`, search SHA256 deterministic key, analytics TTL 60s + `refresh` param, mutation invalidation trên documents và sessions, fail-safe degradation, `test_caching_layer.py` 6/6 passed, `test_caching_api.py` 5/5 passed)
 - [x] 12.4 Migration Lifecycle & Schema Freshness Hardening (Phase 12.1A + 12.1C; verified: ADR-002, ADR-003, entrypoint.sh startup runner, test_migration_artifact_freshness.py, test_runtime_verification.py, CI image checks)
 
-**Acceptance Gate:** Trạng thái: 12.1, 12.2, 12.4 đã hoàn tất; 12.3 (Caching Layer) là hạng mục duy nhất còn lại.
+**Acceptance Gate:** Phase 12 Acceptance Gate PASS 100% ✅ (12.1, 12.2, 12.3, 12.4 hoàn tất đầy đủ và được kiểm chứng qua CI/CD).

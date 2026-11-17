@@ -3,7 +3,7 @@
 - **Tài liệu:** Đặc tả kỹ thuật & Kiến trúc Hệ thống Caching Layer (Phase 12.3)
 - **Dự án:** Creative Research Workbench
 - **Giai đoạn:** Phase 12.3 (Quality & Performance Hardening — In-Memory Caching Subsystem)
-- **Trạng thái:** 🟡 DRAFT SPEC (Chờ Founder phê duyệt triển khai)
+- **Trạng thái:** 🟢 ACCEPTED & VERIFIED (Đã triển khai & xác nhận qua Batch C28)
 - **Tài liệu tham chiếu:** `docs/ADR-010-caching-layer.md`, `docs/ADR-001-architecture.md`, `docs/ADR-004-async-background-processing.md`
 - **Kỷ luật áp dụng:** First-Principles Thinking, Spec-First, Test-First, Zero-New-Dependencies, Fail-Safe Graceful Degradation
 
