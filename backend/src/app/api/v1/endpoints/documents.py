@@ -31,6 +31,7 @@ from sqlalchemy import func, or_, select
 from sqlalchemy.orm import Session
 
 from app.api.v1.endpoints.sessions import get_db
+from app.core.cache import get_cache
 from app.core.config import settings
 from app.domain.models import Chunk, Document, DocumentStatus, JobStatus, JobType
 from app.services.embedding_client import get_embedding_client
@@ -281,6 +282,8 @@ async def upload_document(
             res = worker_ingest_service.ingest_bytes(raw_bytes=raw_bytes, filename=filename)
             if res.status == "error":
                 raise RuntimeError(res.error_message or "Lỗi không xác định khi nạp tài liệu")
+            get_cache().invalidate_namespace("search")
+            get_cache().invalidate_namespace("analytics")
             return {
                 "status": res.status,
                 "document_id": str(res.document_id) if res.document_id else None,
@@ -319,6 +322,10 @@ async def upload_document(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Lỗi trong quá trình nạp tài liệu: {result.error_message}",
         )
+
+    # Invalidate cache sau khi nạp tài liệu thành công
+    get_cache().invalidate_namespace("search")
+    get_cache().invalidate_namespace("analytics")
 
     # Lấy title của document vừa tạo
     created_doc = db.get(Document, result.document_id)
@@ -460,6 +467,9 @@ async def update_document(
     db.commit()
     db.refresh(document)
 
+    get_cache().invalidate_namespace("search")
+    get_cache().invalidate_namespace("analytics")
+
     return {
         "data": _serialize_document_detail(document, new_chunks)
     }
@@ -490,6 +500,9 @@ async def delete_document(
     doc_id_str = str(document.id)
     db.delete(document)
     db.commit()
+
+    get_cache().invalidate_namespace("search")
+    get_cache().invalidate_namespace("analytics")
 
     return {
         "status": "deleted",

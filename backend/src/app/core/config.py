@@ -34,5 +34,9 @@ class Settings(BaseSettings):
     # CORS
     ALLOWED_ORIGINS: list[str] = ["http://localhost:5173", "http://localhost:3000"]
 
+    # Caching Layer (Phase 12.3)
+    ENABLE_CACHE: bool = True
+    CACHE_DEFAULT_TTL: int = 300
+
 
 settings = Settings()
