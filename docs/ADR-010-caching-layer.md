@@ -97,4 +97,17 @@ Tầng cache được thiết kế theo cơ chế **Opt-in / Configurable**:
 
 ## 6. Trạng Thái Quyết Định (Status)
 
-- **Trạng thái:** Proposed / Draft (Chờ Founder phê duyệt triển khai cho Batch C28).
+- **Trạng thái:** Accepted (Đã triển khai tại Batch C28 và tái cấu trúc kiểm thử sạch tại Batch C29).
+
+---
+
+## 7. Ghi Chú Tái Cấu Trúc Kiểm Thử (Batch C29 — Test Isolation Refactor)
+
+1. **Vấn đề phát hiện:**
+   - Trong quá trình triển khai Batch C28, để xử lý cross-test cache pollution đối với các integration tests kỳ vọng database rỗng (`test_analytics_overview_returns_zero_counts_for_empty_database`), mã nguồn `analytics.py` đã tạm thời chứa logic test-aware (`if dependency_overrides: key = f"analytics:overview:{id(db)}"`).
+   - Điều này vi phạm nguyên tắc phân tách trách nhiệm (Separation of Concerns): production code không nên chứa nhận thức về test harness hay dependency overrides.
+
+2. **Quyết định tái cấu trúc:**
+   - Khôi phục cache key trong `backend/src/app/api/v1/endpoints/analytics.py` về chuỗi thuần túy: `"analytics:overview:global"`, hoàn toàn test-agnostic.
+   - Chuyển toàn bộ trách nhiệm cô lập bộ đệm sang test harness thông qua fixture `isolated_cache` (`autouse=True`) đặt tại `backend/tests/conftest.py`.
+   - Fixture này thực hiện `get_cache().clear()` trước và sau mỗi lần thực thi test function, bảo đảm dữ liệu cache không bị rò rỉ giữa các kịch bản kiểm thử mà vẫn giữ trọn vẹn sự tinh gọn cho production code.
