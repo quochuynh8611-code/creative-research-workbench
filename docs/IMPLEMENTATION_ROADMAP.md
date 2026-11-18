@@ -242,7 +242,7 @@ created: "2026-07-03"
 
 - [x] **PR 1: Backend Static Data, Read-Only Endpoints & Context Schema Validation** (Branch: `feat/c34-triz-toolkit-advanced`, PR #75 merged vào `main` tại `1f031a0b78f32044960009d8ba39704544744333`; verified: 3 tệp JSON tĩnh, 3 endpoints read-only, Pydantic discriminated union `TrizArizContext`, `TrizEvolutionContext`, `TrizResourceContext`, 7/7 new tests, 223/223 backend unit tests PASS).
 - [x] **PR 2: Frontend Advanced TRIZ Components & Session Integration** (Branch: `feat/c34-frontend-triz-advanced`, PR #76 merged vào `main` tại `42e6ed0d5998be31069251f74c1e08ba1ed2ff20`; verified: `ArizStepperPanel` 6 bước trong tab Structuring, `EvolutionPatternsExplorer` 8 quy luật và `ResourceAnalysisPanel` 5 tabs trong tab Ideation, runtime context validators, 14/14 new frontend tests, 800/800 web tests PASS, CI 3/3 checks PASS).
-- [ ] **PR 3: Productization Runbook, Documentation & Batch C34 Finalization** (Branch: `docs/c34-triz-advanced-runbook`; verified: bổ sung mục 15 TRIZ Advanced Runbook trong `docs/DEPLOYMENT_GUIDE.md`, cập nhật `docs/IMPLEMENTATION_ROADMAP.md` đóng hoàn tất Batch C34, chuyển `docs/ADR-015-triz-toolkit-advanced.md` sang Accepted).
+- [x] **PR 3: Productization Runbook, Documentation & Batch C34 Finalization** (Branch: `docs/c34-triz-advanced-runbook`, PR #77 merged vào `main` tại `292eb7e8ef7efb796908c41db17a538ad87d2e93`; verified: bổ sung mục 15 TRIZ Advanced Runbook trong `docs/DEPLOYMENT_GUIDE.md`, cập nhật `docs/IMPLEMENTATION_ROADMAP.md` đóng hoàn tất Batch C34, chuyển `docs/ADR-015-triz-toolkit-advanced.md` sang Accepted).
 
-**Acceptance Gate:** Batch C34 Acceptance Gate PASS 100% ✅ (PR #75, PR #76 đã merge, PR #77 hoàn tất và 3/3 checks CI trên `main` PASS).
+**Acceptance Gate:** Batch C34 Acceptance Gate PASS 100% ✅ (PR #75, PR #76, PR #77 đã merge và 3/3 checks CI trên `main` PASS. Batch C34 đóng hoàn tất).
 
