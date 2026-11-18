@@ -1,0 +1,104 @@
+[
+  {
+    "step_number": 1,
+    "code": "ariz_step_1",
+    "name_vi": "Xác định Bài toán nhỏ (Mini-Problem) & Mô hình hóa",
+    "name_en": "Mini-Problem Formulation & Problem Modeling",
+    "description": "Khoanh vùng mâu thuẫn kỹ thuật cốt lõi. Giữ nguyên hệ thống hiện tại, ngăn ngừa hậu quả xấu mà không làm phát sinh thêm thiết bị hay chi phí phức tạp.",
+    "trigger_questions": [
+      "Bộ phận nào trong hệ thống đang tạo ra tác động có hại?",
+      "Cái gì bắt buộc phải giữ nguyên vẹn trong hệ thống?",
+      "Xung đột kỹ thuật cơ bản nhất xảy ra giữa hai thông số nào?"
+    ],
+    "recommended_actions": [
+      "Phát biểu mô hình bài toán dưới dạng Mini-Problem: 'Mọi thứ giữ nguyên, ngoại trừ...'",
+      "Loại bỏ các giải pháp thêm thắt cồng kềnh, tập trung vào yếu tố xung đột cốt lõi",
+      "Xác định rõ cặp thông số cải thiện và bị suy giảm"
+    ]
+  },
+  {
+    "step_number": 2,
+    "code": "ariz_step_2",
+    "name_vi": "Phân tích Vùng Thao Tác (OZ) & Thời Gian Thao Tác (OT)",
+    "name_en": "Operational Zone (OZ) & Operational Time (OT) Analysis",
+    "description": "Khoanh vùng chính xác ranh giới không gian và khoảng thời gian xảy ra xung đột mâu thuẫn để thu hẹp phạm vi can thiệp.",
+    "trigger_questions": [
+      "Xung đột xảy ra chính xác ở vị trí nào trong không gian (Vùng thao tác OZ)?",
+      "Xung đột bắt đầu và kết thúc vào thời điểm nào (Thời gian thao tác OT)?",
+      "Có giai đoạn chuẩn bị trước (T1) hoặc giai đoạn sau thao tác (T2) nào không?"
+    ],
+    "recommended_actions": [
+      "Vẽ sơ đồ vùng thao tác OZ (bề mặt tiếp xúc, khe hở, ranh giới hai môi trường)",
+      "Lập trục thời gian OT gồm: Thời gian trước thao tác, Thời gian diễn ra xung đột, Thời gian sau thao tác",
+      "Tập trung tìm giải pháp chỉ can thiệp bên trong OZ và trong khoảng thời gian OT"
+    ]
+  },
+  {
+    "step_number": 3,
+    "code": "ariz_step_3",
+    "name_vi": "Định nghĩa Kết quả Lý tưởng (IFR) & Mâu thuẫn Vật lý (PC)",
+    "name_en": "Ideal Final Result (IFR) & Physical Contradiction (PC)",
+    "description": "Xác định trạng thái hoàn hảo lý tưởng (yếu tố X tự khắc phục vấn đề) và làm sắc bén mâu thuẫn vật lý đối kháng.",
+    "trigger_questions": [
+      "Nếu yếu tố X tự nó giải quyết vấn đề mà không tốn chi phí thì trạng thái lý tưởng trông như thế nào?",
+      "Thông số vật lý nào phải đồng thời ở hai trạng thái trái ngược nhau (nóng và lạnh, cứng và mềm, có và không)?",
+      "Tại sao thông số đó phải ở trạng thái A, và tại sao nó bắt buộc phải ở trạng thái ngược lại?"
+    ],
+    "recommended_actions": [
+      "Phát biểu IFR: 'Thành phần X của hệ thống hoặc môi trường tự nó loại bỏ tác hại mà không làm mất công năng chính'",
+      "Phát biểu mâu thuẫn vật lý: 'Vùng thao tác OZ trong thời gian OT phải có tính chất P để..., nhưng phải có tính chất phi-P để...'",
+      "Kiểm tra tính triệt để: Không thỏa hiệp (compromise), kiên quyết tìm cách đáp ứng cả hai đòi hỏi đối kháng"
+    ]
+  },
+  {
+    "step_number": 4,
+    "code": "ariz_step_4",
+    "name_vi": "Huy động Tài nguyên Chất - Trường (SFR)",
+    "name_en": "Mobilization of Substance-Field Resources (SFR)",
+    "description": "Rà soát toàn diện các tài nguyên chất và năng lượng/trường có sẵn trong vùng thao tác và môi trường xung quanh để hiện thực hóa IFR.",
+    "trigger_questions": [
+      "Có chất phế thải, phụ phẩm hoặc môi trường tự nhiên (không khí, nước) nào trong OZ có thể tận dụng?",
+      "Có trường năng lượng sẵn có nào (nhiệt tỏa ra, từ trường, áp suất, trọng lực) có thể kích hoạt?",
+      "Có thể biến đổi trạng thái pha của chất (rắn -> lỏng -> khí) để tạo hiệu ứng mong muốn?"
+    ],
+    "recommended_actions": [
+      "Lập danh mục các chất nội tại trong hệ thống và siêu hệ thống",
+      "Lập danh mục các trường năng lượng đang hiện diện hoặc phân tán lãng phí",
+      "Áp dụng nguyên tắc 'dùng chất/trường rẻ nhất hoặc có sẵn miễn phí tại chỗ'"
+    ]
+  },
+  {
+    "step_number": 5,
+    "code": "ariz_step_5",
+    "name_vi": "Áp dụng Chiến lược Phân tách & Hiệu ứng Khoa học",
+    "name_en": "Application of Separation Strategies & Scientific Effects",
+    "description": "Giải tỏa mâu thuẫn vật lý bằng 4 nguyên lý phân tách kinh điển (trong Không gian, Thời gian, Điều kiện, Thành phần) và tra cứu hiệu ứng vật lý, hóa học, hình học.",
+    "trigger_questions": [
+      "Có thể tách hai yêu cầu đối kháng vào hai vùng không gian khác nhau (Separation in Space)?",
+      "Có thể tách hai yêu cầu đối kháng vào hai khoảng thời gian khác nhau (Separation in Time)?",
+      "Có thể tách theo điều kiện hoạt động hoặc chuyển sang cấu trúc vi mô phân hệ (Separation upon Condition / System Transitions)?"
+    ],
+    "recommended_actions": [
+      "Đối soát 4 chiến lược phân tách kinh điển của TRIZ",
+      "Liên kết với 40 nguyên tắc sáng tạo và bảng chỉ dẫn hiệu ứng vật lý/hóa học",
+      "Thử nghiệm phương án lồng ghép vi mô hoặc chuyển pha chất"
+    ]
+  },
+  {
+    "step_number": 6,
+    "code": "ariz_step_6",
+    "name_vi": "Đánh giá Giải pháp & Hoàn thiện Ý tưởng",
+    "name_en": "Solution Verification & System Synthesis",
+    "description": "Kiểm tra tính khả thi, đánh giá mức độ lý tưởng (Ideality), phòng ngừa mâu thuẫn thứ cấp phát sinh và lưu thành giải pháp ứng viên.",
+    "trigger_questions": [
+      "Giải pháp vừa tìm ra có làm phát sinh mâu thuẫn hoặc tác hại phụ nào mới không?",
+      "Mức độ lý tưởng của hệ thống đã tăng lên như thế nào?",
+      "Ý tưởng này có thể khái quát hóa và ứng dụng cho các bài toán tương tự trong tổ chức không?"
+    ],
+    "recommended_actions": [
+      "Kiểm tra mâu thuẫn thứ cấp: Nếu có, quay lại Bước 1 giải quyết như một bài toán con",
+      "Chuyển đổi ý tưởng thành Candidate Solution hoàn chỉnh trên hệ thống",
+      "Lưu lại bài học kinh nghiệm và kiến thức mới vào Research Notebook"
+    ]
+  }
+]

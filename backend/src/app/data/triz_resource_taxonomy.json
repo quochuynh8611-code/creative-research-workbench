@@ -1,0 +1,98 @@
+[
+  {
+    "category": "substance",
+    "name_vi": "Tài nguyên Chất (Substance Resources)",
+    "name_en": "Substance Resources",
+    "description": "Các chất rắn, lỏng, khí, vật liệu có sẵn bên trong hệ thống, trong siêu hệ thống hoặc trong môi trường xung quanh có thể huy động miễn phí hoặc với chi phí cực thấp.",
+    "subtypes": [
+      "Vật liệu sẵn có của các thành phần trong hệ thống",
+      "Vật liệu của siêu hệ thống và môi trường tự nhiên (không khí, nước, đất)",
+      "Chất thải, phế phẩm, phụ phẩm từ quá trình vận hành",
+      "Chất giá rẻ, chất chuyển pha (nóng chảy, bốc hơi, kết tinh)",
+      "Chất bổ sung vi lượng hoặc bọt khí/lỗ xốp"
+    ],
+    "checklist_questions": [
+      "Có thể tận dụng chất thải hoặc phụ phẩm của chính hệ thống để giải quyết vấn đề không?",
+      "Có thể sử dụng không khí, nước hoặc môi trường xung quanh thay cho vật liệu đắt tiền?",
+      "Có thể thay đổi trạng thái pha của chất (ví dụ: làm đông lạnh tạm thời để tạo độ cứng) không?",
+      "Có thể tạo cấu trúc rỗng, xốp hoặc bọt khí bên trong chất để giảm trọng lượng không?"
+    ]
+  },
+  {
+    "category": "field",
+    "name_vi": "Tài nguyên Trường và Năng lượng (Field Resources)",
+    "name_en": "Field & Energy Resources",
+    "description": "Các trường năng lượng cơ học, nhiệt, điện từ, quang học, hóa học hoặc trọng lực đang hiện diện sẵn trong hệ thống hoặc bị phân tán lãng phí ra môi trường.",
+    "subtypes": [
+      "Trường cơ học và động năng (áp suất, ma sát, rung động, quán tính, lực đàn hồi)",
+      "Trường trọng lực và lực nổi",
+      "Trường nhiệt (nhiệt lượng tỏa ra, gradient chênh lệch nhiệt độ)",
+      "Trường điện và từ (từ trường trái đất, tĩnh điện, dòng rò)",
+      "Trường quang học và bức xạ (ánh sáng tự nhiên, tia UV, hồng ngoại)",
+      "Năng lượng hóa học và liên kết phân tử"
+    ],
+    "checklist_questions": [
+      "Nhiệt lượng tỏa ra từ động cơ/chip có thể dùng để sưởi ấm, tiền gia nhiệt hoặc sinh điện không?",
+      "Lực rung động hoặc chấn động có thể tận dụng để xáo trộn, làm sạch hoặc cấp liệu không?",
+      "Trọng lực tự nhiên có thể thay thế máy bơm hay động cơ đẩy không?",
+      "Có thể sử dụng ánh sáng môi trường hoặc từ trường sẵn có để kích hoạt cảm biến không?"
+    ]
+  },
+  {
+    "category": "time",
+    "name_vi": "Tài nguyên Thời gian (Time Resources)",
+    "name_en": "Time Resources",
+    "description": "Các khoảng thời gian trước khi diễn ra quá trình, trong quá trình, sau quá trình hoặc các khoảng thời gian chết (idle time) có thể tái phân bổ.",
+    "subtypes": [
+      "Thời gian chuẩn bị trước thao tác (Pre-action time)",
+      "Thời gian chết, thời gian nghỉ giữa các chu kỳ (Idle time / Downtime)",
+      "Thời gian sau thao tác (Post-action time)",
+      "Khả năng thực hiện thao tác song song (Parallel time)",
+      "Rút ngắn hoặc kéo dài tốc độ diễn ra quá trình (Tác động siêu nhanh hoặc cực chậm)"
+    ],
+    "checklist_questions": [
+      "Có thể thực hiện trước công việc chuẩn bị trong thời gian rảnh rỗi không?",
+      "Thời gian thiết bị nghỉ/chờ có thể tận dụng để tự bảo trì, sạc lại năng lượng hoặc xử lý dữ liệu ngầm không?",
+      "Các tác vụ có thể thực thi song song thay vì tuần tự để tiết kiệm thời gian không?",
+      "Nếu tác động diễn ra cực nhanh (dạng xung vi giây), tác hại có kịp xuất hiện không?"
+    ]
+  },
+  {
+    "category": "space",
+    "name_vi": "Tài nguyên Không gian (Space Resources)",
+    "name_en": "Space Resources",
+    "description": "Các vùng không gian trống bên trong, bên ngoài hệ thống, bề mặt tiếp xúc, khe hở, hoặc cấu trúc không gian phân tầng có thể khai thác.",
+    "subtypes": [
+      "Khoảng trống bên trong lòng hệ thống (Internal voids / cavities)",
+      "Khoảng trống bên ngoài bao quanh hệ thống (External space)",
+      "Bề mặt phân cách và diện tích tiếp xúc (Surfaces & Interfaces)",
+      "Không gian lồng ghép (Nesting / Matryoshka - vật này nằm trong lòng vật khác)",
+      "Tận dụng chiều không gian bổ sung (Từ 1D sang 2D, từ 2D sang 3D)"
+    ],
+    "checklist_questions": [
+      "Bên trong hệ thống có khoang rỗng nào chưa được sử dụng không?",
+      "Có thể lồng chi tiết này vào trong lòng chi tiết khác khi không sử dụng (như búp bê Nga) không?",
+      "Có thể tăng diện tích bề mặt tiếp xúc bằng cách tạo rãnh, nếp gấp hoặc gân tăng cứng không?",
+      "Có thể chuyển bài toán từ mặt phẳng 2D sang không gian 3D nhiều tầng không?"
+    ]
+  },
+  {
+    "category": "information",
+    "name_vi": "Tài nguyên Thông tin (Information Resources)",
+    "name_en": "Information Resources",
+    "description": "Các tín hiệu, trạng thái vật lý, thông số biến đổi, dữ liệu phản hồi từ người dùng hoặc thông tin phát xạ tự nhiên có sẵn mà không cần lắp thêm cảm biến phức tạp.",
+    "subtypes": [
+      "Trạng thái vật lý tự bộc lộ (Màu sắc biến đổi khi nóng, âm thanh thay đổi khi rạn nứt)",
+      "Tín hiệu và dữ liệu phản hồi sẵn có từ môi trường",
+      "Dữ liệu lịch sử, log vận hành và thông số telemetry",
+      "Thông tin đối xứng hoặc quy luật bất biến của hệ thống",
+      "Phản hồi trực giác và hành vi tự nhiên của người dùng"
+    ],
+    "checklist_questions": [
+      "Có thể nhận biết sự cố thông qua âm thanh, mùi, màu sắc hoặc độ rung tự nhiên thay vì gắn cảm biến đắt tiền không?",
+      "Hệ thống có thể tự gửi tín hiệu cảnh báo thông qua các thuộc tính vật lý sẵn có của vật liệu không?",
+      "Dữ liệu log hoạt động đã có có thể dùng để dự đoán lỗi trước khi nó xảy ra không?",
+      "Có thể dùng hiệu ứng giao thoa hoặc quang học để hiển thị thông tin trực tiếp không?"
+    ]
+  }
+]

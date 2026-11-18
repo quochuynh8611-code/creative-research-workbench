@@ -8,19 +8,22 @@ Cung cấp:
 """
 from __future__ import annotations
 
+import json
+from pathlib import Path
 from typing import Any, Literal
+
 from fastapi import APIRouter, HTTPException, Query, status
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field
 
 from app.domain.models import ContradictionType
+from app.services.business_triz_lens import get_business_triz_lens
+from app.services.everyday_triz_lens import get_everyday_triz_lens
 from app.services.problem_structuring_service import (
     _CONTRADICTION_MATRIX_39X39,
     _TRIZ_DATA,
     auto_map_parameters,
     get_separation_strategies_for_contradiction,
 )
-from app.services.everyday_triz_lens import get_everyday_triz_lens
-from app.services.business_triz_lens import get_business_triz_lens
 from app.services.triz_nine_windows_service import get_nine_windows
 
 router = APIRouter()
@@ -208,3 +211,89 @@ async def get_triz_nine_windows(
     Sơ đồ 9 Màn hình (9-Windows / System Operator / Multi-Screen Scheme) theo lăng kính.
     """
     return get_nine_windows(lens=lens)
+
+
+# ──────────────────────────────────────────────
+# Advanced TRIZ Toolkit (Batch C34: ARIZ, Evolution & Resources)
+# ──────────────────────────────────────────────
+
+_DATA_DIR = Path(__file__).resolve().parent.parent.parent.parent / "data"
+
+_ARIZ_STEPS_CACHE: list[dict[str, Any]] | None = None
+_EVOLUTION_TRENDS_CACHE: list[dict[str, Any]] | None = None
+_RESOURCE_TAXONOMY_CACHE: list[dict[str, Any]] | None = None
+
+
+def _get_ariz_steps() -> list[dict[str, Any]]:
+    global _ARIZ_STEPS_CACHE
+    if _ARIZ_STEPS_CACHE is None:
+        file_path = _DATA_DIR / "triz_ariz_steps.json"
+        if file_path.exists():
+            with open(file_path, "r", encoding="utf-8") as f:
+                _ARIZ_STEPS_CACHE = json.load(f)
+        else:
+            _ARIZ_STEPS_CACHE = []
+    return _ARIZ_STEPS_CACHE
+
+
+def _get_evolution_trends() -> list[dict[str, Any]]:
+    global _EVOLUTION_TRENDS_CACHE
+    if _EVOLUTION_TRENDS_CACHE is None:
+        file_path = _DATA_DIR / "triz_evolution_trends.json"
+        if file_path.exists():
+            with open(file_path, "r", encoding="utf-8") as f:
+                _EVOLUTION_TRENDS_CACHE = json.load(f)
+        else:
+            _EVOLUTION_TRENDS_CACHE = []
+    return _EVOLUTION_TRENDS_CACHE
+
+
+def _get_resource_taxonomy() -> list[dict[str, Any]]:
+    global _RESOURCE_TAXONOMY_CACHE
+    if _RESOURCE_TAXONOMY_CACHE is None:
+        file_path = _DATA_DIR / "triz_resource_taxonomy.json"
+        if file_path.exists():
+            with open(file_path, "r", encoding="utf-8") as f:
+                _RESOURCE_TAXONOMY_CACHE = json.load(f)
+        else:
+            _RESOURCE_TAXONOMY_CACHE = []
+    return _RESOURCE_TAXONOMY_CACHE
+
+
+@router.get("/ariz-steps", status_code=status.HTTP_200_OK)
+async def get_triz_ariz_steps() -> dict[str, Any]:
+    """
+    Danh mục 6 bước rút gọn của Thuật giải ARIZ (ARIZ Step-by-Step Guide — Batch C34).
+    Tất định, chỉ đọc (Read-Only Static Repository).
+    """
+    steps = _get_ariz_steps()
+    return {
+        "data": steps,
+        "total_steps": len(steps),
+    }
+
+
+@router.get("/evolution-trends", status_code=status.HTTP_200_OK)
+async def get_triz_evolution_trends() -> dict[str, Any]:
+    """
+    Danh mục 8 quy luật tiến hóa hệ thống kỹ thuật Altshuller kinh điển (Trends of Evolution — Batch C34).
+    Tất định, chỉ đọc (Read-Only Static Repository).
+    """
+    trends = _get_evolution_trends()
+    return {
+        "data": trends,
+        "total_trends": len(trends),
+    }
+
+
+@router.get("/resource-taxonomy", status_code=status.HTTP_200_OK)
+async def get_triz_resource_taxonomy() -> dict[str, Any]:
+    """
+    Danh mục 5 nhóm tài nguyên TRIZ cốt lõi (Resource Taxonomy — Batch C34).
+    Tất định, chỉ đọc (Read-Only Static Repository).
+    """
+    categories = _get_resource_taxonomy()
+    return {
+        "data": categories,
+        "total_categories": len(categories),
+    }

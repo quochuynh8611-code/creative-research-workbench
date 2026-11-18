@@ -1,0 +1,138 @@
+[
+  {
+    "trend_id": "trend_completeness",
+    "name_vi": "Quy luật Tính hoàn thiện của các bộ phận hệ thống",
+    "name_en": "Trend of Completeness of System Components",
+    "description": "Để một hệ thống kỹ thuật tự vận hành khả thi, nó bắt buộc phải gồm đủ 4 bộ phận cơ bản: Động cơ (Engine), Bộ phận dẫn động (Transmission), Bộ phận công tác (Working Organ), và Bộ phận điều khiển (Control). Xu hướng tiến hóa chuyển dịch vai trò điều khiển và ra quyết định từ con người sang hệ thống thông minh.",
+    "evolution_stages": [
+      "Hệ thống thủ công (Con người cung cấp cả năng lượng và điều khiển)",
+      "Cơ giới hóa (Máy móc cung cấp năng lượng, con người điều khiển)",
+      "Bán tự động hóa (Máy móc kiểm soát một phần chu trình lặp lại)",
+      "Tự động hóa hoàn toàn (Hệ thống tự điều khiển theo chương trình cố định)",
+      "Hệ thống thích nghi thông minh (AI/Hệ thống tự nhận thức, tự học và tự tối ưu)"
+    ],
+    "domain_examples": {
+      "engineering": "Từ cày tay -> Xe máy kéo -> Xe cày tự lái GPS",
+      "software": "Từ script thủ công -> Batch cron jobs -> Workflow tự động thích nghi AI"
+    }
+  },
+  {
+    "trend_id": "trend_energy_conductivity",
+    "name_vi": "Quy luật Dẫn truyền năng lượng qua hệ thống",
+    "name_en": "Trend of Energy Conductivity through the System",
+    "description": "Năng lượng phải truyền tự do và liên tục từ động cơ qua bộ dẫn động đến bộ phận công tác với độ tiêu hao nhỏ nhất. Xu hướng tiến hóa đi từ truyền năng lượng cơ học thô sơ sang điện từ, sóng quang học và dòng dữ liệu phi tiếp xúc.",
+    "evolution_stages": [
+      "Truyền dẫn cơ học tiếp xúc trực tiếp (Ma sát cao, hao hụt lớn)",
+      "Truyền dẫn thủy lực / khí nén (Mềm dẻo hơn, giảm sốc)",
+      "Truyền dẫn điện từ (Hiệu suất cao, phản ứng nhanh)",
+      "Truyền dẫn phi tiếp xúc (Cảm ứng từ, sóng vi ba, quang học)",
+      "Thu hoạch và tái sinh năng lượng nội tại (Energy Harvesting)"
+    ],
+    "domain_examples": {
+      "engineering": "Dây đai truyền động cơ khí -> Động cơ điện trực tiếp -> Đệm từ trường Maglev",
+      "software": "Giao tiếp polling đĩa -> Socket IPC -> Event-driven streaming phi tập trung"
+    }
+  },
+  {
+    "trend_id": "trend_rhythm_coordination",
+    "name_vi": "Quy luật Phối hợp nhịp điệu các bộ phận",
+    "name_en": "Trend of Coordination of Rhythms and Periodicity",
+    "description": "Các tần số dao động, chu kỳ làm việc và nhịp điệu của các bộ phận trong hệ thống phải được đồng bộ hóa với nhau hoặc có chủ đích lệch pha để loại bỏ cộng hưởng có hại hoặc tăng cường hiệu quả công tác.",
+    "evolution_stages": [
+      "Hoạt động liên tục đơn điệu (Lãng phí năng lượng, mài mòn)",
+      "Hoạt động theo chu kỳ tuần hoàn (Bật / Tắt theo nhịp cố định)",
+      "Hoạt động dạng xung động (Pulsed Action - tác động năng lượng tập trung)",
+      "Tần số cộng hưởng tối ưu (Tận dụng cộng hưởng tự nhiên để giảm năng lượng)",
+      "Nhịp điệu tự điều biến thích nghi (Tự thay đổi tần số theo tải thực tế)"
+    ],
+    "domain_examples": {
+      "engineering": "Khoan liên tục -> Búa khoan đập nhịp rung -> Khoan sóng siêu âm tự điều tần",
+      "software": "Cron job cứng -> Polling định kỳ -> Dynamic debounce & Backoff theo nhịp tải"
+    }
+  },
+  {
+    "trend_id": "trend_ideality",
+    "name_vi": "Quy luật Tăng tính lý tưởng của hệ thống",
+    "name_en": "Trend of Increasing Ideality",
+    "description": "Mọi hệ thống kỹ thuật đều tiến hóa theo hướng tăng tính lý tưởng I: I = Tổng lợi ích / (Tổng chi phí + Tổng tác hại). Trạng thái lý tưởng tột cùng là 'Hệ thống vật lý biến mất nhưng công năng mong muốn vẫn được thực hiện trọn vẹn'.",
+    "evolution_stages": [
+      "Hệ thống sơ khai (Công năng thấp, cồng kềnh, chi phí cao)",
+      "Tối ưu hóa thành phần (Tăng công năng, giảm bớt chi phí)",
+      "Tích hợp và tinh giản (Trimming - loại bỏ các chi tiết trung gian)",
+      "Hệ thống đa năng tự phục vụ (Tự bôi trơn, tự làm mát, tự sửa chữa)",
+      "Hệ thống phi vật thể hóa (Công năng được thực hiện bằng phần mềm hoặc trường tự nhiên)"
+    ],
+    "domain_examples": {
+      "engineering": "Cuộn phim máy ảnh cồng kềnh -> Cảm biến số CMOS -> Ống kính ảo thuật toán điện thoại",
+      "software": "Máy chủ On-premise vật lý -> Máy ảo Cloud -> Serverless / Edge Function"
+    }
+  },
+  {
+    "trend_id": "trend_non_uniform_evolution",
+    "name_vi": "Quy luật Phát triển không đều giữa các phân hệ",
+    "name_en": "Trend of Non-uniform Evolution of Subsystems",
+    "description": "Các bộ phận khác nhau của một hệ thống kỹ thuật phát triển với tốc độ khác nhau theo thời gian. Sự lệch pha này là nguồn gốc cốt lõi làm phát sinh các mâu thuẫn kỹ thuật và mâu thuẫn vật lý mới cần giải quyết.",
+    "evolution_stages": [
+      "Một phân hệ đột phá vượt bậc (Tạo ra lợi thế cạnh tranh ban đầu)",
+      "Phân hệ đi kèm trở thành điểm nghẽn (Bottleneck phát sinh)",
+      "Mâu thuẫn kỹ thuật xuất hiện gay gắt giữa hai bộ phận lệch pha",
+      "Tái cấu trúc phân hệ tụt hậu để tái lập cân bằng",
+      "Chuyển dịch trọng tâm đổi mới sang phân hệ tiếp theo"
+    ],
+    "domain_examples": {
+      "engineering": "Tốc độ máy bay tăng nhanh trong khi vật liệu vỏ cánh bị nóng chảy do ma sát",
+      "software": "Tốc độ tính toán CPU bùng nổ trong khi băng thông I/O bộ nhớ/đĩa là điểm nghẽn"
+    }
+  },
+  {
+    "trend_id": "trend_supersystem",
+    "name_vi": "Quy luật Chuyển lên Siêu hệ thống",
+    "name_en": "Trend of Transition to Super-system",
+    "description": "Khi một hệ thống đơn lẻ chạm tới giới hạn vật lý của nó, sự phát triển tiếp theo diễn ra bằng cách kết hợp hệ thống đó với các hệ thống khác để tạo thành Hệ kép (Bisystem) hoặc Đa hệ thống (Polysystem), rồi sau đó hòa tan thành một thể thống nhất mới.",
+    "evolution_stages": [
+      "Hệ thống đơn lẻ (Monosystem hoạt động độc lập)",
+      "Hệ kép đồng nhất hoặc đối kháng (Bisystem - 2 bút viết 2 màu, dao cạo 2 lưỡi)",
+      "Đa hệ thống hỗn hợp (Polysystem - dao đa năng Thụy Sĩ, cụm máy tính cluster)",
+      "Tích hợp sâu có tương tác hiệp đồng (Synergistic integration)",
+      "Hòa tan hoàn toàn vào siêu hệ thống (Nền tảng sinh thái tích hợp)"
+    ],
+    "domain_examples": {
+      "engineering": "Bóng đèn đơn -> Cụm đèn LED đa màu -> Trần nhà phát quang thông minh",
+      "software": "Ứng dụng độc lập -> Microservices kết nối API -> Nền tảng Cloud sinh thái"
+    }
+  },
+  {
+    "trend_id": "trend_micro_level",
+    "name_vi": "Quy luật Chuyển sang Mức vi mô",
+    "name_en": "Trend of Transition to Micro-level",
+    "description": "Các bộ phận công tác của hệ thống tiến hóa từ kích thước vĩ mô (khối cơ học lớn) sang cấu trúc phân chia nhỏ hơn: bề mặt chia cắt, hạt, bột, chất lỏng, phân tử, nguyên tử và cuối cùng là điều khiển ở cấp độ trường vật lý và hạt lượng tử.",
+    "evolution_stages": [
+      "Bộ phận công tác dạng khối cơ học vĩ mô (Cứng nhắc, quán tính lớn)",
+      "Bộ phận phân mảnh (Dạng hạt, bột, cấu trúc xốp/lỗ rỗng)",
+      "Bộ phận dạng chất lỏng / gel (Tự định hình, phân tán lực đều)",
+      "Bộ phận dạng khí / bọt khí / plasma",
+      "Bộ phận điều khiển ở mức trường / hạt vi mô (Trường điện từ, hiệu ứng lượng tử)"
+    ],
+    "domain_examples": {
+      "engineering": "Phanh cơ học ma sát guốc gỗ -> Bột ma sát thủy lực -> Phanh điện từ tái sinh",
+      "software": "Ứng dụng đóng gói monolith -> Container microservices -> Lập trình nano-service lambda"
+    }
+  },
+  {
+    "trend_id": "trend_dynamism",
+    "name_vi": "Quy luật Tăng tính Động học và Khả năng Điều khiển",
+    "name_en": "Trend of Increasing Dynamism and Controllability",
+    "description": "Hệ thống kỹ thuật cứng nhắc bất động luôn tiến hóa để trở nên linh hoạt, mềm dẻo, có khả năng biến đổi hình học và trạng thái để tự thích nghi với những thay đổi của môi trường và yêu cầu hoạt động.",
+    "evolution_stages": [
+      "Kết cấu cứng cố định (Rigid, bất biến)",
+      "Có một khớp nối chuyển động (One jointed system)",
+      "Nhiều khớp nối đa hướng (Multi-jointed flexible system)",
+      "Kết cấu hoàn toàn đàn hồi / vật liệu nhớ hình (Elastic / Memory alloy)",
+      "Hệ thống tự thích nghi thông minh theo thời gian thực (Real-time dynamic adaptive)"
+    ],
+    "domain_examples": {
+      "engineering": "Thước gỗ thẳng -> Thước gấp -> Thước cuộn lá thép -> Thước đo laser điện tử",
+      "software": "Cấu hình hard-coded tĩnh -> Config file khởi động lại -> Dynamic remote config / Feature flag real-time"
+    }
+  }
+]
