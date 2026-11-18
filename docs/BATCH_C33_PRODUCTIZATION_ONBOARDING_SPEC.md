@@ -4,7 +4,7 @@
 **Phiên bản:** v1.0.0 (Batch C33 — Productization & Onboarding)  
 **Tác giả:** Senior Product Engineer / UX Engineer  
 **Ngày:** 2026-11-18  
-**Trạng thái:** PR 1 Merged (PR #72), PR 2 Spec & Test-First Phase  
+**Trạng thái:** PR 1 & PR 2 Merged (PR #72, #73), PR 3 Finalization Phase  
 
 ---
 
@@ -242,7 +242,7 @@ Feature: Welcome Onboarding & Demo Productization
 
 - **PR 1: `feat(ux): welcome onboarding modal and quick-start flow`** [x] DONE (Merged PR #72)
   - Component `WelcomeOnboardingModal`, tích hợp nút replay trên `SessionList`, unit tests trên Next.js/React.
-- **PR 2: `feat(ops): demo data seeder and stakeholder demo script`** [/] IN PROGRESS
+- **PR 2: `feat(ops): demo data seeder and stakeholder demo script`** [x] DONE (Merged PR #73)
   - CLI script `backend/scripts/seed_demo_data.py`, unit test seeder, tài liệu `docs/DEMO_SCRIPT.md`.
-- **PR 3: `docs(product): Batch C33 productization finalization & roadmap update`** [ ] PLANNED
+- **PR 3: `docs(product): Batch C33 productization finalization & roadmap update`** [/] IN PROGRESS (Finalization)
   - Cập nhật deployment guide, roadmap Batch C33, chuyển ADR-014 sang `Accepted`.

@@ -351,6 +351,20 @@ Khi gặp sự cố sau khi triển khai phiên bản mới, thực hiện rollb
 - **Khắc phục:**
   - Đảm bảo tham số `--base-url` trỏ vào đúng sandbox nội bộ (mặc định: `http://localhost:8000`). Không cố gắng bypass guard trên môi trường production.
 
+### I. Seeder Bị Chặn Bởi Anti-Production Guard
+- **Triệu chứng:** Khi chạy script seeder `seed_demo_data.py`, terminal báo lỗi:
+  `Error: Anti-Production Guard: Host 'api.crw-workbench.com' is not permitted. Demo seeder only allowed against localhost/sandbox environments...`
+- **Bản chất:** Chốt chặn an toàn kiến trúc (ADR-014 Quyết định 2) ngăn chặn việc vô tình nạp dữ liệu mẫu vào môi trường staging hay production. Seeder chỉ chấp nhận các host: `localhost`, `127.0.0.1`, `0.0.0.0`, `testserver`.
+- **Khắc phục:**
+  - Seeder được thiết kế thuần túy cho môi trường phát triển cục bộ và sandbox phục vụ chuẩn bị demo. Đảm bảo tham số `--base-url` luôn trỏ vào `http://localhost:8000` hoặc sandbox IP tương đương.
+
+### J. Seeder Tự Động Bỏ Qua (Skip) Do Trùng Dữ Liệu Demo & Hướng Dẫn Nạp Lại
+- **Triệu chứng:** Kết quả chạy seeder báo cáo:
+  `Sessions Created: 0, Sessions Skipped: 2`, và cột trạng thái hiển thị `skipped_existing`.
+- **Bản chất:** Tính lũy đẳng đa tiêu chí (Multi-criteria Idempotency) tự động phát hiện hệ thống đã tồn tại các phiên nghiên cứu có tiền tố `[DEMO]` hoặc có tiêu đề chính xác khớp với bài toán mẫu.
+- **Quy tắc vận hành & Hướng dẫn nạp lại:**
+  - **Chạy Lần 2 Không Tạo Trùng:** Nếu script seeder được chạy lại lần 2 (hoặc nhiều lần) trên cùng một sandbox, hệ thống tự động nhận diện và **skip cả 2 session**, bảo đảm không bao giờ sinh ra dữ liệu trùng lặp rác.
+  - **Khôi Phục / Nạp Lại:** Nếu người dùng chủ động xóa hoặc archive các session `[DEMO]` trên giao diện hoặc qua API, hệ thống sẽ phát hiện phiên mẫu chưa có và cho phép script seeder nạp lại toàn bộ dữ liệu mẫu ban đầu một cách an toàn.
 
 ---
 
@@ -430,4 +444,59 @@ Creative Research Workbench tích hợp sẵn công cụ benchmark bất đồng
    - `/api/v1/sessions/{id}/coach/suggestions`: Baseline $p95 < 200ms$ (Mock/Fallback), error rate 0%.
    > [!NOTE]
    > Các ngưỡng SLO trên là **Informational Baseline**, nếu p95 vượt ngưỡng, runner sẽ in cảnh báo `WARN` nhưng không chặn build hay trả exit code lỗi.
+
+---
+
+## 14. Sổ Tay Vận Hành & Trình Diễn Sản Phẩm (Productization Runbook — Batch C33)
+
+### 14.1. Nạp Dữ Liệu Demo Cho Môi Trường Local / Sandbox (Sample Data Seeder)
+Creative Research Workbench tích hợp sẵn công cụ CLI nạp dữ liệu mẫu bất đồng bộ qua REST API tại `backend/scripts/seed_demo_data.py`:
+1. **Lệnh chạy cơ bản (Hiển thị dạng bảng):**
+   ```bash
+   python -m backend.scripts.seed_demo_data --base-url http://localhost:8000 --format table
+   ```
+2. **Lệnh chạy xuất tệp tin JSON:**
+   ```bash
+   python -m backend.scripts.seed_demo_data --base-url http://localhost:8000 --format json --output demo_seed_summary.json
+   ```
+3. **Ràng buộc an toàn cốt lõi & Giới hạn môi trường:**
+   - **Chỉ Chạy Local / Sandbox:** Anti-Production Guard chỉ cho phép chạy với `localhost`, `127.0.0.1`, `0.0.0.0`, `testserver`. Đây không phải là công cụ nạp dữ liệu production.
+   - **Giới hạn số lượng nạp (Strict Bounds):** Chỉ seed đúng chính xác **2 demo sessions**:
+     - *Mẫu 1 (Business):* Tối ưu hóa Tốc độ Giao hàng & Chi phí Logistics chặng cuối (1 problem frame, 2 notes, 2 solutions).
+     - *Mẫu 2 (Software):* Tăng cường Bảo mật Đa tầng & Giảm Độ trễ API Gateway (1 problem frame, 1 note, 1 solution).
+   - **Xác thực lệnh & Hành vi chạy lại (Validation & Re-run Behavior):**
+     - **Chạy lần 2 tự động Skip:** Nếu chạy lại lệnh trên cùng một môi trường sandbox đã có sẵn dữ liệu mẫu, seeder tự động nhận diện cả tiền tố `[DEMO]` và tiêu đề chính xác để skip cả 2 session (`Sessions Created: 0, Sessions Skipped: 2`), bảo đảm không tạo trùng lặp.
+     - **Tái nạp sau khi dọn dẹp:** Nếu người dùng xóa hoặc archive các session `[DEMO]`, script seeder sẽ nhận diện trạng thái chưa có và cho phép nạp lại đầy đủ 2 phiên mẫu ban đầu.
+   - **Bảo mật tuyệt đối (Zero Secret Leak):** Cả định dạng Table và JSON đều được lọc qua bộ che giấu token nhạy cảm (`mask_secrets_in_text`), không để lộ API keys hay Bearer tokens.
+
+### 14.2. Kịch Bản Trình Diễn Cho Stakeholder Trong 5 Phút (Stakeholder Demo Walkthrough)
+- **Tài liệu kịch bản chuẩn:** Tham khảo [docs/DEMO_SCRIPT.md](file:///Users/mr.chem/Documents/Lap-trinh/creative-research-workbench/docs/DEMO_SCRIPT.md).
+- **Phân bổ 5 mốc thời gian:**
+  - `0:00 - 0:45` | Mở đầu, giới thiệu triết lý TRIZ + AI Coach, Welcome Onboarding modal 3 bước, 1-click skip.
+  - `0:45 - 1:45` | Mở session `[DEMO] Tối ưu Tốc độ Giao hàng & Chi phí Logistics`, phân tích mâu thuẫn (`speed` vs `loss_of_money`).
+  - `1:45 - 2:45` | Khám phá Research Notes (thời gian chết, micro-hub) và Ma trận TRIZ (Nguyên tắc 10, 1, 35).
+  - `2:45 - 4:00` | AI Solution Coach (Hard Grounding, cap 5), lưu giải pháp qua ConfirmationModal (Human-in-the-Loop).
+  - `4:00 - 5:00` | Tab Synthesis, tổng hợp kế hoạch và giao diện in `@media print` sạch sẽ sẵn sàng xuất PDF.
+
+### 14.3. Quy Trình Tiền Kiểm Tra Cho Người Thuyết Trình (Pre-Demo Health Check)
+Trước khi bắt đầu buổi demo với đối tác hoặc ban lãnh đạo, người thuyết trình thực hiện checklist 4 bước:
+1. **Kiểm tra sức khỏe Backend:**
+   ```bash
+   curl -s http://localhost:8000/health | jq .
+   # Kỳ vọng: {"status": "ok"}
+   ```
+2. **Kiểm tra trạng thái AI Provider:**
+   ```bash
+   curl -s http://localhost:8000/api/v1/system/ai-status | jq .
+   # Kỳ vọng: status hiển thị "configured" hoặc "ready", không rò rỉ API key
+   ```
+3. **Nạp dữ liệu mẫu an toàn:**
+   ```bash
+   python -m backend.scripts.seed_demo_data --base-url http://localhost:8000 --format table
+   # Kỳ vọng: Bảng tóm tắt hiển thị 2 sessions sẵn sàng (created hoặc skipped_existing)
+   ```
+4. **Kiểm tra giao diện người dùng:**
+   - Truy cập `http://localhost:3000/sessions`.
+   - Xác nhận có 2 session mẫu bắt đầu bằng `[DEMO]`.
+   - Xác nhận huy hiệu `AI Status Badge` ở góc trên bên phải hiển thị màu xanh (`READY`).
 
