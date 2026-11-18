@@ -21,7 +21,8 @@ from __future__ import annotations
 
 import re
 import uuid
-from typing import Annotated, Any, Literal, Optional, Union
+from typing import Annotated, Any, Literal
+
 from pydantic import BaseModel, ConfigDict, Field, StrictInt, TypeAdapter, field_validator
 
 # Disallow ASCII control characters 0x00-0x1F and 0x7F-0x9F (including \n, \r, \t, \0)
@@ -29,7 +30,7 @@ from pydantic import BaseModel, ConfigDict, Field, StrictInt, TypeAdapter, field
 _CONTROL_CHAR_RE = re.compile(r"[\x00-\x1f\x7f-\x9f\u2028\u2029]")
 
 
-def _validate_free_text_field(v: str, field_name: str, max_len: Optional[int] = None) -> str:
+def _validate_free_text_field(v: str, field_name: str, max_len: int | None = None) -> str:
     """
     Validate các trường chuỗi tự do (cell_label, source_ref, method_id, principle_used dạng chuỗi):
       - Quy tắc b: Kiểm tra ký tự điều khiển trên chuỗi GỐC, KHÔNG strip trước (cấm \\n, \\r, \\t, \\0 ở mọi vị trí).
@@ -114,19 +115,19 @@ class CandidateSolutionContext(BaseNoteContext):
     schema_version: Literal[1] = 1
     source_type: Literal["candidate_solution"] = "candidate_solution"
     solution_id: uuid.UUID
-    principle_used: Optional[Union[StrictInt, str]] = None
+    principle_used: StrictInt | str | None = None
     solution_status: Literal["candidate", "accepted", "rejected"]
 
     @field_validator("principle_used", mode="before")
     @classmethod
-    def validate_principle_used(cls, v: Any) -> Optional[Union[int, str]]:
+    def validate_principle_used(cls, v: Any) -> int | str | None:
         if v is None:
             return None
         # Quy tắc a: Từ chối boolean, float
         if isinstance(v, bool):
-            raise ValueError("principle_used must not be a boolean")
+            raise ValueError("principle_used must not be a boolean")  # noqa: TRY004
         if isinstance(v, float):
-            raise ValueError("principle_used must not be a float")
+            raise ValueError("principle_used must not be a float")  # noqa: TRY004
         if isinstance(v, int):
             if v < 1 or v > 40:
                 raise ValueError("principle_used integer must be in range 1..40")
@@ -138,14 +139,52 @@ class CandidateSolutionContext(BaseNoteContext):
         raise ValueError("principle_used must be an integer, string, or None")
 
 
+class TrizArizContext(BaseNoteContext):
+    """Nguồn 6: Thuật giải ARIZ 6 bước rút gọn (Batch C34)."""
+    schema_version: Literal[1] = 1
+    source_type: Literal["triz_ariz"] = "triz_ariz"
+    step_number: StrictInt = Field(..., ge=1, le=6)
+    step_name: str = Field(..., min_length=1, max_length=100)
+
+    @field_validator("step_name")
+    @classmethod
+    def validate_step_name(cls, v: str) -> str:
+        return _validate_free_text_field(v, "step_name", max_len=100)
+
+
+class TrizEvolutionContext(BaseNoteContext):
+    """Nguồn 7: Quy luật Tiến hóa Kỹ thuật Altshuller (Batch C34)."""
+    schema_version: Literal[1] = 1
+    source_type: Literal["triz_evolution"] = "triz_evolution"
+    trend_id: str = Field(..., min_length=1, max_length=100)
+    trend_name: str = Field(..., min_length=1, max_length=100)
+
+    @field_validator("trend_id")
+    @classmethod
+    def validate_trend_id(cls, v: str) -> str:
+        return _validate_free_text_field(v, "trend_id", max_len=100)
+
+    @field_validator("trend_name")
+    @classmethod
+    def validate_trend_name(cls, v: str) -> str:
+        return _validate_free_text_field(v, "trend_name", max_len=100)
+
+
+class TrizResourceContext(BaseNoteContext):
+    """Nguồn 8: Phân tích Nguồn lực TRIZ 5 nhóm (Batch C34)."""
+    schema_version: Literal[1] = 1
+    source_type: Literal["triz_resource"] = "triz_resource"
+    resource_type: Literal["substance", "field", "time", "space", "information"]
+    resource_name: str = Field(..., min_length=1, max_length=100)
+
+    @field_validator("resource_name")
+    @classmethod
+    def validate_resource_name(cls, v: str) -> str:
+        return _validate_free_text_field(v, "resource_name", max_len=100)
+
+
 NoteSourceContextUnion = Annotated[
-    Union[
-        Triz9WindowsContext,
-        TrizMatrixContext,
-        PrincipleSuggestionContext,
-        EvidenceContext,
-        CandidateSolutionContext,
-    ],
+    Triz9WindowsContext | TrizMatrixContext | PrincipleSuggestionContext | EvidenceContext | CandidateSolutionContext | TrizArizContext | TrizEvolutionContext | TrizResourceContext,
     Field(discriminator="source_type"),
 ]
 
