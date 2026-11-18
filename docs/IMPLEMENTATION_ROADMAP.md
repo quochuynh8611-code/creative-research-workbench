@@ -224,3 +224,14 @@ created: "2026-07-03"
 
 **Acceptance Gate:** Batch C32 Acceptance Gate PASS 100% ✅ (PR #69, PR #70, PR #71 đã merge và 3/3 checks CI trên `main` PASS).
 
+---
+
+## Phase 16 — Batch C33: Productization & Onboarding
+**Goal:** Hoàn thiện trải nghiệm người dùng mới và khả năng trình diễn sản phẩm (Demo) chuyên nghiệp cho stakeholder: Welcome Onboarding Modal 3 bước linh hoạt (1-click dismiss), Sample Data Seeder bất đồng bộ với Anti-Production Guard và tính lũy đẳng đa tầng, cùng Kịch bản Demo 5 phút chuẩn mực.
+
+- [x] **PR 1: Welcome Onboarding Modal & Quick-Start Flow** (Branch: `feat/c33-productization-onboarding`, PR #72 merged vào `main` tại `75f2e990bde01c6dcd38fcfbcb7d8d73c5b43a25`; verified: component `WelcomeOnboardingModal` 3 bước TRIZ, 1-click skip ghi nhận `localStorage`, nút header "Hướng dẫn nhanh" replay tour, quick-start từ domain template, 6/6 frontend unit tests PASS, 786/786 web tests PASS, 203/203 backend unit tests PASS).
+- [x] **PR 2: Demo Data Seeder & Stakeholder Demo Script** (Branch: `feat/c33-demo-seeder`, PR #73 merged vào `main` tại `3698172004d0b8d94974637bab35b9ac28cce8f3`; verified: script `backend/scripts/seed_demo_data.py` nạp đúng 2 demo sessions với 1 problem frame, $\le 2$ notes, $\le 2$ solutions, Anti-Production Guard chặn URL ngoài/production, multi-criteria idempotency kiểm tra cả tiền tố `[DEMO]` và title chính xác, output table/JSON bảo mật zero secret leak, `docs/DEMO_SCRIPT.md` kịch bản demo 5 phút, 13/13 unit tests PASS, 216/216 backend unit tests PASS).
+- [x] **PR 3: Productization Finalization, Deployment Guide & Roadmap** (Branch: `docs/c33-productization-runbook`; verified: bổ sung mục 14 Productization Runbook và mục 11.I/J Troubleshooting trong `docs/DEPLOYMENT_GUIDE.md`, cập nhật `docs/IMPLEMENTATION_ROADMAP.md` đóng hoàn tất Batch C33, chuyển `docs/ADR-014-productization-onboarding.md` sang Accepted).
+
+**Acceptance Gate:** Batch C33 Acceptance Gate PASS 100% ✅ (PR #72, PR #73 đã merge, PR #74 hoàn tất và 3/3 checks CI trên `main` PASS).
+

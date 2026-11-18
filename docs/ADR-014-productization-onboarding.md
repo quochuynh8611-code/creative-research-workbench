@@ -1,6 +1,6 @@
 # ADR-014: Kiến Trúc Trải Nghiệm Tiếp Cận, Dữ Liệu Demo Và Kịch Bản Trình Diễn (Productization & Onboarding Architecture)
 
-- **Trạng thái:** Proposed
+- **Trạng thái:** Accepted
 - **Ngày:** 2026-11-18
 - **Tác giả:** Senior Product Engineer / UX Engineer
 - **Ngữ cảnh:** Creative Research Workbench (CRW) — Batch C33
@@ -45,11 +45,13 @@ Do đó, Batch C33 cần thiết lập một kiến trúc trải nghiệm Onboar
 - **Chốt chặn an toàn (Anti-Production Guard):**
   - Script kiểm tra URL đích, chỉ chấp nhận hostname thuộc whitelist: `localhost`, `127.0.0.1`, `0.0.0.0`, `testserver`.
   - Mọi URL trỏ ra ngoài (staging, production domain, IP public) sẽ bị chặn ngay lập tức và raise `ValueError`.
-- **Tính lũy đẳng đa tiêu chí (Multi-criteria Idempotency):**
+- **Tính lũy đẳng đa tiêu chí (Multi-criteria Idempotency) & Vòng đời nạp lại:**
   - Script kiểm tra danh sách session hiện có và đối chiếu cả 2 tiêu chí:
     a) Session có tiền tố `[DEMO]` (kể cả khi người dùng đổi một phần tiêu đề) $\rightarrow$ Bỏ qua (skip).
     b) Session có tiêu đề chính xác khớp với bài toán mẫu nhưng bị bỏ mất tiền tố `[DEMO]` $\rightarrow$ Bỏ qua (skip).
-  - Không bao giờ tạo trùng lặp dữ liệu trên cùng một sandbox.
+  - **Quy tắc chạy lại và nạp lại:**
+    - Khi script chạy lần 2 trên cùng một sandbox, hệ thống tự động skip cả 2 session (`sessions_skipped: 2, sessions_created: 0`), tuyệt đối không tạo trùng lặp.
+    - Nếu người dùng chủ động xóa hoặc archive các session `[DEMO]`, script seeder sẽ nhận diện trạng thái trống và cho phép nạp lại toàn bộ dữ liệu mẫu một cách an toàn.
 - **Bảo mật tuyệt đối (Zero Secret Leak):**
   - Cả 2 định dạng xuất (Table và JSON) đều được lọc qua bộ che giấu token nhạy cảm (`mask_secrets_in_text`), đảm bảo không để lộ API keys hay Bearer tokens.
 
@@ -62,6 +64,10 @@ Do đó, Batch C33 cần thiết lập một kiến trúc trải nghiệm Onboar
   - Min 3: 40 nguyên tắc qua Lăng kính Đời sống.
   - Min 4: AI Solution Coach (Grounding, Cap 5, Fallback Heuristic, ConfirmationModal).
   - Min 5: Tổng hợp kế hoạch & xuất bản in PDF sạch.
+
+### Quyết định 4: PR 3 Là Thay Đổi Thuần Tài Liệu (Docs-Only Finalization)
+- **Giải pháp:** PR 3 chỉ cập nhật sổ tay vận hành `docs/DEPLOYMENT_GUIDE.md`, lộ trình `docs/IMPLEMENTATION_ROADMAP.md`, hoàn thiện đặc tả và chuyển ADR-014 sang `Accepted`.
+- **Chấp nhận có chủ đích:** Không bổ sung automated code test mới cho PR 3. Chất lượng tài liệu được bảo đảm thông qua quy trình "Docs Health Check" trước khi commit (rà soát regex secret, markdown lint, và kiểm tra liên kết nội bộ).
 
 ---
 
@@ -86,6 +92,7 @@ Do đó, Batch C33 cần thiết lập một kiến trúc trải nghiệm Onboar
 
 ### Đánh đổi (Trade-offs):
 - **Chấp nhận có chủ đích việc reset `localStorage`:** Cờ `crw_onboarding_dismissed` chỉ lưu trữ client-side trên trình duyệt. Nếu người dùng xóa bộ nhớ cache hoặc chuyển sang trình duyệt khác, cờ có thể bị reset và modal có thể xuất hiện lại. Đây là sự chấp nhận có chủ đích để giữ hệ thống siêu tinh gọn, không cần lưu trữ bảng dữ liệu hay cột trạng thái user onboarding trong database PostgreSQL. Người dùng luôn có thể tắt ngay trong 1 click ("Bỏ qua") hoặc mở lại bằng nút "Hướng dẫn nhanh".
+- **Chấp nhận PR 3 là Docs-Only:** Không phát triển test tự động mới cho các cập nhật tài liệu vận hành và roadmap, tránh làm phức tạp hóa test suite khi không có thay đổi mã nguồn logic.
 
 ---
 
