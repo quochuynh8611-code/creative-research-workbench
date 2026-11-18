@@ -8,6 +8,9 @@
  *   - 'principle_suggestion': validatePrincipleSuggestionContext
  *   - 'evidence': validateEvidenceContext
  *   - 'candidate_solution': validateCandidateSolutionContext
+ *   - 'triz_ariz': validateTrizArizContext
+ *   - 'triz_evolution': validateTrizEvolutionContext
+ *   - 'triz_resource': validateTrizResourceContext
  *   - các nguồn khác / unknown: fail-closed với thông báo lỗi chuỗi an toàn.
  */
 
@@ -17,6 +20,9 @@ import { validateTrizMatrixContext } from './triz-matrix-context-validator'
 import { validatePrincipleSuggestionContext } from './principle-suggestion-context-validator'
 import { validateEvidenceContext } from './evidence-context-validator'
 import { validateCandidateSolutionContext } from './candidate-solution-context-validator'
+import { validateTrizArizContext } from './triz-ariz-context-validator'
+import { validateTrizEvolutionContext } from './triz-evolution-context-validator'
+import { validateTrizResourceContext } from './triz-resource-context-validator'
 
 export type NoteSourceContextValidationResult =
   | { ok: true; data: NoteSourceContext }
@@ -52,6 +58,18 @@ export function validateNoteSourceContext(input: unknown): NoteSourceContextVali
 
   if (sourceType === 'candidate_solution') {
     return validateCandidateSolutionContext(input)
+  }
+
+  if (sourceType === 'triz_ariz') {
+    return validateTrizArizContext(input)
+  }
+
+  if (sourceType === 'triz_evolution') {
+    return validateTrizEvolutionContext(input)
+  }
+
+  if (sourceType === 'triz_resource') {
+    return validateTrizResourceContext(input)
   }
 
   return {

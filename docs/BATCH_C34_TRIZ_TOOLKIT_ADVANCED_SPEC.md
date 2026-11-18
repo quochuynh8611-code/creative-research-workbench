@@ -73,6 +73,21 @@ Phương pháp luận TRIZ hiện tại trong CRW tập trung chủ yếu vào c
 - ❌ KHÔNG thay đổi hợp đồng API hiện có của `/api/v1/sessions` hay `/api/v1/triz/lookup`.
 - ❌ KHÔNG triển khai lên production.
 
+### 2.3. Bốn Điều Chỉnh Bắt Buộc Trước Khi Code (Founder Mandates)
+Theo chỉ thị phê duyệt từ Founder cho Batch C34 PR 2:
+1. **ARIZ STEPPER CHỈ 6 BƯỚC, KHÔNG THÊM:**
+   - Giữ đúng 6 bước như spec đã nêu (B1 đến B6).
+   - KHÔNG mở rộng thành ARIZ đầy đủ 9 phần (40 bước).
+2. **EVOLUTION EXPLORER CHỈ 8 QUY LUẬT, KHÔNG THÊM:**
+   - Giữ đúng 8 quy luật Altshuller kinh điển.
+   - KHÔNG thêm quy luật khác.
+3. **RESOURCE PANEL CHỈ 5 TABS, KHÔNG THÊM:**
+   - Giữ đúng 5 nhóm tài nguyên (`substance`, `field`, `time`, `space`, `information`).
+   - KHÔNG thêm nhóm khác.
+4. **COMPONENTS CHỈ GỌI API READ-ONLY:**
+   - Các components frontend chỉ gọi các API endpoints read-only (`GET /api/v1/triz/ariz-steps`, `GET /api/v1/triz/evolution-trends`, `GET /api/v1/triz/resource-taxonomy`).
+   - KHÔNG cho phép user edit trực tiếp static JSON. Đây là sự chấp nhận có chủ đích (Intentional Trade-off). Mọi ghi chú và giải pháp được lưu vào `research_notes` qua trường `source_context`.
+
 ---
 
 ## 3. Kiến Trúc Hệ Thống (System Architecture)
@@ -149,13 +164,44 @@ Phương pháp luận TRIZ hiện tại trong CRW tập trung chủ yếu vào c
   7. *Quy luật Chuyển sang Mức vi mô (Transition to Micro-level):* Khối vĩ mô $\to$ Hạt/Bột $\to$ Phân tử/Dung dịch $\to$ Thể khí/Plasma $\to$ Trường/Sóng điện từ $\to$ Thuật toán phần mềm/Cloud.
   8. *Quy luật Tăng tính Động học và Khả năng Điều khiển (Dynamism & Controllability):* Kết cấu cứng $\to$ Khớp nối $\to$ Linh hoạt đàn hồi $\to$ Khí nén/Thủy lực $\to$ Trường điện từ/Tự thích nghi.
 
-### 4.3. Phân Hệ 3: Phân Tích Nguồn Lực Tại Chỗ (Resource Analysis)
-- **5 Nhóm Nguồn Lực Cốt Lõi:**
-  1. **Tài nguyên Chất (Substance):** Vật liệu hệ thống, vật liệu siêu hệ thống, môi trường (không khí, nước), phế thải, chất chuyển đổi trạng thái.
-  2. **Tài nguyên Trường (Field):** Trường cơ học, trọng lực, nhiệt, điện từ, hóa học, quang học, âm thanh, trường tản mát.
-  3. **Tài nguyên Thời gian (Time):** Thời gian trước quá trình, trong quá trình, sau quá trình, thời gian chết/chờ, thao tác song song.
-  4. **Tài nguyên Không gian (Space):** Không gian trống bên trong, bên ngoài, bề mặt phân chia, không gian lồng ghép, cấu trúc lỗ xốp.
-  5. **Tài nguyên Thông tin (Information):** Tín hiệu sẵn có từ vật liệu, thuộc tính biến đổi theo nhiệt độ/áp suất, dữ liệu log, phản hồi người dùng.
+### 4.4. Chi Tiết Kiến Trúc Frontend Giao Diện (PR 2 Deliverables)
+
+1. **`ArizStepperPanel` (`apps/web/features/triz/ariz-stepper-panel.tsx`):**
+   - Đặt trong tab `structuring` bên trong `NormalizedView` dưới dạng **Collapsible Card** (tương tự `TrizNineWindows`).
+   - Gồm Stepper 6 bước đánh số từ 1..6, có trạng thái Active / Completed.
+   - Thẻ nội dung của từng bước hiển thị:
+     - Tên bước song ngữ Việt - Anh.
+     - Mô tả mục tiêu ngắn gọn.
+     - Danh sách 2-3 câu hỏi kích hoạt tư duy (Trigger Questions).
+     - Danh sách hành động khuyến nghị (Recommended Actions).
+     - Ô nhập nhanh quan sát/kết luận của người dùng (`textarea`).
+     - Nút "Lưu bước này vào Notebook" kích hoạt callback `onSaveAsNote` với `source_context`:
+       `{ schema_version: 1, source_type: 'triz_ariz', step_number, step_name }`.
+   - Nút điều hướng "Bước trước" và "Bước tiếp theo".
+
+2. **`EvolutionPatternsExplorer` (`apps/web/features/triz/evolution-patterns-explorer.tsx`):**
+   - Đặt trong tab `ideation` (`session-detail.tsx`), bên cạnh `PrincipleSuggestions`.
+   - Hiển thị danh sách 8 quy luật Altshuller kinh điển dạng danh sách thẻ có thể mở rộng (Accordion / Cards).
+   - Khi mở rộng một quy luật:
+     - Hiển thị mô tả quy luật.
+     - Hiển thị chuỗi các nấc tiến hóa (Evolution Stages timeline: từ nấc sơ khai đến nấc tự thích nghi cao cấp).
+     - Hiển thị ví dụ thực tế trong Kỹ thuật và Phần mềm.
+     - Ô nhập nhận định về bước nhảy vọt của hệ thống và nút "Lưu định hướng tiến hóa vào Notebook" với `source_context`:
+       `{ schema_version: 1, source_type: 'triz_evolution', trend_id, trend_name }`.
+
+3. **`ResourceAnalysisPanel` (`apps/web/features/triz/resource-analysis-panel.tsx`):**
+   - Đặt trong tab `ideation` (`session-detail.tsx`).
+   - Thiết kế giao diện 5 tabs tương ứng với 5 nhóm tài nguyên cốt lõi:
+     - `substance` (Chất)
+     - `field` (Trường & Năng lượng)
+     - `time` (Thời gian)
+     - `space` (Không gian)
+     - `information` (Thông tin & Dữ liệu)
+   - Mỗi tab hiển thị:
+     - Phân loại phụ (Subtypes) của nhóm tài nguyên.
+     - Danh sách câu hỏi kiểm tra (Checklist Questions) kích hoạt việc tận dụng tài nguyên miễn phí sẵn có.
+     - Ô ghi nhận tài nguyên tìm được và nút "Lưu tài nguyên vào Notebook" với `source_context`:
+       `{ schema_version: 1, source_type: 'triz_resource', resource_type, resource_name }`.
 
 ---
 
@@ -312,17 +358,17 @@ Feature: Security & Safety Guard
 
 Để tuân thủ kỷ luật Small PRs, Batch C34 được đề xuất chia thành 3 PRs độc lập:
 
-1. **PR 1: Backend Data & Endpoints cho Advanced TRIZ (`feat(backend): triz advanced endpoints for ariz, evolution and resources`)**:
+1. **PR 1: Backend Data & Endpoints cho Advanced TRIZ (`feat(backend): triz advanced endpoints for ariz, evolution and resources`)** [x] DONE (Merged PR #75):
    - Thêm các tệp dữ liệu tĩnh: `triz_ariz_steps.json`, `triz_evolution_trends.json`, `triz_resource_taxonomy.json`.
    - Cập nhật `backend/src/app/api/v1/endpoints/triz.py` với 3 endpoints read-only mới.
    - Cập nhật Pydantic schemas trong `note_context.py` để hỗ trợ 3 source types mới.
-   - Bộ unit tests toàn diện cho 3 endpoints và schema validation.
-2. **PR 2: Frontend Components: ARIZ Stepper, Evolution Explorer & Resource Matrix (`feat(web): advanced triz components and ideation integration`)**:
+   - 7 unit tests backend PASS 100%, 223/223 backend unit tests PASS.
+2. **PR 2: Frontend Components: ARIZ Stepper, Evolution Explorer & Resource Matrix (`feat(web): advanced triz components and ideation integration`)** [/] IN PROGRESS (Spec & Test-First):
    - Thêm component `ariz-stepper-panel.tsx`, `evolution-patterns-explorer.tsx`, `resource-analysis-panel.tsx`.
-   - Tích hợp vào `structuring` và `ideation` tabs của `session-detail.tsx`.
-   - Kết nối callback `onSaveAsNote` với metadata provenance.
-   - Frontend unit tests với Jest/React Testing Library.
-3. **PR 3: Documentation, Runbook & Batch C34 Finalization (`docs(triz): advanced triz method guide, deployment runbook and roadmap`)**:
+   - Tích hợp vào `structuring` (ARIZ stepper collapsible) và `ideation` tabs (Evolution & Resource analysis) của `session-detail.tsx`.
+   - Thêm 3 client API methods trong `apps/web/lib/api-client.ts` và types trong `apps/web/lib/types.ts`.
+   - 3 frontend test suites trong `apps/web/features/triz/__tests__/`.
+3. **PR 3: Documentation, Runbook & Batch C34 Finalization (`docs(triz): advanced triz method guide, deployment runbook and roadmap`)** [ ] PLANNED:
    - Cập nhật sổ tay phương pháp luận `docs/DEPLOYMENT_GUIDE.md` và `docs/IMPLEMENTATION_ROADMAP.md`.
    - Chuyển `docs/ADR-015-triz-toolkit-advanced.md` sang Accepted.
    - Đóng hoàn tất Batch C34.

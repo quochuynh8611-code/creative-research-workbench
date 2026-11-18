@@ -273,12 +273,36 @@ export type CandidateSolutionSourceContext = {
   principle_used?: number | string
 }
 
+export interface TrizArizSourceContext {
+  schema_version: 1
+  source_type: 'triz_ariz'
+  step_number: number
+  step_name: string
+}
+
+export interface TrizEvolutionSourceContext {
+  schema_version: 1
+  source_type: 'triz_evolution'
+  trend_id: string
+  trend_name: string
+}
+
+export interface TrizResourceSourceContext {
+  schema_version: 1
+  source_type: 'triz_resource'
+  resource_type: 'substance' | 'field' | 'time' | 'space' | 'information'
+  resource_name: string
+}
+
 export type NoteSourceContext =
   | Triz9WindowsSourceContext
   | TrizMatrixSourceContext
   | PrincipleSuggestionSourceContext
   | EvidenceSourceContext
   | CandidateSolutionSourceContext
+  | TrizArizSourceContext
+  | TrizEvolutionSourceContext
+  | TrizResourceSourceContext
 
 export interface ResearchNote {
   id: string
@@ -669,6 +693,53 @@ export interface TrizNineWindowsResponse {
   lens_title: string
   grid: TrizNineWindowsCell[]
   meta: TrizNineWindowsMeta
+}
+
+// ──────────────────────────────────────────────
+// TRIZ Advanced Toolkit Types (Batch C34 — ARIZ, Evolution, Resources)
+// ──────────────────────────────────────────────
+
+export interface TrizArizStep {
+  step_number: number
+  code: string
+  name_vi: string
+  name_en: string
+  description: string
+  trigger_questions: string[]
+  recommended_actions: string[]
+}
+
+export interface TrizArizResponse {
+  data: TrizArizStep[]
+  total_steps: number
+}
+
+export interface TrizEvolutionTrend {
+  trend_id: string
+  name_vi: string
+  name_en: string
+  description: string
+  evolution_stages: string[]
+  domain_examples: Record<string, string>
+}
+
+export interface TrizEvolutionResponse {
+  data: TrizEvolutionTrend[]
+  total_trends: number
+}
+
+export interface TrizResourceCategory {
+  category: 'substance' | 'field' | 'time' | 'space' | 'information'
+  name_vi: string
+  name_en: string
+  description: string
+  subtypes: string[]
+  checklist_questions: string[]
+}
+
+export interface TrizResourceTaxonomyResponse {
+  data: TrizResourceCategory[]
+  total_categories: number
 }
 
 // ──────────────────────────────────────────────

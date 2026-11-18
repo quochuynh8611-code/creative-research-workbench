@@ -1,10 +1,11 @@
 'use client'
 
 import React, { useState } from 'react'
-import { Edit3, CheckCircle, Sparkles, FileText, ArrowRight, ChevronDown, Grid3X3 } from 'lucide-react'
+import { Edit3, CheckCircle, Sparkles, FileText, ArrowRight, ChevronDown, Grid3X3, GitCommit } from 'lucide-react'
 import { ContradictionBadge } from './contradiction-badge'
 import { SeparationStrategies } from './separation-strategies'
 import { TrizNineWindows } from '@/features/triz/triz-nine-windows'
+import { ArizStepperPanel } from '@/features/triz/ariz-stepper-panel'
 import { resolveLensFromDomain } from '@/lib/triz-lens-resolver'
 import type { ProblemFrame, NoteDraft } from '@/lib/types'
 
@@ -22,6 +23,7 @@ export function NormalizedView({
   onSaveAsNote,
 }: NormalizedViewProps) {
   const [isNineWindowsExpanded, setIsNineWindowsExpanded] = useState(false)
+  const [isArizExpanded, setIsArizExpanded] = useState(false)
   const statement = problemFrame.normalized_statement || problemFrame.raw_statement
 
   return (
@@ -124,6 +126,46 @@ export function NormalizedView({
               onSaveAsNote={onSaveAsNote}
               initialLens={resolveLensFromDomain(problemFrame.domain)}
             />
+          </div>
+        )}
+      </div>
+
+      {/* Collapsible ARIZ 6-Step Guide Section (Batch C34) */}
+      <div className="rounded-xl border border-border bg-card/60 backdrop-blur-sm shadow-sm overflow-hidden">
+        <button
+          type="button"
+          onClick={() => setIsArizExpanded((prev) => !prev)}
+          aria-expanded={isArizExpanded}
+          aria-controls="ariz-collapsible-content"
+          aria-label="Thuật giải ARIZ 6 bước rút gọn"
+          className="w-full flex items-center justify-between p-5 text-left hover:bg-muted/30 transition-colors focus-visible:ring-2 focus-visible:ring-primary focus:outline-none cursor-pointer"
+        >
+          <div className="flex items-center gap-3">
+            <div className="p-2 rounded-lg bg-primary/10 text-primary">
+              <GitCommit className="w-4 h-4" />
+            </div>
+            <div>
+              <h3 className="text-sm font-semibold text-foreground">
+                Thuật giải giải quyết vấn đề sáng chế (ARIZ 6 bước rút gọn)
+              </h3>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Quy trình tư duy từng bước giải quyết mâu thuẫn phức tạp hướng tới Kết quả Lý tưởng Cuối cùng (IFR)
+              </p>
+            </div>
+          </div>
+          <ChevronDown
+            className={`w-4 h-4 text-muted-foreground transition-transform duration-200 shrink-0 ml-2 ${
+              isArizExpanded ? 'rotate-180' : ''
+            }`}
+          />
+        </button>
+
+        {isArizExpanded && (
+          <div
+            id="ariz-collapsible-content"
+            className="p-6 border-t border-border bg-background/50 space-y-4"
+          >
+            <ArizStepperPanel onSaveAsNote={onSaveAsNote} />
           </div>
         )}
       </div>
