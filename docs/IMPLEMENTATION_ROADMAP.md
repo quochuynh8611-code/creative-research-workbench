@@ -220,7 +220,7 @@ created: "2026-07-03"
 
 - [x] **PR 1: Backend Observability, Structured Logging, Correlation ID & In-Memory Metrics** (Branch: `feat/c32-backend-observability`, PR #69 merged vào `main` tại `c1ed300087e803562b80b2b2c4326e8c3e23de33`; verified: `StructuredJsonFormatter`, contextvars correlation ID middleware, `InMemoryMetricsCollector` cho 4 endpoint ưu tiên, bộ theo dõi AI Coach fallback, endpoint nội bộ `GET /api/v1/system/metrics`, masking secret đa tầng, 14/14 new tests, 203/203 unit tests PASS).
 - [x] **PR 2: Benchmark Suite & Local Load Testing** (Branch: `feat/c32-benchmark-suite`, PR #70 merged vào `main` tại `26f5f9e84bee8531a8b251d17152ed5739668551`; verified: script bất đồng bộ `backend/scripts/benchmark.py`, concurrency $\le 10$, requests $\le 100$, Anti-Production Guard chặn domain production/staging, informational SLO baselines, output table/JSON bảo mật tuyệt đối, 15/15 unit tests PASS).
-- [ ] **PR 3: Runbook Update & Operational Documentation** (Branch: `docs/c32-operational-runbook`; phạm vi: bổ sung mục 13 Operational Runbook và mục 11.F/G/H Troubleshooting trong `docs/DEPLOYMENT_GUIDE.md`, cập nhật tiến độ Batch C32 trong `docs/IMPLEMENTATION_ROADMAP.md`, chuyển `docs/ADR-013-operational-excellence.md` sang Accepted) — **IN PROGRESS**.
+- [x] **PR 3: Runbook Update & Operational Documentation** (Branch: `docs/c32-operational-runbook`, PR #71 merged vào `main` tại `e976f297075ba47feeca272009a91d3434aeb2de`; verified: bổ sung mục 13 Operational Runbook và mục 11.F/G/H Troubleshooting trong `docs/DEPLOYMENT_GUIDE.md`, cập nhật tiến độ Batch C32 trong `docs/IMPLEMENTATION_ROADMAP.md`, chuyển `docs/ADR-013-operational-excellence.md` sang Accepted).
 
-**Acceptance Gate:** Batch C32 Acceptance Gate sẽ được đánh dấu hoàn tất sau khi PR 3 được merge và 3/3 checks CI trên `main` PASS.
+**Acceptance Gate:** Batch C32 Acceptance Gate PASS 100% ✅ (PR #69, PR #70, PR #71 đã merge và 3/3 checks CI trên `main` PASS).
 
