@@ -2,7 +2,7 @@
 
 **Dự án:** Creative Research Workbench (CRW)  
 **Tài liệu:** Standard Operating Runbook (Phục vụ Self-Host & Production-Ready Operations)  
-**Phiên bản:** v1.1.0 (Chuẩn hóa Batch C30)  
+**Phiên bản:** v1.2.0 (Chuẩn hóa Batch C32 — Operational Excellence)  
 **Ràng buộc bảo mật:** Zero Secret Exposure — Tuyệt đối không commit credentials hoặc API keys.
 
 ---
@@ -322,6 +322,35 @@ Khi gặp sự cố sau khi triển khai phiên bản mới, thực hiện rollb
   3. Nếu sử dụng OpenAI: Xác nhận `OPENAI_API_KEY` hợp lệ và tài khoản còn quota.
   4. Nếu sử dụng Ollama: Xác nhận Ollama daemon đang chạy và có thể truy cập từ mạng Docker (`curl http://host.docker.internal:11434/api/tags`).
 
+### F. Truy Vết Và Giám Sát Fallback Của AI Coach Thời Gian Thực
+- **Triệu chứng:** Cần phân tích lý do hệ thống chuyển sang Fallback (do timeout, lỗi JSON, hay rate-limit 429).
+- **Cách quan sát:**
+  1. Tra cứu chỉ số tổng hợp fallback qua endpoint metrics nội bộ:
+     ```bash
+     curl -s http://localhost:8000/api/v1/system/metrics | jq '.data.ai_coach_fallbacks'
+     ```
+  2. Lọc log có cấu trúc (JSON) để xem chi tiết mã lý do và session ID:
+     ```bash
+     docker compose logs api --tail=200 | grep "fallback_reason"
+     ```
+- **Khắc phục:**
+  - `LLMTimeout`: Kiểm tra độ trễ mạng hoặc tải GPU/CPU của Ollama daemon.
+  - `HTTP429`: Kiểm tra hạn mức sử dụng (billing quota) trên dashboard OpenAI.
+  - `InvalidJSON` / `EmptySuggestions`: Kiểm tra prompt và model output format.
+
+### G. In-Memory Metrics Bị Reset Sau Khi Khởi Động Lại Container
+- **Triệu chứng:** Sau khi restart container `crw_api`, endpoint `/api/v1/system/metrics` trả về `sample_count: 0` cho các endpoint.
+- **Bản chất:** Đây là hành vi có chủ đích theo thiết kế kiến trúc tinh gọn (ADR-013 Quyết định 3). Hệ thống sử dụng bộ đệm vòng (ring buffer max 1000) trên RAM để bảo vệ hiệu năng và không phụ thuộc vào hạ tầng ngoài (Redis/TimescaleDB).
+- **Khắc phục / Vận hành:**
+  - Nếu cần lưu trữ số liệu phục vụ phân tích dài hạn, thiết lập cronjob định kỳ cào dữ liệu từ `GET /api/v1/system/metrics` ra file snapshot JSON trước khi bảo trì/restart container.
+
+### H. Anti-Production Guard Chặn Chạy Benchmark
+- **Triệu chứng:** Khi chạy `backend/scripts/benchmark.py`, terminal báo lỗi:
+  `[ERROR] Validation failed: Anti-Production Guard: Host '...' is not permitted.`
+- **Bản chất:** Chốt chặn an toàn có chủ đích (ADR-013 Quyết định 5) nhằm ngăn chặn tuyệt đối nguy cơ vô tình bắn tải vào hạ tầng staging hay production. Runner chỉ chấp nhận: `localhost`, `127.0.0.1`, `0.0.0.0`, `testserver`.
+- **Khắc phục:**
+  - Đảm bảo tham số `--base-url` trỏ vào đúng sandbox nội bộ (mặc định: `http://localhost:8000`). Không cố gắng bypass guard trên môi trường production.
+
 
 ---
 
@@ -335,3 +364,70 @@ Khi gặp sự cố sau khi triển khai phiên bản mới, thực hiện rollb
 3. **Không Ghi Secret Vào Nhật Ký (Logs):**
    - Endpoint `/api/v1/system/ai-status` chỉ trả về cờ boolean `configured: true/false` và tên model; không bao giờ trả về API key.
    - Không in `settings.OPENAI_API_KEY` hoặc chuỗi mật khẩu database ra stdout/stderr trong mã nguồn.
+
+---
+
+## 13. Sổ Tay Vận Hành & Đo Lường Hệ Thống (Operational Excellence Runbook — Batch C32)
+
+### 13.1. Truy Vết Yêu Cầu Qua Correlation ID (End-to-End Request Tracing)
+Backend tự động quản lý Correlation ID cho mọi HTTP request nhằm kết nối chuỗi log xuyên suốt từ API Gateway đến Service và Database:
+1. **Truyền Correlation ID từ Client:**
+   Client có thể chủ động đính kèm header `X-Request-ID` hoặc `X-Correlation-ID` trong request:
+   ```bash
+   curl -i -H "X-Request-ID: req-audit-test-001" http://localhost:8000/api/v1/sessions
+   ```
+2. **Quy Tắc Nhận Diện & Phản Hồi Header (Validation & Echo Behavior):**
+   - **Trường hợp Client Gửi Header:** Nếu client gửi `X-Request-ID` (hoặc `X-Correlation-ID`), backend nhận diện và **echo lại chính xác giá trị đó** trong response headers (`X-Request-ID: req-audit-test-001` và `X-Correlation-ID: req-audit-test-001`).
+   - **Trường hợp Client Không Gửi:** Backend **tự động sinh một UUID4 ngẫu nhiên** (`uuid.uuid4().hex`) để gán cho request.
+   - Backend **luôn trả về cả 2 headers** `X-Request-ID` và `X-Correlation-ID` trong mọi response headers để đảm bảo tính tương thích hai chiều.
+3. **Tra cứu log tập trung theo Correlation ID:**
+   Toàn bộ log được định dạng JSON có cấu trúc (`timestamp`, `level`, `correlation_id`, `module`, `message`). Để xem toàn bộ hành trình xử lý của một request:
+   ```bash
+   docker compose logs api | grep '"correlation_id": "req-audit-test-001"'
+   ```
+4. **Bảo mật phản hồi lỗi 500 (Zero Stack Trace Leak):**
+   Khi có lỗi hệ thống nội bộ, response gửi về client chỉ chứa `error_id` (chính là `correlation_id`) và thông báo tổng quát, tuyệt đối không lộ stack trace hay cấu trúc database:
+   ```json
+   {
+     "error": "Internal server error",
+     "error_id": "req-audit-test-001"
+   }
+   ```
+   Kỹ sư vận hành sử dụng `error_id` này để tra cứu chính xác traceback đã được che giấu secret trong log container.
+
+### 13.2. Giám Sát Hiệu Năng Thời Gian Thực (Internal System Metrics)
+Backend duy trì một bộ đếm in-memory ring buffer (tối đa 1000 mẫu gần nhất) cho 4 endpoint cốt lõi:
+- **Endpoint nội bộ:** `GET http://localhost:8000/api/v1/system/metrics`
+- **Lệnh kiểm tra:**
+  ```bash
+  curl -s http://localhost:8000/api/v1/system/metrics | jq .
+  ```
+- **Cấu trúc dữ liệu giám sát:**
+  - `endpoints`: Thống kê chi tiết cho `/health`, `/api/v1/sessions`, `/api/v1/system/ai-status`, `/api/v1/sessions/{id}/coach/suggestions`.
+    - `sample_count`: Số mẫu trong bộ đệm rolling (tối đa 1000).
+    - `duration_ms`: Phân vị độ trễ (`min`, `max`, `mean`, `p50`, `p90`, `p95`, `p99`).
+    - `status_codes`: Phân loại mã HTTP theo nhóm (`2xx`, `3xx`, `4xx`, `5xx`).
+  - `ai_coach_fallbacks`: Giám sát tần suất fallback của AI Solution Coach.
+    - `total_fallbacks`: Tổng số lần kích hoạt Rule-Based Heuristics.
+    - `by_reason`: Phân rã theo nguyên nhân (`LLMTimeout`, `HTTP429`, `InvalidJSON`, `EmptySuggestions`).
+
+### 13.3. Đo Kiểm Tải Cục Bộ (Local Benchmark Suite)
+Creative Research Workbench tích hợp sẵn công cụ benchmark bất đồng bộ nội bộ tại `backend/scripts/benchmark.py`:
+1. **Lệnh chạy cơ bản (Đo kiểm 4 endpoint mặc định với 20 requests, 5 workers):**
+   ```bash
+   python -m backend.scripts.benchmark --requests 20 --concurrency 5 --output table
+   ```
+2. **Các tham số điều khiển:**
+   - `--base-url`: URL server đích (mặc định: `http://localhost:8000`). Bắt buộc localhost / sandbox IP.
+   - `--concurrency`: Số workers đồng thời (mặc định: 5, giới hạn an toàn tối đa: 10).
+   - `--requests`: Số requests gửi đi (mặc định: 50, giới hạn an toàn tối đa: 100).
+   - `--endpoint`: Endpoint cần đo (`all`, `health`, `sessions`, `ai_status`, `coach`).
+   - `--output`: Định dạng báo cáo (`table` hoặc `json`).
+3. **Quy định về ngưỡng Informational SLO:**
+   - `/health`: Baseline $p95 < 25ms$, throughput > 50 req/s, error rate 0%.
+   - `/api/v1/sessions`: Baseline $p95 < 100ms$, error rate 0%.
+   - `/api/v1/system/ai-status`: Baseline $p95 < 50ms$, error rate 0%.
+   - `/api/v1/sessions/{id}/coach/suggestions`: Baseline $p95 < 200ms$ (Mock/Fallback), error rate 0%.
+   > [!NOTE]
+   > Các ngưỡng SLO trên là **Informational Baseline**, nếu p95 vượt ngưỡng, runner sẽ in cảnh báo `WARN` nhưng không chặn build hay trả exit code lỗi.
+

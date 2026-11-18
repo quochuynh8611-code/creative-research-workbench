@@ -179,4 +179,8 @@ Sau khi hoàn thành Batch C31 (AI Solution Coach & Safety Confirmation Dialogs)
 2. **PR 2: `feat(ops): benchmark load testing suite`**
    - Script `backend/scripts/benchmark.py` (concurrency $\le 10$, requests $\le 100$, 4 endpoints), local baseline report.
 3. **PR 3: `docs(ops): operational runbook, metrics guides, and Batch C32 finalization`**
-   - Cập nhật deployment guide, hướng dẫn vận hành và truy vết Correlation ID, chuyển ADR-013 sang `Accepted`.
+   - Cập nhật `docs/DEPLOYMENT_GUIDE.md`: Bổ sung Mục 13 (Operational Runbook: Trace Correlation ID với cơ chế client echo/fallback UUID4, đọc `/api/v1/system/metrics`, chạy benchmark) và Mục 11.F/G/H (Troubleshooting).
+   - Cập nhật `docs/IMPLEMENTATION_ROADMAP.md`: Hoàn tất Batch C31 và mở Phase 15 Batch C32.
+   - Chuyển `docs/ADR-013-operational-excellence.md` sang trạng thái `Accepted`.
+   - Docs Health Check Checklist: Quét secret regex, kiểm tra liên kết nội bộ và định dạng markdown trước khi commit.
+   - Chấp nhận có chủ đích: PR 3 là docs-only, không có automated code test mới.
