@@ -20,6 +20,7 @@ import {
   BookTemplate,
   Layers,
   Sparkles,
+  HelpCircle,
 } from 'lucide-react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import {
@@ -36,6 +37,7 @@ import { cn } from '@/lib/utils'
 import type { DomainType } from '@/lib/types'
 import { AIStatusBadge } from '@/features/system/ai-status-badge'
 import { OnboardingWorkflowBanner } from '@/features/session/onboarding-workflow-banner'
+import { WelcomeOnboardingModal } from '@/features/session/welcome-onboarding-modal'
 
 const STATUS_COLORS: Record<string, string> = {
   draft: 'bg-muted text-muted-foreground',
@@ -64,6 +66,7 @@ export function SessionList() {
   const [validationError, setValidationError] = useState<string | null>(null)
   const [confirmArchiveId, setConfirmArchiveId] = useState<string | null>(null)
   const [isTemplateModalOpen, setIsTemplateModalOpen] = useState(false)
+  const [isWelcomeModalOpen, setIsWelcomeModalOpen] = useState(false)
   const [templateDomainFilter, setTemplateDomainFilter] = useState<string>('all')
   const [importNotification, setImportNotification] = useState<{ type: 'success' | 'error'; message: string } | null>(null)
   const fileInputRef = useRef<HTMLInputElement | null>(null)
@@ -231,6 +234,18 @@ export function SessionList() {
 
   const sessionToArchive = sessions.find((s) => s.id === confirmArchiveId)
 
+  // Auto-open Welcome Onboarding Modal for first-time visitors with empty sessions
+  useEffect(() => {
+    try {
+      const isDismissed = localStorage.getItem('crw_onboarding_dismissed') === 'true'
+      if (!isDismissed && !isLoading && !isError && sessions.length === 0 && activeTab === 'active') {
+        setIsWelcomeModalOpen(true)
+      }
+    } catch {
+      // Ignore storage errors in restricted contexts
+    }
+  }, [isLoading, isError, sessions.length, activeTab])
+
   const formatWorkflowState = (state?: string) => {
     if (!state) return null
     return STAGE_LABELS[state] || state
@@ -341,6 +356,16 @@ export function SessionList() {
                 <Upload className="w-4 h-4" />
               )}
               Nhập JSON
+            </button>
+            <button
+              type="button"
+              onClick={() => setIsWelcomeModalOpen(true)}
+              className="inline-flex items-center gap-1.5 border border-input bg-background hover:bg-muted text-foreground px-3.5 py-2 rounded-md text-sm font-medium transition-colors"
+              title="Hướng dẫn nhanh"
+              aria-label="Hướng dẫn nhanh"
+            >
+              <HelpCircle className="w-4 h-4 text-primary" />
+              <span className="hidden sm:inline">Hướng dẫn nhanh</span>
             </button>
             <button
               type="button"
@@ -960,6 +985,16 @@ export function SessionList() {
           ))}
         </div>
       )}
+
+      {/* Welcome Onboarding Modal (Batch C33 PR 1) */}
+      <WelcomeOnboardingModal
+        isOpen={isWelcomeModalOpen}
+        onClose={() => setIsWelcomeModalOpen(false)}
+        onOpenCreateForm={() => {
+          setIsCreating(true)
+          setValidationError(null)
+        }}
+      />
     </div>
   )
 }
