@@ -189,7 +189,7 @@
 
 ---
 
-## 5. Đặc Tả Giao Diện & Trải Nghiệm Người Dùng (UI Specification)
+## 5. Đặc Tả Giao Diện & Trải Nghiệm Người Dùng PR 2 (UI Specification)
 
 ### 5.1 Vị Trí & Hiển Thị của `AICoachPanel`
 - Đặt tại tab **Ideation (Ý tưởng & Nguyên tắc)** trong `apps/web/features/session/session-detail.tsx`, ngay phía trên hoặc đồng hành cùng `CandidateSolutions`.
@@ -199,29 +199,44 @@
   - Trạng thái AI Provider (gắn liền với cấu hình của hệ thống: Sẵn sàng / Mock mode / Degraded)
   - Nút bấm chính: **"Phân tích cùng AI Coach"** (kèm trạng thái loading khi đang xử lý).
 
-### 5.2 Xử Lý Các Trạng Thái (States)
-1. **Empty Session (Chưa có ProblemFrame):**
-   - Hiển thị banner hướng dẫn: *"Phiên nghiên cứu chưa có thông tin bài toán. Vui lòng hoàn thành bước Nhập vấn đề hoặc Phân tích cấu trúc trước khi nhờ AI Coach phân tích."*
-   - Vô hiệu hóa nút phân tích.
-2. **Loading / Analyzing:**
-   - Hiển thị hiệu ứng Skeleton hoặc thông điệp: *"AI Coach đang rà soát mâu thuẫn, nguyên tắc TRIZ và bằng chứng..."*
-   - Nút phân tích ở trạng thái disabled kèm spinner.
-3. **Suggestions Ready:**
+### 5.2 5 Trạng Thái Trực Quan (Component States)
+1. **`idle`**:
+   - Khi chưa chạy phân tích trong phiên.
+   - Hiển thị mô tả ngắn gọn về khả năng trợ lý giải pháp TRIZ và nút bấm "Phân tích với AI Coach".
+2. **`analyzing`**:
+   - Trạng thái đang tải dữ liệu (Loading skeleton / spinner với thông điệp: *"AI Coach đang rà soát mâu thuẫn, nguyên tắc TRIZ và bằng chứng..."*).
+   - Nút phân tích bị vô hiệu hóa (disabled).
+3. **`suggestions`**:
    - Hiển thị thẻ tóm tắt phân tích (`summary`).
-   - Danh sách các thẻ gợi ý với huy hiệu màu phân loại:
-     - 🟣 Nguyên nhân (`possible_cause`) — Tím
-     - 🔵 Hướng mâu thuẫn (`contradiction_direction`) — Xanh dương
-     - 🟢 Nguyên tắc TRIZ (`relevant_principle`) — Xanh lá
-     - 🟠 Câu hỏi làm rõ (`clarifying_question`) — Cam
-     - 🟡 Giải pháp đề xuất (`solution_candidate`) — Vàng hổ phách
-   - Dưới mỗi thẻ có thông tin Căn cứ (Grounding Source) rõ ràng.
-   - Các nút hành động:
-     - Thẻ giải pháp: Nút **"Lưu thành Giải pháp"** ➔ Mở Confirmation Modal ➔ Gọi `createCandidateSolution`.
-     - Thẻ câu hỏi / nhận định: Nút **"Lưu vào Ghi chép"** ➔ Mở Confirmation Modal ➔ Gọi `createResearchNote`.
-     - Nút **"Bỏ qua"** ➔ Xóa thẻ khỏi danh sách hiển thị hiện tại.
-4. **Mock / Degraded Fallback:**
-   - Hiển thị nhãn cảnh báo nhẹ nhàng: *"Đang sử dụng bộ tạo gợi ý TRIZ Heuristic cục bộ (Rule-Based Fallback)."*
-   - Gợi ý vẫn hiển thị bình thường dựa trên 40 nguyên tắc sáng tạo và bảng Altshuller.
+   - **Quy tắc Giới hạn (Max 5 Displayed)**: Frontend chỉ hiển thị tối đa 5 gợi ý đầu tiên. Nếu backend trả nhiều hơn 5, chỉ hiển thị 5 và kèm thông báo: *"Đã hiển thị 5 gợi ý ưu tiên"*.
+   - **Contract Validation chặt chẽ**: Mỗi suggestion bắt buộc phải có đủ: `id`, `category`, `title`, `description`, `source_grounding.source_type`, `source_grounding.source_reference`. Nếu thiếu bất kỳ trường nào, bỏ qua card đó, không crash UI và không hiển thị card lỗi.
+   - Danh sách tối đa 5 thẻ gợi ý (`CoachSuggestion`), mỗi thẻ hiển thị:
+     - Category badge (Nguyên nhân / Hướng mâu thuẫn / Nguyên tắc TRIZ / Câu hỏi làm rõ / Giải pháp đề xuất).
+     - Title & Description.
+     - Source Grounding badge (`source_type`: contradiction, principle, evidence, note kèm `source_reference`).
+     - Provenance tag rõ ràng ("AI Coach" vs "Rule-based fallback").
+4. **`empty`**:
+   - Khi phiên nghiên cứu chưa có `ProblemFrame` (hoặc statement rỗng).
+   - Hiển thị banner hướng dẫn: *"Phiên nghiên cứu chưa có thông tin bài toán. Vui lòng hoàn thành bước Nhập vấn đề hoặc Phân tích cấu trúc trước khi nhờ AI Coach phân tích."*
+   - Vô hiệu hóa nút phân tích để bảo vệ hệ thống.
+5. **`error/degraded`**:
+   - Khi backend gặp lỗi hoặc không thể kết nối mạng.
+   - Hiển thị thông báo thân thiện: *"Không thể lấy gợi ý từ AI Coach vào lúc này. Vui lòng thử lại sau."*
+   - Tuyệt đối không làm crash toàn trang, không lộ stack trace, query hay secret. Có nút "Thử lại".
+
+### 5.3 Thao Tác Phê Duyệt Của Con Người Theo Phân Loại (Action Rules by Category)
+1. **"Lưu thành Giải pháp" (CHỈ dành cho category = `solution_candidate`)**:
+   - CHỈ category `solution_candidate` mới có nút "Lưu thành Giải pháp". Các category khác TUYỆT ĐỐI KHÔNG có nút này.
+   - Mở `ConfirmationModal` với tiêu đề "Lưu gợi ý thành Giải pháp" và nội dung giải pháp.
+   - Chỉ khi người dùng bấm "Xác nhận", frontend mới gọi `createCandidateSolution(sessionId, { title, mechanism, ... })`.
+   - Invalidate query `['sessions', sessionId, 'solutions']` để cập nhật bảng Candidate Solutions.
+2. **"Lưu vào Ghi chép" (Dành cho tất cả các category khác hoặc khi cần lưu note)**:
+   - Mở `ConfirmationModal` với tiêu đề "Lưu gợi ý vào Sổ tay nghiên cứu".
+   - Chỉ khi người dùng bấm "Xác nhận", frontend mới gọi `createResearchNote(sessionId, { content, note_type: 'insight' | 'hypothesis' })`.
+   - Invalidate query `['sessions', sessionId, 'notes']` để cập nhật Notebook.
+3. **"Bỏ qua"**:
+   - Chỉ ẩn thẻ gợi ý khỏi danh sách hiển thị cục bộ (`local state`).
+   - KHÔNG gọi bất kỳ API nào, KHÔNG xóa dữ liệu khỏi database, KHÔNG lưu backend.
 
 ---
 

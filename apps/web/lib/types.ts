@@ -731,3 +731,57 @@ export interface AIStatusResponse {
   data: AIStatusData
 }
 
+// ──────────────────────────────────────────────
+// AI Solution Coach Types (Batch C31)
+// ──────────────────────────────────────────────
+
+export type CoachGroundingSourceType = 'contradiction' | 'principle' | 'evidence' | 'note'
+
+export interface CoachGroundingInfo {
+  source_type: CoachGroundingSourceType
+  source_reference: string
+}
+
+export type CoachSuggestionCategory =
+  | 'possible_cause'
+  | 'contradiction_direction'
+  | 'relevant_principle'
+  | 'clarifying_question'
+  | 'solution_candidate'
+
+export interface CoachSuggestionActionablePayload {
+  title?: string
+  mechanism?: string
+  content?: string
+  note_type?: NoteType
+  [key: string]: any
+}
+
+export interface CoachSuggestion {
+  id: string
+  category: CoachSuggestionCategory | string
+  title: string
+  description: string
+  source_grounding: CoachGroundingInfo
+  actionable_payload?: CoachSuggestionActionablePayload | null
+}
+
+export type CoachProvenance = 'ai_coach' | 'rule_based_fallback' | 'mock_coach'
+
+export interface AICoachResult {
+  session_id: string
+  summary: string
+  suggestions: CoachSuggestion[]
+  provenance: CoachProvenance | string
+  provider: string
+  model: string
+  latency_ms: number
+  fallback_reason?: string | null
+  generated_at: string
+}
+
+export interface AICoachResponse {
+  data: AICoachResult
+}
+
+
