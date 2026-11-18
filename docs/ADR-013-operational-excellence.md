@@ -1,6 +1,6 @@
 # ADR-013: Kiến Trúc Quan Sát, Đo Lường Và Độ Tin Cậy Vận Hành (Operational Excellence Architecture)
 
-- **Trạng thái:** Accepted (Đã cập nhật theo 4 điều chỉnh bắt buộc của Founder)
+- **Trạng thái:** Accepted
 - **Ngày:** 2026-11-18
 - **Tác giả:** Senior DevOps Engineer / Performance Engineer
 - **Ngữ cảnh:** Creative Research Workbench (CRW) — Batch C32
@@ -22,7 +22,10 @@ Creative Research Workbench đã hoàn thành triển khai tính năng AI Soluti
 ### Quyết định 1: Triển khai Structured JSON Logging kết hợp Correlation ID và Secret Masking
 - **Giải pháp:** Xây dựng `StructuredJsonFormatter` kế thừa từ `logging.Formatter`, tự động định dạng log JSON kèm timestamp UTC ISO, log level, module, function và `correlation_id` từ `contextvars.ContextVar[str]`.
 - **Masking:** Tích hợp bộ lọc regex bắt buộc che giấu mọi token/credential: `sk-proj`, `Bearer`, `password`, `token`, `api_key`.
-- **Header:** Nhận diện header `X-Request-ID` hoặc `X-Correlation-ID` từ client (nếu có); nếu không, sinh UUID4 ngẫu nhiên (`uuid.uuid4().hex`). Luôn trả về `X-Request-ID` và `X-Correlation-ID` trong response headers.
+- **Header & Validation:**
+  - Nếu client gửi `X-Request-ID` (hoặc `X-Correlation-ID`), backend nhận diện và echo lại chính xác giá trị đó trong response headers.
+  - Nếu client không gửi, backend tự động sinh một UUID4 ngẫu nhiên (`uuid.uuid4().hex`).
+  - Backend luôn trả về cả `X-Request-ID` và `X-Correlation-ID` trong response headers để đảm bảo tính tương thích hai chiều.
 - **Phản hồi lỗi 500:** Tuyệt đối không trả về stack trace cho client. Client chỉ nhận được `error_id` và thông điệp chung. Log nội bộ ghi nhận chi tiết lỗi đã qua bộ lọc masking.
 
 ### Quyết định 2: In-Memory Ring Buffer Metrics Collector Cho 4 Endpoint Ưu Tiên
@@ -74,6 +77,7 @@ Creative Research Workbench đã hoàn thành triển khai tính năng AI Soluti
 
 ### Đánh đổi (Trade-offs):
 - Metrics bị reset khi restart container: Đã được chấp nhận có chủ đích (xem Quyết định 3).
+- **PR 3 là Docs-Only:** PR 3 chỉ cập nhật tài liệu vận hành và roadmap, không có automated code test mới. Đây là sự chấp nhận có chủ đích vì không có mã nguồn runtime nào bị sửa đổi. Quy trình kiểm thử được thay thế bằng Docs Health Check (kiểm tra rò rỉ secret qua regex, kiểm tra link và định dạng markdown).
 
 ---
 

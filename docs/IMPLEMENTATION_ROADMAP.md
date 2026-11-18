@@ -209,7 +209,18 @@ created: "2026-07-03"
 
 - [x] **PR 1: Backend AI Coach & Heuristic Fallback API** (Branch: `feat/c31-backend-ai-coach`, PR #66 merged vào `main` tại `3bcf44fbe740d7fa7f3eae4eed34a4c6cc53d415`; verified: `AICoachService`, `RuleBasedCoach`, `generate_coach_suggestions` trên Mock/OpenAI/Ollama, `POST /api/v1/sessions/{id}/coach/suggestions`, hard grounding filter, cap 5, zero db mutation, 11/11 new tests, 180 unit tests PASS).
 - [x] **PR 2: Frontend AI Coach Panel & Confirmation Dialogs** (Branch: `feat/c31-frontend-ai-coach-panel`, PR #67 merged vào `main` tại `a0458f27c6d3317125ce6cd383deee8d15fc0061`; verified: `AICoachPanel` 5 states, contract validation, cap 5 displayed với thông báo ưu tiên, chỉ solution_candidate có nút Lưu thành Giải pháp, confirmation modal trước khi lưu Solution/Note, dismiss local-only, 13/13 web tests PASS).
-- [ ] **PR 3: Docs, Runbook Smoke Test & Roadmap Finalization** (Branch: `docs/c31-ai-coach-runbook`; phạm vi: bổ sung smoke test an toàn cho AI Coach trong `docs/DEPLOYMENT_GUIDE.md`, cập nhật tiến độ Batch C31 trong `docs/IMPLEMENTATION_ROADMAP.md`, cập nhật `docs/ADR-012-ai-solution-coach.md`) — **IN PROGRESS**.
+- [x] **PR 3: Docs, Runbook Smoke Test & Roadmap Finalization** (Branch: `docs/c31-ai-coach-runbook`, PR #68 merged vào `main` tại `045e8a1753d9c07e5ae205121bd6ffaf52c129be`; verified: bổ sung smoke test AI Coach an toàn, không tạo dữ liệu rác, xử lý grep an toàn, cập nhật roadmap Batch C31 và ADR-012).
 
-**Acceptance Gate:** Batch C31 Acceptance Gate sẽ được đánh dấu hoàn tất sau khi PR 3 được merge và 3/3 checks CI trên `main` PASS.
+**Acceptance Gate:** Batch C31 Acceptance Gate PASS 100% ✅ (PR #66, PR #67, PR #68 đã merge và 3/3 checks CI trên `main` PASS).
+
+---
+
+## Phase 15 — Batch C32: Operational Excellence & Observability
+**Goal:** Nâng cao độ tin cậy vận hành, khả năng tự quan sát (Observability), đo kiểm hiệu năng định lượng (Benchmarking) và chuẩn hóa runbook vận hành cho Creative Research Workbench mà không làm nặng hạ tầng.
+
+- [x] **PR 1: Backend Observability, Structured Logging, Correlation ID & In-Memory Metrics** (Branch: `feat/c32-backend-observability`, PR #69 merged vào `main` tại `c1ed300087e803562b80b2b2c4326e8c3e23de33`; verified: `StructuredJsonFormatter`, contextvars correlation ID middleware, `InMemoryMetricsCollector` cho 4 endpoint ưu tiên, bộ theo dõi AI Coach fallback, endpoint nội bộ `GET /api/v1/system/metrics`, masking secret đa tầng, 14/14 new tests, 203/203 unit tests PASS).
+- [x] **PR 2: Benchmark Suite & Local Load Testing** (Branch: `feat/c32-benchmark-suite`, PR #70 merged vào `main` tại `26f5f9e84bee8531a8b251d17152ed5739668551`; verified: script bất đồng bộ `backend/scripts/benchmark.py`, concurrency $\le 10$, requests $\le 100$, Anti-Production Guard chặn domain production/staging, informational SLO baselines, output table/JSON bảo mật tuyệt đối, 15/15 unit tests PASS).
+- [ ] **PR 3: Runbook Update & Operational Documentation** (Branch: `docs/c32-operational-runbook`; phạm vi: bổ sung mục 13 Operational Runbook và mục 11.F/G/H Troubleshooting trong `docs/DEPLOYMENT_GUIDE.md`, cập nhật tiến độ Batch C32 trong `docs/IMPLEMENTATION_ROADMAP.md`, chuyển `docs/ADR-013-operational-excellence.md` sang Accepted) — **IN PROGRESS**.
+
+**Acceptance Gate:** Batch C32 Acceptance Gate sẽ được đánh dấu hoàn tất sau khi PR 3 được merge và 3/3 checks CI trên `main` PASS.
 
