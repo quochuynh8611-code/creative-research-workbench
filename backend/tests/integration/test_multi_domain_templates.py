@@ -83,9 +83,9 @@ def test_all_target_domains_represented_in_catalog():
 
 
 def test_template_ids_are_strictly_unique():
-    """2. 12 ID phải hoàn toàn unique và catalog chứa đúng 12 templates."""
+    """2. 18 ID phải hoàn toàn unique và catalog chứa đúng 18 templates (Batch C35)."""
     templates = get_all_templates()
-    assert len(templates) == 12, f"Expected exactly 12 templates in catalog, got {len(templates)}"
+    assert len(templates) == 18, f"Expected exactly 18 templates in catalog, got {len(templates)}"
 
     ids = [t["id"] for t in templates]
     assert len(ids) == len(set(ids)), f"Duplicate template IDs detected: {ids}"

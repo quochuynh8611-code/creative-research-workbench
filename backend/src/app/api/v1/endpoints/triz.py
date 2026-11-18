@@ -202,9 +202,16 @@ async def get_triz_separation_principles() -> dict[str, Any]:
 
 @router.get("/nine-windows", status_code=status.HTTP_200_OK)
 async def get_triz_nine_windows(
-    lens: Literal["engineering", "business", "everyday"] = Query(
+    lens: Literal[
+        "engineering",
+        "business",
+        "everyday",
+        "systems_thinking",
+        "design_thinking",
+        "lean_startup",
+    ] = Query(
         default="engineering",
-        description="Lăng kính tư duy TRIZ 9 cửa sổ (engineering, business, everyday)",
+        description="Lăng kính tư duy TRIZ 9 cửa sổ (engineering, business, everyday, systems_thinking, design_thinking, lean_startup)",
     ),
 ) -> dict[str, Any]:
     """
