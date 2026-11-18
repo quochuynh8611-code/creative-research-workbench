@@ -29,6 +29,7 @@ import { NormalizedView } from '@/features/structuring/normalized-view'
 import { WorkflowStepper } from '@/features/session/workflow-stepper'
 import { PrincipleSuggestions } from '@/features/ideation/principle-suggestions'
 import { CandidateSolutions } from '@/features/ideation/candidate-solutions'
+import { AICoachPanel } from '@/features/ideation/ai-coach-panel'
 import { EvidencePanel } from '@/features/retrieval/evidence-panel'
 import { TrizMatrixLookup } from '@/features/triz/triz-matrix-lookup'
 import { TrizMatrixPanel } from '@/features/triz/triz-matrix-panel'
@@ -827,6 +828,10 @@ export function SessionDetail({ sessionId }: SessionDetailProps) {
               methods={effectiveRecommendations}
               onSelectPrinciple={handleApplyPrincipleToSolution}
               onSaveAsNote={handleSaveAsNote}
+            />
+            <AICoachPanel
+              sessionId={sessionId}
+              problemFrame={effectiveProblemFrame}
             />
             <CandidateSolutions
               sessionId={sessionId}

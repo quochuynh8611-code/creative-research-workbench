@@ -1,5 +1,6 @@
 import axios from 'axios'
 import type {
+  AICoachResponse,
   AIProblemAnalysisRequest,
   AIProblemAnalysisResponse,
   AIResearchReport,
@@ -508,3 +509,14 @@ export async function getAIStatus(): Promise<AIStatusResponse> {
   const response = await apiClient.get<AIStatusResponse>('/api/v1/system/ai-status')
   return response.data
 }
+
+/**
+ * 37. Lấy danh sách gợi ý phân tích và giải pháp từ AI Solution Coach (Batch C31 PR 2).
+ */
+export async function getAICoachSuggestions(sessionId: string): Promise<AICoachResponse> {
+  const response = await apiClient.post<AICoachResponse>(
+    `/api/v1/sessions/${sessionId}/coach/suggestions`
+  )
+  return response.data
+}
+
