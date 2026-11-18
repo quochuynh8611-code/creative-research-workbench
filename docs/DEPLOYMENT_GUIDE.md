@@ -500,3 +500,116 @@ Trước khi bắt đầu buổi demo với đối tác hoặc ban lãnh đạo,
    - Xác nhận có 2 session mẫu bắt đầu bằng `[DEMO]`.
    - Xác nhận huy hiệu `AI Status Badge` ở góc trên bên phải hiển thị màu xanh (`READY`).
 
+---
+
+## 15. Sổ Tay Vận Hành TRIZ Nâng Cao (TRIZ Advanced Toolkit Runbook — Batch C34)
+
+### 15.1. Hướng Dẫn Sử Dụng ARIZ Stepper (6 Bước Rút Gọn)
+- **Vị trí trên giao diện:** Tab **Phân tích Cấu trúc (Structuring)** -> Card mở rộng `Thuật giải giải quyết vấn đề sáng chế (ARIZ 6 bước rút gọn)` (ngay dưới khối TRIZ 9-Windows).
+- **Mục đích:** Hướng dẫn nhà nghiên cứu và kỹ sư bóc tách bài toán cấp 3, cấp 4 phức tạp thành mô hình mâu thuẫn vật lý và hướng tới Kết quả Lý tưởng Cuối cùng (IFR).
+- **Quy trình 6 bước cốt lõi:**
+  1. `B1_CHON_HE_THONG`: Chọn hệ thống kỹ thuật và phát biểu bài toán ban đầu (Mini-problem).
+  2. `B2_MO_HINH_BAI_TOAN`: Xây dựng mô hình bài toán và xác định cặp thông số mâu thuẫn.
+  3. `B3_PHAN_TICH_VUNG_XUNG_DOT`: Khoanh vùng không gian (OZ) và thời gian (OT) thao tác xảy ra xung đột.
+  4. `B4_DINH_NGHIA_IFR`: Định nghĩa Kết quả Lý tưởng Cuối cùng (IFR-1 & IFR-2) và mâu thuẫn vật lý.
+  5. `B5_HUY_DONG_NGUON_LUC`: Khai thác tối đa các nguồn lực Chất - Trường (SFR) sẵn có miễn phí.
+  6. `B6_THAY_THE_HOAC_CHUYEN_DOI`: Chuyển đổi bài toán sang cấp siêu hệ thống/phân hệ hoặc áp dụng chiến lược phân tách.
+- **Thao tác lưu sổ tay:** Nhập ghi chú giải pháp tại từng bước -> Bấm `Lưu vào sổ tay` -> Ghi chép tự động gắn `source_context` định danh `triz_ariz` (bước 1..6) vào Research Notebook.
+
+### 15.2. Hướng Dẫn Sử Dụng Evolution Patterns Explorer (8 Quy Luật Kinh Điển)
+- **Vị trí trên giao diện:** Tab **Ý tưởng & Nguyên tắc (Ideation)** -> Khối `8 Quy luật Tiến hóa Kỹ thuật (Altshuller)`.
+- **Mục đích:** Định vị nấc tiến hóa hiện tại của sản phẩm/công nghệ và dự đoán bước nhảy vọt tương lai (Evolutionary Leap).
+- **Danh mục 8 quy luật:**
+  1. *Tính đầy đủ:* Đủ 4 bộ phận (nguồn năng lượng, động cơ, truyền động, cơ cấu công tác).
+  2. *Dẫn truyền năng lượng:* Dòng năng lượng lưu thông tự do (cơ học -> thủy lực -> điện từ).
+  3. *Điều phối nhịp điệu:* Phối hợp tần số, dao động và nhịp hoạt động.
+  4. *Nâng cao tính lý tưởng:* Tỷ số Lợi ích / (Chi phí + Tác hại) tiến dần đến vô cực.
+  5. *Phát triển không đều:* Các bộ phận phát triển với tốc độ khác nhau sinh ra mâu thuẫn.
+  6. *Chuyển sang siêu hệ thống:* Đơn hệ -> Đa hệ kép -> Tích hợp siêu hệ thống.
+  7. *Chuyển dịch Vĩ mô sang Vi mô:* Cơ học thô -> Bột mịn -> Chất lỏng/khí -> Trường/Plasma.
+  8. *Tăng tính động:* Hệ thống cứng -> Có khớp -> Đàn hồi linh hoạt -> Trường tự thích nghi.
+- **Thao tác lưu sổ tay:** Click mở rộng quy luật -> Xem lộ trình các giai đoạn và ví dụ đa lĩnh vực (Kỹ thuật, Phần mềm, Kinh doanh) -> Nhập ghi chú -> Bấm `Lưu vào sổ tay` (ngữ cảnh `triz_evolution`).
+
+### 15.3. Hướng Dẫn Sử Dụng Resource Analysis Panel (5 Nhóm Tài Nguyên)
+- **Vị trí trên giao diện:** Tab **Ý tưởng & Nguyên tắc (Ideation)** -> Khối `Phân tích Nguồn lực TRIZ (5 nhóm tài nguyên)`.
+- **Mục đích:** Tìm kiếm các nguồn lực sẵn có, giá rẻ hoặc miễn phí xung quanh hệ thống để đạt IFR mà không phát sinh chi phí.
+- **5 Nhóm tài nguyên (Tabs):**
+  - `substance` (Chất): Vật liệu cấu thành, phụ phẩm, chất thải, môi trường tự nhiên.
+  - `field` (Trường): Cơ, nhiệt, điện, từ, quang học, trọng lực (MATChEM).
+  - `time` (Thời gian): Thời gian chuẩn bị, thời gian chết (idle time), chu kỳ hoạt động.
+  - `space` (Không gian): Khoảng trống bên trong, bề mặt tiếp xúc, chiều thẳng đứng 3D.
+  - `information` (Thông tin): Tín hiệu tự phát, trạng thái màu sắc, rung động, dữ liệu đo đạc.
+- **Thao tác lưu sổ tay:** Chuyển đổi tab -> Đánh dấu checklist các nguồn lực tiềm năng -> Ghi chép phát hiện -> Bấm `Lưu vào sổ tay` (ngữ cảnh `triz_resource`).
+
+### 15.4. Hướng Dẫn Truy Vết Bằng Correlation ID (Distributed Tracing)
+- Mọi request HTTP gửi tới API backend tự động được gán mã định danh duy nhất thông qua header `X-Correlation-ID`.
+- Khi client gửi kèm header `X-Correlation-ID: <custom-uuid>`, backend sẽ giữ nguyên mã đó xuyên suốt contextvars và đính kèm vào mọi dòng structured JSON log:
+  ```json
+  {"timestamp": "2026-11-18T13:00:00Z", "level": "INFO", "correlation_id": "c34-trace-uuid", "message": "Fetching ARIZ steps"}
+  ```
+- **Lệnh curl mẫu kiểm tra correlation ID:**
+  ```bash
+  curl -i -H "X-Correlation-ID: c34-test-trace-001" http://localhost:8000/api/v1/triz/ariz-steps
+  # Header trả về phải có: X-Correlation-ID: c34-test-trace-001
+  ```
+- **Validation quy chuẩn Correlation ID:**
+  - Nếu header phản hồi **không echo lại** `X-Correlation-ID`, kiểm tra ngay cấu hình middleware tại `backend/src/app/core/middleware/correlation_id.py` xem middleware đã được đăng ký trong FastAPI app (`main.py`) hay chưa.
+
+### 15.5. Hướng Dẫn Đọc & Giám Sát Metrics Nội Bộ (`/api/v1/system/metrics`)
+- Endpoint: `GET /api/v1/system/metrics` (In-memory, reset khi restart server, không lộ secret).
+- **Lệnh truy vấn:**
+  ```bash
+  curl -s http://localhost:8000/api/v1/system/metrics | jq .
+  ```
+- **Các trường chỉ số cần theo dõi:**
+  - `uptime_seconds`: Thời gian server hoạt động liên tục.
+  - `endpoints`: Đếm lượt gọi, mã trạng thái HTTP và độ trễ ($p50, p95$) của từng route (bao gồm cả các route `/api/v1/triz/*`).
+  - `ai_coach_fallbacks`:
+    - `total_fallbacks`: Số lần kích hoạt Rule-Based Heuristic khi LLM gặp sự cố.
+    - `by_reason`: Phân rã nguyên nhân (`LLMTimeout`, `HTTP429`, `InvalidJSON`, `EmptySuggestions`).
+
+### 15.6. Hướng Dẫn Xử Lý Sự Cố Phổ Biến (Troubleshooting FAQ & Command Validation)
+1. **Sự cố 1: ARIZ Stepper không hiển thị dữ liệu hoặc báo lỗi mạng**
+   - *Triệu chứng:* Component hiển thị alert lỗi kèm nút "Thử lại".
+   - *Command Validation bắt buộc:*
+     - Kiểm tra kết nối endpoint qua curl:
+       ```bash
+       curl -s http://localhost:8000/api/v1/triz/ariz-steps | jq .total_steps
+       # Kỳ vọng: 6
+       ```
+     - **Nếu endpoint không load:** Bắt buộc kiểm tra tệp tĩnh JSON tại `backend/src/app/data/triz_ariz_steps.json`. Xác thực tính hợp lệ của JSON bằng lệnh:
+       ```bash
+       python -m json.tool backend/src/app/data/triz_ariz_steps.json > /dev/null && echo "JSON OK"
+       ```
+     - Kiểm tra backend container logs: `docker compose logs api --tail=50`.
+2. **Sự cố 2: Evolution Explorer hoặc Resource Analysis Panel không load**
+   - *Triệu chứng:* Giao diện báo lỗi truy vấn dữ liệu từ máy chủ.
+   - *Command Validation bắt buộc:*
+     - Kiểm tra endpoint Evolution:
+       ```bash
+       curl -s http://localhost:8000/api/v1/triz/evolution-trends | jq .total_trends
+       # Kỳ vọng: 8
+       ```
+     - Kiểm tra endpoint Resource Taxonomy:
+       ```bash
+       curl -s http://localhost:8000/api/v1/triz/resource-taxonomy | jq .total_categories
+       # Kỳ vọng: 5
+       ```
+     - **Nếu endpoint không load:** Bắt buộc kiểm tra tính hợp lệ của tệp tĩnh:
+       ```bash
+       python -m json.tool backend/src/app/data/triz_evolution_trends.json > /dev/null
+       python -m json.tool backend/src/app/data/triz_resource_taxonomy.json > /dev/null
+       ```
+3. **Sự cố 3: AI Coach tự động rơi vào chế độ Rule-Based Heuristic Fallback**
+   - *Triệu chứng:* Gợi ý giải pháp có chú thích `[Rule-Based Heuristic Fallback]`, metrics `total_fallbacks` tăng lên.
+   - *Command Validation bắt buộc:*
+     - **Bắt buộc kiểm tra `/api/v1/system/ai-status`:**
+       ```bash
+       curl -s http://localhost:8000/api/v1/system/ai-status | jq .
+       ```
+     - Xác nhận trường `status` và `provider`:
+       - Nếu status là `disabled` hoặc `unconfigured`: Cần cấu hình khóa hợp lệ `OPENAI_API_KEY` (hoặc khởi động Ollama cục bộ).
+       - Nếu status là `error`: Kiểm tra kết nối mạng ra ngoài hoặc quota tài khoản AI provider.
+     - *Lưu ý:* Cơ chế fallback là tính năng an toàn fail-safe được thiết kế có chủ đích, bảo đảm phiên nghiên cứu không bao giờ bị gián đoạn hay treo hệ thống.
+
+
