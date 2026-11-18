@@ -232,7 +232,7 @@ DOMAIN_TEMPLATES: list[dict[str, Any]] = [
             "normalized_statement": "Nâng cao mức độ làm sạch và độ tin cậy vô khuẩn mà không làm tổn hại độ bền và độ ổn định kết cấu thiết bị",
             "contradiction_type": "technical",
             "improving_parameter": "reliability",
-            "worsening_parameter": "stability",
+            "worsening_parameter": "durability",
             "domain": "healthcare",
         },
     },
