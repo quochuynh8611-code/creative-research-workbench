@@ -17,6 +17,7 @@ from unittest.mock import mock_open, patch
 import pytest
 
 from app.services.triz_nine_windows_service import (
+    _VALID_LENSES,
     get_nine_windows,
     load_nine_windows_data,
     validate_nine_windows_data,
@@ -45,7 +46,7 @@ def _make_valid_dataset() -> dict[str, Any]:
         "lenses": {},
     }
 
-    for lens in ["engineering", "business", "everyday"]:
+    for lens in _VALID_LENSES:
         cells = []
         idx = 1
         for lvl in levels:

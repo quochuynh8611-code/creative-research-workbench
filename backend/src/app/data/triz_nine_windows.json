@@ -317,6 +317,321 @@
           ]
         }
       ]
+    },
+    "systems_thinking": {
+      "lens_title": "Lăng kính Tư duy Hệ thống",
+      "description": "Phân tích cấu trúc tương hỗ, cơ cấu vòng lặp phản hồi (Feedback Loops), kho tích trữ và dòng chảy (Stocks & Flows) cùng các điểm đòn bẩy can thiệp (Leverage Points).",
+      "windows": [
+        {
+          "level": "supersystem",
+          "time": "past",
+          "label_vi": "Hệ sinh thái thể chế và quy luật vĩ mô trong quá khứ",
+          "label_en": "Past Supersystem",
+          "prompt_vi": "Các cấu trúc thể chế, chu kỳ kinh tế và môi trường sinh thái trong quá khứ đã tạo tiền đề hoặc giới hạn hành vi hệ thống thế nào?",
+          "description_vi": "Xem xét bối cảnh chính sách, áp lực ngoại sinh và các quy luật cân bằng tự nhiên chi phối môi trường vĩ mô thời kỳ trước.",
+          "examples_vi": [
+            "Hệ thống quy định thương mại song phương và chu kỳ nông nghiệp phụ thuộc mùa mưa định hình nền kinh tế tiền công nghiệp."
+          ]
+        },
+        {
+          "level": "supersystem",
+          "time": "present",
+          "label_vi": "Mạng lưới tương tác và vòng phản hồi toàn cục hiện tại",
+          "label_en": "Present Supersystem",
+          "prompt_vi": "Các mạng lưới tương tác toàn cầu và các vòng phản hồi củng cố (reinforcing) hay cân bằng (balancing) đang tác động lên hệ thống ra sao?",
+          "description_vi": "Nhận diện sự đan xen giữa chuỗi cung ứng, luồng thông tin mạng xã hội và các vòng lặp phản hồi ngoại vi thúc đẩy hoặc kiềm chế hệ thống.",
+          "examples_vi": [
+            "Vòng lặp hiệu ứng mạng (network effects) của các nền tảng số tạo thế độc quyền tự gia cố trong chuỗi giá trị toàn cầu."
+          ]
+        },
+        {
+          "level": "supersystem",
+          "time": "future",
+          "label_vi": "Sự chuyển dịch ranh giới và điểm bùng phát sinh thái tương lai",
+          "label_en": "Future Supersystem",
+          "prompt_vi": "Các điểm bùng phát (tipping points) về môi trường, nhân khẩu học và kinh tế tuần hoàn sẽ tái định hình siêu hệ thống thế nào?",
+          "description_vi": "Dự báo các biến động ngưỡng giới hạn sinh thái và sự dịch chuyển từ chuỗi cung ứng tuyến tính sang mạng lưới tuần hoàn khép kín.",
+          "examples_vi": [
+            "Mạng lưới cân bằng phát thải carbon xuyên biên giới với cơ chế điều tiết tự động dựa trên tín dụng sinh thái phân tán."
+          ]
+        },
+        {
+          "level": "system",
+          "time": "past",
+          "label_vi": "Cấu trúc động học và độ trễ phản hồi trong quá khứ",
+          "label_en": "Past System",
+          "prompt_vi": "Cấu trúc kho tích trữ (stocks) và dòng chảy (flows) trước đây gặp phải những độ trễ thời gian (delays) nào gây dao động mất ổn định?",
+          "description_vi": "Phân tích nguyên nhân cốt lõi gây ra hiện tượng dao động (oscillation) và phản ứng quá mức của hệ thống trong lịch sử vận hành.",
+          "examples_vi": [
+            "Hiệu ứng roi da (bullwhip effect) trong chuỗi cung ứng do độ trễ truyền đạt đơn đặt hàng bằng văn bản thủ công."
+          ]
+        },
+        {
+          "level": "system",
+          "time": "present",
+          "label_vi": "Điểm đòn bẩy can thiệp và xung đột mục tiêu hiện tại",
+          "label_en": "Present System",
+          "prompt_vi": "Đâu là điểm đòn bẩy (leverage point) then chốt mà một thay đổi nhỏ về luồng thông tin hay quy tắc có thể tạo chuyển biến lớn toàn hệ thống?",
+          "description_vi": "Tìm kiếm các điểm can thiệp chiến lược (thay đổi mục tiêu, cấu trúc thông tin, quy tắc điều phối) thay vì chỉ thay đổi tham số số lượng bề mặt.",
+          "examples_vi": [
+            "Minh bạch hóa luồng dữ liệu thời gian thực giữa bệnh viện và đơn vị bảo hiểm y tế để triệt tiêu động cơ trục lợi xét nghiệm trùng lặp."
+          ]
+        },
+        {
+          "level": "system",
+          "time": "future",
+          "label_vi": "Hệ thống tự tổ chức và năng lực thích ứng linh hoạt tương lai",
+          "label_en": "Future System",
+          "prompt_vi": "Hệ thống sẽ xây dựng năng lực tự tổ chức (self-organization) và khả năng phục hồi (resilience) trước các cú sốc bất định ra sao?",
+          "description_vi": "Dự phóng cấu trúc hệ thống có khả năng tự tiến hóa, thích nghi đa trạng thái và phục hồi nhanh sau khi đứt gãy một phần.",
+          "examples_vi": [
+            "Lưới điện vi mô có thuật toán tự phân vùng độc lập khi xảy ra sự cố nguồn cấp chính mà không gây sụp đổ mạng diện rộng."
+          ]
+        },
+        {
+          "level": "subsystem",
+          "time": "past",
+          "label_vi": "Các thành phần nút mạng và mối liên kết nhân quả tuyến tính xưa",
+          "label_en": "Past Subsystem",
+          "prompt_vi": "Các bộ phận cấu thành đơn lẻ trước đây được liên kết theo logic nguyên nhân - kết quả trực tiếp đơn giản như thế nào?",
+          "description_vi": "Đánh giá sự phân mảnh của các phòng ban hoặc linh kiện chức năng khi chưa có sự tích hợp phản hồi thông tin hai chiều.",
+          "examples_vi": [
+            "Quy trình chuyển giao hồ sơ giấy tờ tuần tự qua từng bàn xử lý độc lập không có cơ chế đối soát chéo tự động."
+          ]
+        },
+        {
+          "level": "subsystem",
+          "time": "present",
+          "label_vi": "Cảm biến vi mô và luồng chia sẻ thông tin cục bộ hiện tại",
+          "label_en": "Present Subsystem",
+          "prompt_vi": "Các phần tử thành phần đang trao đổi tín hiệu, cảm nhận trạng thái và phối hợp hành vi theo quy tắc cục bộ nào?",
+          "description_vi": "Kiểm tra chất lượng và độ trễ của các cảm biến phản hồi, luồng giao tiếp nội bộ và sự đồng bộ nhịp độ giữa các phân hệ.",
+          "examples_vi": [
+            "Cảm biến IoT đo lưu lượng nước thải tại từng phân xưởng gửi cảnh báo tức thì về trung tâm điều hành môi trường."
+          ]
+        },
+        {
+          "level": "subsystem",
+          "time": "future",
+          "label_vi": "Tác nhân tự hành thích nghi và giao thức điều phối phân tán",
+          "label_en": "Future Subsystem",
+          "prompt_vi": "Các tác nhân vi mô thông minh (intelligent micro-agents) sẽ tự thương lượng và tối ưu hóa tài nguyên cục bộ thế nào?",
+          "description_vi": "Mô hình hóa các phân hệ tự hành có khả năng đàm phán hợp đồng vi mô tự động để cùng đạt được mục tiêu tối ưu toàn hệ thống.",
+          "examples_vi": [
+            "Các thiết bị điện gia dụng tự động đấu giá nhu cầu tiêu thụ điện năng lượng mặt trời tại chỗ thông qua giao thức phân tán."
+          ]
+        }
+      ]
+    },
+    "design_thinking": {
+      "lens_title": "Lăng kính Tư duy Thiết kế",
+      "description": "Phân tích lấy con người làm trung tâm (Human-Centered Design): thấu cảm người dùng (Empathize), xác định nhu cầu tiềm ẩn (Define), thử nghiệm ý tưởng (Ideate) và kiểm chứng trải nghiệm (Prototype & Test).",
+      "windows": [
+        {
+          "level": "supersystem",
+          "time": "past",
+          "label_vi": "Bối cảnh văn hóa xã hội và thói quen hành vi người dùng trong quá khứ",
+          "label_en": "Past Supersystem",
+          "prompt_vi": "Các chuẩn mực văn hóa, thói quen tiêu dùng và rào cản nhận thức trước đây đã định hình hành vi người dùng ra sao?",
+          "description_vi": "Xem xét lịch sử hành vi tiêu dùng và bối cảnh niềm tin xã hội để hiểu cội nguồn tâm lý của đối tượng trải nghiệm.",
+          "examples_vi": [
+            "Thói quen đến chi nhánh ngân hàng giao dịch trực tiếp bằng tiền mặt do tâm lý e ngại chữ ký điện tử thời kỳ đầu số hóa."
+          ]
+        },
+        {
+          "level": "supersystem",
+          "time": "present",
+          "label_vi": "Hành trình trải nghiệm tổng thể và hệ sinh thái đa kênh hiện tại",
+          "label_en": "Present Supersystem",
+          "prompt_vi": "Hành trình người dùng (User Journey) từ khi nhận biết đến sau khi sử dụng đang diễn ra trong hệ sinh thái đa kênh nào?",
+          "description_vi": "Vẽ bản đồ toàn cảnh các điểm chạm (touchpoints) vật lý, số hóa và xã hội mà người dùng tương tác trong suốt chu kỳ trải nghiệm.",
+          "examples_vi": [
+            "Trải nghiệm khám chữa bệnh kết hợp đặt lịch trên ứng dụng, nhận thuốc tại quầy tự động và tư vấn từ xa sau điều trị."
+          ]
+        },
+        {
+          "level": "supersystem",
+          "time": "future",
+          "label_vi": "Môi trường tương tác thấu cảm và trải nghiệm cộng tác con người - AI",
+          "label_en": "Future Supersystem",
+          "prompt_vi": "Môi trường sống hòa nhập và các giao diện vô hình sẽ đón đầu nhu cầu cảm xúc và thể chất của cộng đồng ra sao?",
+          "description_vi": "Dự báo không gian sống và làm việc nơi công nghệ ẩn mình vào bối cảnh, chủ động thích ứng với trạng thái tâm sinh lý con người.",
+          "examples_vi": [
+            "Không gian học tập tích hợp ánh sáng và âm học tự điều chỉnh theo mức độ tập trung và trạng thái cảm xúc của nhóm học sinh."
+          ]
+        },
+        {
+          "level": "system",
+          "time": "past",
+          "label_vi": "Giải pháp sản phẩm thế hệ trước và sự thiếu vắng thấu cảm sâu",
+          "label_en": "Past System",
+          "prompt_vi": "Các giải pháp trước đây đã giải quyết vấn đề thuần túy theo góc nhìn kỹ thuật mà bỏ quên cảm xúc người dùng như thế nào?",
+          "description_vi": "Phân tích nguyên nhân khiến các thiết kế cũ bị người dùng từ chối hoặc sử dụng sai công năng do thiếu sự lắng nghe và thấu cảm.",
+          "examples_vi": [
+            "Máy chụp cộng hưởng từ (MRI) tạo tiếng ồn lớn gây hoảng loạn cho bệnh nhi, buộc phải gây mê trước khi chụp."
+          ]
+        },
+        {
+          "level": "system",
+          "time": "present",
+          "label_vi": "Điểm đau nhức nhối và nhu cầu tiềm ẩn của người dùng hiện tại",
+          "label_en": "Present System",
+          "prompt_vi": "Đâu là điểm đau (pain point) sâu sắc nhất và nhu cầu tiềm ẩn (latent need) chưa từng được nói ra của người dùng mục tiêu?",
+          "description_vi": "Xác định câu lệnh 'Làm thế nào chúng ta có thể...' (How Might We) từ việc quan sát thực địa và phỏng vấn chuyên sâu đối tượng thụ hưởng.",
+          "examples_vi": [
+            "Bệnh nhân tiểu đường không chỉ cần đo đường huyết chính xác mà khao khát thoát khỏi sự kỳ thị khi phải tiêm insulin nơi công cộng."
+          ]
+        },
+        {
+          "level": "system",
+          "time": "future",
+          "label_vi": "Trải nghiệm cá nhân hóa trực giác và trao quyền trọn vẹn tương lai",
+          "label_en": "Future System",
+          "prompt_vi": "Sản phẩm/dịch vụ tương lai sẽ mang lại cảm giác làm chủ, thỏa mãn cảm xúc và truyền cảm hứng hành động như thế nào?",
+          "description_vi": "Thiết kế giải pháp lý tưởng nơi người dùng không cảm thấy nỗ lực học hỏi (zero learning curve) và hoàn toàn tin tưởng vào hệ thống.",
+          "examples_vi": [
+            "Thiết bị theo dõi sức khỏe không xâm lấn dạng miếng dán da sinh học cung cấp khuyến nghị dinh dưỡng tự nhiên như một người bạn đồng hành."
+          ]
+        },
+        {
+          "level": "subsystem",
+          "time": "past",
+          "label_vi": "Các điểm chạm vật lý đơn lẻ và biểu mẫu tiếp nhận cổ điển",
+          "label_en": "Past Subsystem",
+          "prompt_vi": "Các nút bấm vật lý, tờ hướng dẫn sử dụng và biểu mẫu khảo sát ý kiến xưa có tạo ra rào cản nhận thức nào?",
+          "description_vi": "Xem xét các thành phần vi mô gây ức chế thị giác hoặc khó thao tác cho người già, trẻ em hay người yếu thế.",
+          "examples_vi": [
+            "Bảng điều khiển lò vi sóng với hàng chục nút bấm ma trận chữ nhỏ khiến người dùng chỉ sử dụng duy nhất một nút khởi động nhanh."
+          ]
+        },
+        {
+          "level": "subsystem",
+          "time": "present",
+          "label_vi": "Tương tác vi mô, giao diện người dùng và tính tiện dụng hiện hành",
+          "label_en": "Present Subsystem",
+          "prompt_vi": "Từng chi tiết giao diện (UI), tín hiệu âm thanh và phản hồi xúc giác (haptics) đang hướng dẫn hành vi người dùng ra sao?",
+          "description_vi": "Đánh giá tính tiện dụng (affordance), tính công thái học và khả năng tự giải thích của từng nút bấm, trường nhập liệu hay chi tiết cầm nắm.",
+          "examples_vi": [
+            "Nút xác nhận thanh toán có độ trễ rung nhẹ trên màn hình cảm ứng để tạo cảm giác an tâm hoàn tất giao dịch cho người cao tuổi."
+          ]
+        },
+        {
+          "level": "subsystem",
+          "time": "future",
+          "label_vi": "Giao diện thần kinh tự nhiên và vi mẫu thử nghiệm tức thì",
+          "label_en": "Future Subsystem",
+          "prompt_vi": "Các vi điểm chạm đa giác quan và công cụ tạo mẫu nguyên mẫu nhanh (rapid micro-prototypes) sẽ tương thích với cơ thể ra sao?",
+          "description_vi": "Mô hình hóa các tương tác trực tiếp qua sóng não, cử chỉ ánh mắt hoặc xúc giác không gian ảo để kiểm thử phản ứng tức thì.",
+          "examples_vi": [
+            "Giao diện điều khiển kính thực tế hỗn hợp phản hồi theo chuyển động đồng tử và nhịp chớp mắt tự nhiên của bác sĩ phẫu thuật."
+          ]
+        }
+      ]
+    },
+    "lean_startup": {
+      "lens_title": "Lăng kính Khởi nghiệp Tinh gọn",
+      "description": "Phân tích theo tư duy kiểm chứng giả thuyết (Hypothesis-Driven Innovation): vòng lặp Xây dựng - Đo lường - Học hỏi (Build-Measure-Learn), sản phẩm khả thi tối thiểu (MVP) và quyết định Tăng tốc hoặc Chuyển hướng (Pivot).",
+      "windows": [
+        {
+          "level": "supersystem",
+          "time": "past",
+          "label_vi": "Rào cản thị trường truyền thống và chu kỳ đầu tư nặng nề xưa",
+          "label_en": "Past Supersystem",
+          "prompt_vi": "Quy trình lập kế hoạch kinh doanh 5 năm và nhu cầu vốn đầu tư hạ tầng lớn trước đây đã kìm hãm tốc độ đổi mới thế nào?",
+          "description_vi": "Phân tích sự rủi ro của phương pháp phát triển sản phẩm đóng cửa (waterfall) khiến doanh nghiệp phá sản trước khi tiếp cận khách hàng đầu tiên.",
+          "examples_vi": [
+            "Doanh nghiệp phần mềm đóng gói trên đĩa CD mất 2 năm phát triển và hàng triệu đô chi phí phân phối vật lý trước khi biết thị trường không cần."
+          ]
+        },
+        {
+          "level": "supersystem",
+          "time": "present",
+          "label_vi": "Động lực cạnh tranh linh hoạt và kênh phân phối số hóa hiện thời",
+          "label_en": "Present Supersystem",
+          "prompt_vi": "Môi trường khởi nghiệp năng động, điện toán đám mây và các kênh phân phối trực tiếp tới người dùng (D2C) đang tạo lợi thế gì?",
+          "description_vi": "Khảo sát cơ sở hạ tầng SaaS, các kênh quảng cáo số và mạng lưới tiếp thị liên kết cho phép đưa thử nghiệm ra thị trường trong vài ngày.",
+          "examples_vi": [
+            "Sử dụng landing page kiểm tra nhu cầu đặt trước (pre-order) qua mạng xã hội để đo lường dung lượng thị trường trước khi sản xuất hàng loạt."
+          ]
+        },
+        {
+          "level": "supersystem",
+          "time": "future",
+          "label_vi": "Hệ sinh thái thử nghiệm mở và mô hình kinh doanh phân tán tương lai",
+          "label_en": "Future Supersystem",
+          "prompt_vi": "Các nền tảng hợp tác mở và cơ chế cấp vốn vi mô tự động sẽ thúc đẩy tốc độ kiểm chứng thị trường ra sao?",
+          "description_vi": "Dự báo môi trường kinh doanh nơi các hợp đồng thông minh và tổ chức tự trị phi tập trung (DAO) cho phép huy động vốn và kiểm chứng ý tưởng toàn cầu.",
+          "examples_vi": [
+            "Cộng đồng người dùng trực tiếp tài trợ vi mô và bỏ phiếu định hình tính năng sản phẩm thông qua biểu quyết phân tán theo thời gian thực."
+          ]
+        },
+        {
+          "level": "system",
+          "time": "past",
+          "label_vi": "Sản phẩm hoàn thiện cồng kềnh và cái bẫy hoàn hảo hóa ban đầu",
+          "label_en": "Past System",
+          "prompt_vi": "Thế hệ sản phẩm trước đã sa vào bẫy bổ sung quá nhiều tính năng mà không kiểm chứng sự sẵn sàng chi trả của khách hàng ra sao?",
+          "description_vi": "Nhận diện các trường hợp sản phẩm hoàn mỹ về mặt kỹ thuật nhưng thất bại hoàn toàn về mặt thương mại do không có người mua.",
+          "examples_vi": [
+            "Dự án điện thoại vệ tinh Iridium tiêu tốn 5 tỷ USD xây dựng chùm vệ tinh nhưng máy quá to và giá cước quá đắt với người dùng phổ thông."
+          ]
+        },
+        {
+          "level": "system",
+          "time": "present",
+          "label_vi": "Sản phẩm khả thi tối thiểu và vòng lặp Học hỏi được kiểm chứng",
+          "label_en": "Present System",
+          "prompt_vi": "Đâu là phiên bản MVP đơn giản nhất đủ để bắt đầu vòng lặp Xây dựng - Đo lường - Học hỏi với chi phí và thời gian tối thiểu?",
+          "description_vi": "Xác định giả thuyết rủi ro nhất (giả thuyết giá trị hoặc giả thuyết tăng trưởng) cần kiểm chứng bằng dữ liệu hành vi thực tế thay vì khảo sát suông.",
+          "examples_vi": [
+            "Mẫu thử dạng Wizard of Oz: nhân viên thực hiện thủ công toàn bộ quy trình hậu cần phía sau website để kiểm chứng nhu cầu giao đồ giặt là."
+          ]
+        },
+        {
+          "level": "system",
+          "time": "future",
+          "label_vi": "Động cơ tăng trưởng bền vững và năng lực thích ứng chuyển hướng",
+          "label_en": "Future System",
+          "prompt_vi": "Hệ thống sẽ vận hành động cơ tăng trưởng (Engine of Growth) nào để mở rộng quy mô mà không đánh mất tính tinh gọn?",
+          "description_vi": "Thiết kế kiến trúc sản phẩm có thể chuyển hướng (Pivot) nhanh chóng về phân khúc khách hàng hoặc kênh phân phối khi thị trường bão hòa.",
+          "examples_vi": [
+            "Nền tảng truyền thông nội bộ chuyển hướng thành công cụ cộng tác trực tuyến phổ quát nhờ nhận diện luồng tăng trưởng hữu cơ mạnh mẽ."
+          ]
+        },
+        {
+          "level": "subsystem",
+          "time": "past",
+          "label_vi": "Chỉ số ảo tưởng và ghi nhận dữ liệu doanh số gián tiếp xưa",
+          "label_en": "Past Subsystem",
+          "prompt_vi": "Các báo cáo tài chính cuối quý và chỉ số viếng thăm bề mặt trước đây đã che giấu sự thờ ơ của khách hàng thế nào?",
+          "description_vi": "Xem xét tác hại của các chỉ số phù phiếm (Vanity Metrics: lượt xem trang, lượt tải app không hoạt động) gây ảo tưởng về sự thành công.",
+          "examples_vi": [
+            "Đếm số lượt đăng ký tài khoản miễn phí để báo cáo tăng trưởng trong khi tỷ lệ người dùng quay lại sau 7 ngày bằng không."
+          ]
+        },
+        {
+          "level": "subsystem",
+          "time": "present",
+          "label_vi": "Chỉ số hành vi khả thi và công cụ đo lường phễu chuyển đổi hiện hành",
+          "label_en": "Present Subsystem",
+          "prompt_vi": "Từng tính năng của MVP đang được đo lường bằng chỉ số hành động (Actionable Metric) và tỷ lệ chuyển đổi nào?",
+          "description_vi": "Thiết lập các phễu phân tích tổ hợp (cohort analysis), kiểm thử A/B và chỉ số kích hoạt (activation / retention) cho từng đơn vị tính năng.",
+          "examples_vi": [
+            "Theo dõi tỷ lệ người dùng hoàn thành ít nhất 3 lượt lưu ghi chú trong 24 giờ đầu để xác định ngưỡng chuyển đổi từ tò mò sang gắn bó."
+          ]
+        },
+        {
+          "level": "subsystem",
+          "time": "future",
+          "label_vi": "Thử nghiệm thích ứng tự động và cảm biến đo lường giá trị biên",
+          "label_en": "Future Subsystem",
+          "prompt_vi": "Các phân hệ thuật toán có khả năng tự động tối ưu hóa giá trị và thử nghiệm tính năng liên tục theo thời gian thực ra sao?",
+          "description_vi": "Mô hình hóa các phân hệ tự động phân phối tính năng mới cho các nhóm thử nghiệm nhỏ (canary release) và tự hủy nếu chỉ số gắn kết sụt giảm.",
+          "examples_vi": [
+            "Thuật toán định giá động tự động thử nghiệm mức phí vi mô theo mức độ sử dụng tính năng và tối ưu hóa doanh thu biên theo thời gian thực."
+          ]
+        }
+      ]
     }
   }
 }

@@ -39,6 +39,7 @@ from app.services.session_export_service import (
 )
 from app.services.session_import_service import import_session_from_json
 from app.services.domain_templates import get_all_templates, get_template_by_id
+from app.services.workflow_profiles import get_workflow_profiles
 from app.services.workflow_engine import (
     InvalidTransitionError,
     WorkflowEngine,
@@ -546,6 +547,16 @@ async def list_domain_templates():
     return {
         "data": templates,
         "meta": {"total": len(templates)},
+    }
+
+
+@router.get("/workflow-profiles", status_code=status.HTTP_200_OK)
+async def list_workflow_profiles():
+    """Lấy danh sách các cấu hình quy trình nghiên cứu (Workflow Profiles — Batch C35)."""
+    profiles = get_workflow_profiles()
+    return {
+        "data": profiles,
+        "meta": {"total": len(profiles)},
     }
 
 

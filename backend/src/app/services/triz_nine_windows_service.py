@@ -20,7 +20,14 @@ from typing import Any
 
 logger = logging.getLogger(__name__)
 
-_VALID_LENSES = ("engineering", "business", "everyday")
+_VALID_LENSES = (
+    "engineering",
+    "business",
+    "everyday",
+    "systems_thinking",
+    "design_thinking",
+    "lean_startup",
+)
 _VALID_LEVELS = ("supersystem", "system", "subsystem")
 _VALID_TIMES = ("past", "present", "future")
 
