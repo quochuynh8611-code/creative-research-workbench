@@ -1,6 +1,6 @@
 # ADR-012: KIẾN TRÚC AI SOLUTION COACH & HUMAN-CONTROLLED GROUNDED SUGGESTIONS
 
-**Trạng thái:** Proposed (Đang trình duyệt Founder)  
+**Trạng thái:** Accepted (Đã phê duyệt và triển khai qua PR #66, PR #67)  
 **Ngày:** 2026-11-17  
 **Phạm vi:** Backend AI Services, API REST Gateway, Frontend Session Workspace  
 **Tác giả:** Senior AI Product Engineer / Technical Architect  

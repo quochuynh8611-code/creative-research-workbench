@@ -198,6 +198,18 @@ created: "2026-07-03"
 
 - [x] **PR 1: Backend AI Safety & Status API** (Branch: `feat/c30-backend-ai-safety`, PR #63 merged vào `main` tại `0116765056993e738cb955ec1e1d233db2e03dc5`; verified: `GET /api/v1/system/ai-status` bảo mật, Ollama client, global exception shield, 518/518 backend tests PASS).
 - [x] **PR 2: Frontend UX, Onboarding Banner & Confirmation Dialogs** (Branch: `feat/c30-frontend-onboarding-ux`, PR #64 merged vào `main` tại `7811be584d197335a6f3266f1be07a0042758f02`; verified: `AIStatusBadge` kết nối `/ai-status`, `OnboardingWorkflowBanner` 6 bước TRIZ với quy tắc template fallback logistics -> nutrition -> error, `ConfirmationModal` trước khi xóa Solution và Note, 66/66 web suites, 767/767 tests PASS).
-- [ ] **PR 3: Docs & Operations Runbook** (Branch: `docs/c30-deployment-runbook`; phạm vi: chuẩn hóa `.env.example`, nâng cấp `docs/DEPLOYMENT_GUIDE.md` thành Standard Operating Runbook toàn diện với backup SHA-256 / restore / rollback / smoke test, rà soát Docker plan & gap docs) — **IN PROGRESS**.
+- [x] **PR 3: Docs & Operations Runbook** (Branch: `docs/c30-deployment-runbook`, PR #65 merged vào `main` tại `575221847b2b32d4f563dbc86a22f53688132776`; verified: chuẩn hóa `.env.example`, nâng cấp `docs/DEPLOYMENT_GUIDE.md` thành Standard Operating Runbook toàn diện với backup SHA-256 / restore / rollback / smoke test, rà soát Docker plan & gap docs).
 
-**Acceptance Gate:** Batch C30 Acceptance Gate sẽ được đánh dấu hoàn tất sau khi PR 3 được merge và 3/3 checks CI trên `main` PASS.
+**Acceptance Gate:** Batch C30 Acceptance Gate PASS 100% ✅ (PR #63, PR #64, PR #65 đã merge và 3/3 checks CI trên `main` PASS).
+
+---
+
+## Phase 14 — Batch C31: AI Solution Coach
+**Goal:** Mở rộng AI Solution Coach thành trợ lý phân tích và gợi ý giải pháp theo ngữ cảnh TRIZ: gợi ý có căn cứ cứng (Hard Grounding), giới hạn tối đa 5 suggestions, fallback Rule-Based Heuristic xác định khi LLM offline/lỗi, và giao diện phê duyệt Human-in-the-Loop với ConfirmationModal.
+
+- [x] **PR 1: Backend AI Coach & Heuristic Fallback API** (Branch: `feat/c31-backend-ai-coach`, PR #66 merged vào `main` tại `3bcf44fbe740d7fa7f3eae4eed34a4c6cc53d415`; verified: `AICoachService`, `RuleBasedCoach`, `generate_coach_suggestions` trên Mock/OpenAI/Ollama, `POST /api/v1/sessions/{id}/coach/suggestions`, hard grounding filter, cap 5, zero db mutation, 11/11 new tests, 180 unit tests PASS).
+- [x] **PR 2: Frontend AI Coach Panel & Confirmation Dialogs** (Branch: `feat/c31-frontend-ai-coach-panel`, PR #67 merged vào `main` tại `a0458f27c6d3317125ce6cd383deee8d15fc0061`; verified: `AICoachPanel` 5 states, contract validation, cap 5 displayed với thông báo ưu tiên, chỉ solution_candidate có nút Lưu thành Giải pháp, confirmation modal trước khi lưu Solution/Note, dismiss local-only, 13/13 web tests PASS).
+- [ ] **PR 3: Docs, Runbook Smoke Test & Roadmap Finalization** (Branch: `docs/c31-ai-coach-runbook`; phạm vi: bổ sung smoke test an toàn cho AI Coach trong `docs/DEPLOYMENT_GUIDE.md`, cập nhật tiến độ Batch C31 trong `docs/IMPLEMENTATION_ROADMAP.md`, cập nhật `docs/ADR-012-ai-solution-coach.md`) — **IN PROGRESS**.
+
+**Acceptance Gate:** Batch C31 Acceptance Gate sẽ được đánh dấu hoàn tất sau khi PR 3 được merge và 3/3 checks CI trên `main` PASS.
+
