@@ -32,6 +32,9 @@ Do đó, Batch C33 cần thiết lập một kiến trúc trải nghiệm Onboar
 
 ### Quyết định 2: Công Cụ Nạp Dữ Liệu Demo Bất Đồng Bộ Qua REST API Kèm Anti-Production Guard
 - **Giải pháp:** Cung cấp script độc lập `backend/scripts/seed_demo_data.py` sử dụng `httpx.AsyncClient` kết nối vào backend local (`http://localhost:8000`).
+- **Giới hạn môi trường (Strict Local/Sandbox Constraint):**
+  - Script được thiết kế thuần túy cho môi trường phát triển cục bộ và sandbox phục vụ chuẩn bị demo.
+  - **ĐÂY KHÔNG PHẢI LÀ CÔNG CỤ NẠP DỮ LIỆU PRODUCTION.** Việc cấm dùng cho production là một giới hạn kiến trúc có chủ đích nhằm loại bỏ nguy cơ ô nhiễm dữ liệu thực.
 - **Giới hạn số lượng nạp (Strict Bounds):**
   - Chỉ seed chính xác **2 demo sessions**.
   - Mỗi session chỉ có đúng **1 problem frame**, tối đa **2 notes**, tối đa **2 candidate solutions**.
@@ -42,8 +45,13 @@ Do đó, Batch C33 cần thiết lập một kiến trúc trải nghiệm Onboar
 - **Chốt chặn an toàn (Anti-Production Guard):**
   - Script kiểm tra URL đích, chỉ chấp nhận hostname thuộc whitelist: `localhost`, `127.0.0.1`, `0.0.0.0`, `testserver`.
   - Mọi URL trỏ ra ngoài (staging, production domain, IP public) sẽ bị chặn ngay lập tức và raise `ValueError`.
-- **Tính lũy đẳng (Idempotency):**
-  - Script kiểm tra danh sách session hiện có; nếu đã tồn tại các session có tiêu đề bắt đầu bằng tiền tố `[DEMO]`, script bỏ qua không tạo trùng lặp.
+- **Tính lũy đẳng đa tiêu chí (Multi-criteria Idempotency):**
+  - Script kiểm tra danh sách session hiện có và đối chiếu cả 2 tiêu chí:
+    a) Session có tiền tố `[DEMO]` (kể cả khi người dùng đổi một phần tiêu đề) $\rightarrow$ Bỏ qua (skip).
+    b) Session có tiêu đề chính xác khớp với bài toán mẫu nhưng bị bỏ mất tiền tố `[DEMO]` $\rightarrow$ Bỏ qua (skip).
+  - Không bao giờ tạo trùng lặp dữ liệu trên cùng một sandbox.
+- **Bảo mật tuyệt đối (Zero Secret Leak):**
+  - Cả 2 định dạng xuất (Table và JSON) đều được lọc qua bộ che giấu token nhạy cảm (`mask_secrets_in_text`), đảm bảo không để lộ API keys hay Bearer tokens.
 
 ### Quyết định 3: Chuẩn Hóa Duy Nhất 1 Kịch Bản Demo 5 Phút Chuẩn Stakeholder (`docs/DEMO_SCRIPT.md`)
 - **Giải pháp:** Tài liệu hóa chi tiết **duy nhất 1 kịch bản thuyết trình 5 phút**, chia thành 5 mốc thời gian rõ ràng (0:00 - 5:00), không thêm nhiều scenario gây rối.
