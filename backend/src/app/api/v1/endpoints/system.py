@@ -9,12 +9,14 @@ Cung cấp:
 from __future__ import annotations
 
 import logging
+from typing import Any
 
 import httpx
 from fastapi import APIRouter
 from pydantic import BaseModel
 
 from app.core.config import settings
+from app.core.metrics import metrics_collector
 
 logger = logging.getLogger(__name__)
 
@@ -199,3 +201,13 @@ def get_ai_status() -> AIStatusResponse:
             fallback_active=fallback_active,
         )
     )
+
+
+@router.get("/metrics")
+def get_system_metrics() -> dict[str, Any]:
+    """
+    Truy vấn chỉ số vận hành (Internal Telemetry) của Workbench (Batch C32).
+    Chỉ track 4 endpoint ưu tiên, rolling buffer 1000 samples, zero secret leak.
+    """
+    return {"data": metrics_collector.get_summary()}
+
