@@ -144,16 +144,31 @@ Sau khi hoàn thành Batch C31 (AI Solution Coach & Safety Confirmation Dialogs)
 
 ## 4. Kế Hoạch Benchmark Cục Bộ (PR 2)
 
-- **Target Endpoints:** 4 endpoints ưu tiên.
-- **Ràng buộc kiểm thử:**
-  - Concurrency: `c <= 10`
-  - Tổng số requests: `n <= 100`
-  - Môi trường: Cục bộ / Sandbox (Mock mode hoặc Local Ollama). Tuyệt đối không chạy trên production.
-- **Tiêu chuẩn hoàn thành:**
-  - `GET /health`: $p95 < 25ms$, throughput > 50 req/s, error rate 0%.
-  - `GET /api/v1/sessions`: $p95 < 100ms$, error rate 0%.
-  - `GET /api/v1/system/ai-status`: $p95 < 50ms$, error rate 0%.
-  - `POST /api/v1/sessions/{id}/coach/suggestions`: $p95 < 200ms$ (Mock mode), error rate 0%.
+- **Target Endpoints:** 4 endpoints ưu tiên:
+  1. `GET /health`
+  2. `GET /api/v1/sessions`
+  3. `GET /api/v1/system/ai-status`
+  4. `POST /api/v1/sessions/{id}/coach/suggestions`
+- **CLI Runner:** `backend/scripts/benchmark.py`
+  - Tham số hỗ trợ:
+    - `--base-url`: URL server đích (mặc định: `http://localhost:8000`). Bắt buộc localhost / sandbox IP.
+    - `--concurrency`: Số workers đồng thời (mặc định: 5, giới hạn tối đa: 10).
+    - `--requests`: Tổng số requests mỗi endpoint (mặc định: 50, giới hạn tối đa: 100).
+    - `--endpoint`: Endpoint cần test (`all`, `health`, `sessions`, `ai_status`, `coach`, mặc định: `all`).
+    - `--output`: Định dạng báo cáo (`table` hoặc `json`, mặc định: `table`).
+- **Ràng Buộc An Toàn (Safety Guards):**
+  - Concurrency: $c \le 10$. Vượt quá sẽ raise validation error (`ValueError`).
+  - Tổng số requests: $n \le 100$. Vượt quá sẽ raise validation error (`ValueError`).
+  - Chống chạy trên Production (Anti-Production Guard): Runner chỉ chấp nhận URL localhost/sandbox (`localhost`, `127.0.0.1`, `0.0.0.0`, `testserver`). Mọi hostname khác như `https://api.crw-workbench.com`, `http://staging.crw-workbench.com`, `https://example.com` đều bị chặn lập tức và raise `ValueError`.
+  - Zero hard-coded secrets: Output (cả định dạng `table` lẫn `json`) và logs tuyệt đối không chứa unmasked token hay credentials. Runner tự động tái sử dụng Session ID hiện có trong sandbox nếu cần.
+  - Phạm vi thực thi: Benchmark chỉ chạy local/sandbox, KHÔNG phải công cụ stress test production. Đây là giới hạn có chủ đích để bảo vệ tài nguyên.
+- **Tiêu chuẩn hoàn thành & SLO Informational Baseline:**
+  > [!NOTE]
+  > Các ngưỡng SLO dưới đây đóng vai trò là **Informational Baseline**, KHÔNG phải hard gate để fail CI hoặc chặn merge. Môi trường local/container/CI runner thường xuyên có độ trễ biến thiên do tài nguyên phần cứng. Nếu p95 vượt ngưỡng, runner chỉ in cảnh báo (warning).
+  - `GET /health`: Baseline $p95 < 25ms$, throughput > 50 req/s, error rate 0%.
+  - `GET /api/v1/sessions`: Baseline $p95 < 100ms$, error rate 0%.
+  - `GET /api/v1/system/ai-status`: Baseline $p95 < 50ms$, error rate 0%.
+  - `POST /api/v1/sessions/{id}/coach/suggestions`: Baseline $p95 < 200ms$ (Mock/Fallback mode), error rate 0%.
 
 ---
 
