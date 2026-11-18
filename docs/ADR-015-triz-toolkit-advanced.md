@@ -61,6 +61,28 @@ Batch C34 cần tích hợp 3 phân hệ phương pháp luận nâng cao này v�
   6. Đánh giá Giải Pháp & Hoàn Thiện Ý Tưởng
 - **Lý do:** Giảm tải gánh nặng nhận thức cho người dùng hiện đại, biến quy trình học thuật thành một "Interactive Wizard" dễ sử dụng.
 
+### Quyết định 5: Bố Trí Trải Nghiệm Người Dùng Frontend Phân Tầng Theo Tab (UX Architecture PR 2)
+- **Giải pháp:**
+  - **ARIZ Stepper Panel:** Bố trí bên trong tab `structuring` (`NormalizedView`) dưới dạng **Collapsible Section** (tương tự `TrizNineWindows`). Người dùng có thể mở ra khi cần bóc tách bài toán phức tạp và thu gọn khi xem bài toán chuẩn hóa.
+  - **Evolution Patterns Explorer & Resource Analysis Panel:** Bố trí trong tab `ideation` (`session-detail.tsx`). Cung cấp các công cụ kích hoạt ý tưởng sáng tạo bổ sung bên cạnh Ma trận Mâu thuẫn 39x39 và Gợi ý Nguyên tắc.
+  - **Ghi chép liền mạch (1-Click Save Note):** Cả 3 components đều hỗ trợ callback `onSaveAsNote` truyền dữ liệu kèm `source_context` định danh nguồn (`triz_ariz`, `triz_evolution`, `triz_resource`), cho phép lưu giữ vết xuất xứ trọn vẹn trong `ResearchNotebook`.
+- **Lý do:** Không làm xáo trộn bố cục phân chia giai đoạn (Intake -> Structuring -> Retrieval -> Ideation -> Notebook -> Synthesis), đồng thời ngăn ngừa quá tải nhận thức trên một màn hình đơn lẻ.
+
+### Quyết định 6: Bốn Điều Chỉnh Bắt Buộc Của Founder Trước Khi Code (Founder Mandates)
+Theo chỉ thị phê duyệt từ Founder, kiến trúc hệ thống khóa chặt 4 bất biến sau:
+1. **ARIZ STEPPER CHỈ 6 BƯỚC, KHÔNG THÊM:**
+   - Giữ đúng 6 bước như spec đã nêu.
+   - Tuyệt đối KHÔNG mở rộng thành ARIZ đầy đủ 9 phần (40 bước) để tránh quá tải nhận thức người dùng.
+2. **EVOLUTION EXPLORER CHỈ 8 QUY LUẬT, KHÔNG THÊM:**
+   - Giữ đúng 8 quy luật Altshuller kinh điển.
+   - Tuyệt đối KHÔNG thêm quy luật nào khác ngoài 8 quy luật này.
+3. **RESOURCE PANEL CHỈ 5 TABS, KHÔNG THÊM:**
+   - Giữ đúng 5 nhóm tài nguyên (`substance`, `field`, `time`, `space`, `information`).
+   - Tuyệt đối KHÔNG thêm nhóm tài nguyên nào khác.
+4. **COMPONENTS CHỈ GỌI API READ-ONLY:**
+   - Toàn bộ frontend components (`ArizStepperPanel`, `EvolutionPatternsExplorer`, `ResourceAnalysisPanel`) chỉ gọi các API endpoints read-only (`GET /api/v1/triz/ariz-steps`, `GET /api/v1/triz/evolution-trends`, `GET /api/v1/triz/resource-taxonomy`).
+   - Tuyệt đối KHÔNG cho phép người dùng sửa đổi trực tiếp các file static JSON. Đây là sự **chấp nhận có chủ đích (Intentional Trade-off)**. Mọi đóng góp/ghi chú người dùng được lưu vào `research_notes` thông qua trường `source_context`.
+
 ---
 
 ## 3. Các Phương Án Bị Loại Bỏ (Rejected Alternatives)

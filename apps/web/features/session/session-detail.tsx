@@ -33,6 +33,8 @@ import { AICoachPanel } from '@/features/ideation/ai-coach-panel'
 import { EvidencePanel } from '@/features/retrieval/evidence-panel'
 import { TrizMatrixLookup } from '@/features/triz/triz-matrix-lookup'
 import { TrizMatrixPanel } from '@/features/triz/triz-matrix-panel'
+import { EvolutionPatternsExplorer } from '@/features/triz/evolution-patterns-explorer'
+import { ResourceAnalysisPanel } from '@/features/triz/resource-analysis-panel'
 import { ResearchNotebook } from '@/features/notebook/research-notebook'
 import { RelatedSessionsPanel } from '@/features/session/related-sessions-panel'
 import { EmbeddingStatusPanel } from '@/features/session/embedding-status-panel'
@@ -827,6 +829,12 @@ export function SessionDetail({ sessionId }: SessionDetailProps) {
             <PrincipleSuggestions
               methods={effectiveRecommendations}
               onSelectPrinciple={handleApplyPrincipleToSolution}
+              onSaveAsNote={handleSaveAsNote}
+            />
+            <EvolutionPatternsExplorer
+              onSaveAsNote={handleSaveAsNote}
+            />
+            <ResourceAnalysisPanel
               onSaveAsNote={handleSaveAsNote}
             />
             <AICoachPanel

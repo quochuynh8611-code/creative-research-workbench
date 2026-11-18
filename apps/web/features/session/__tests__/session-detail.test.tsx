@@ -49,6 +49,9 @@ jest.mock('@/lib/api-client', () => ({
   lookupTrizMatrix: jest.fn(),
   findRelatedSessions: jest.fn(),
   getTrizNineWindows: jest.fn(),
+  getTrizArizSteps: jest.fn().mockResolvedValue({ data: [], total_steps: 0 }),
+  getTrizEvolutionTrends: jest.fn().mockResolvedValue({ data: [], total_trends: 0 }),
+  getTrizResourceTaxonomy: jest.fn().mockResolvedValue({ data: [], total_categories: 0 }),
 }))
 
 const mockedGetSessionRecommendations = getSessionRecommendations as jest.MockedFunction<typeof getSessionRecommendations>

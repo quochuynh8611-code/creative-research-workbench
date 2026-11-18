@@ -36,6 +36,8 @@ import type {
   SessionTemplate,
   SessionTemplatesResponse,
   TrizAutoMapResponse,
+  TrizArizResponse,
+  TrizEvolutionResponse,
   TrizLookupQuery,
   TrizLookupResponse,
   TrizNineWindowsLens,
@@ -43,6 +45,7 @@ import type {
   TrizParameterMatch,
   TrizParametersResponse,
   TrizPrinciplesResponse,
+  TrizResourceTaxonomyResponse,
   UpdateCandidateSolutionInput,
   WorkflowRunResponse,
 } from './types'
@@ -517,6 +520,30 @@ export async function getAICoachSuggestions(sessionId: string): Promise<AICoachR
   const response = await apiClient.post<AICoachResponse>(
     `/api/v1/sessions/${sessionId}/coach/suggestions`
   )
+  return response.data
+}
+
+/**
+ * 38. Lấy danh mục 6 bước rút gọn của Thuật giải ARIZ (Batch C34 PR 2).
+ */
+export async function getTrizArizSteps(): Promise<TrizArizResponse> {
+  const response = await apiClient.get<TrizArizResponse>('/api/v1/triz/ariz-steps')
+  return response.data
+}
+
+/**
+ * 39. Lấy danh mục 8 quy luật tiến hóa kỹ thuật Altshuller (Batch C34 PR 2).
+ */
+export async function getTrizEvolutionTrends(): Promise<TrizEvolutionResponse> {
+  const response = await apiClient.get<TrizEvolutionResponse>('/api/v1/triz/evolution-trends')
+  return response.data
+}
+
+/**
+ * 40. Lấy danh mục 5 nhóm phân loại tài nguyên TRIZ cốt lõi (Batch C34 PR 2).
+ */
+export async function getTrizResourceTaxonomy(): Promise<TrizResourceTaxonomyResponse> {
+  const response = await apiClient.get<TrizResourceTaxonomyResponse>('/api/v1/triz/resource-taxonomy')
   return response.data
 }
 

@@ -14,6 +14,9 @@ const SOURCE_LABELS = {
   principle_suggestion: 'Gợi ý nguyên tắc',
   evidence: 'Bằng chứng',
   candidate_solution: 'Giải pháp ứng viên',
+  triz_ariz: 'Thuật giải ARIZ',
+  triz_evolution: 'Tiến hóa TRIZ',
+  triz_resource: 'Tài nguyên TRIZ',
 } as const
 
 const SOURCE_STYLES = {
@@ -27,6 +30,12 @@ const SOURCE_STYLES = {
     'bg-slate-50 text-slate-700 border-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700',
   candidate_solution:
     'bg-indigo-50 text-indigo-700 border-indigo-200 dark:bg-indigo-950/40 dark:text-indigo-300 dark:border-indigo-800',
+  triz_ariz:
+    'bg-rose-50 text-rose-700 border-rose-200 dark:bg-rose-950/40 dark:text-rose-300 dark:border-rose-800',
+  triz_evolution:
+    'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-800',
+  triz_resource:
+    'bg-cyan-50 text-cyan-700 border-cyan-200 dark:bg-cyan-950/40 dark:text-cyan-300 dark:border-cyan-800',
 } as const
 
 const CANDIDATE_STATUS_LABELS = {
@@ -58,6 +67,12 @@ function formatSourceTooltip(data: NoteSourceContext): string {
       }
       return `Giải pháp ứng viên: ${statusLabel}`
     }
+    case 'triz_ariz':
+      return `Thuật giải ARIZ: Bước #${data.step_number} - ${data.step_name}`
+    case 'triz_evolution':
+      return `Tiến hóa TRIZ: ${data.trend_name} (${data.trend_id})`
+    case 'triz_resource':
+      return `Tài nguyên TRIZ: ${data.resource_name} (${data.resource_type})`
   }
 }
 

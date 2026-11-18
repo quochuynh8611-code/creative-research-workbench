@@ -44,6 +44,9 @@ export type SourceFilter =
   | 'principle_suggestion'
   | 'evidence'
   | 'candidate_solution'
+  | 'triz_ariz'
+  | 'triz_evolution'
+  | 'triz_resource'
   | 'manual'
 
 const SOURCE_FILTER_OPTIONS: { key: SourceFilter; label: string }[] = [
@@ -53,6 +56,9 @@ const SOURCE_FILTER_OPTIONS: { key: SourceFilter; label: string }[] = [
   { key: 'principle_suggestion', label: 'Gợi ý nguyên tắc' },
   { key: 'evidence', label: 'Bằng chứng' },
   { key: 'candidate_solution', label: 'Giải pháp ứng viên' },
+  { key: 'triz_ariz', label: 'Thuật giải ARIZ' },
+  { key: 'triz_evolution', label: 'Tiến hóa TRIZ' },
+  { key: 'triz_resource', label: 'Tài nguyên TRIZ' },
   { key: 'manual', label: 'Thủ công' },
 ]
 
@@ -298,6 +304,9 @@ export function ResearchNotebook({
     principle_suggestion: 0,
     evidence: 0,
     candidate_solution: 0,
+    triz_ariz: 0,
+    triz_evolution: 0,
+    triz_resource: 0,
     manual: 0,
   }
 
