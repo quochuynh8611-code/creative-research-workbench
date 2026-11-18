@@ -359,6 +359,17 @@ class AICoachService:
         latency_ms = round((time.perf_counter() - start_time) * 1000, 2)
         summary = str(raw_output.get("summary") or "AI Solution Coach hoàn thành phân tích phiên nghiên cứu.")
 
+        # Ghi nhận Telemetry vào Metrics Collector (Batch C32)
+        try:
+            from app.core.metrics import metrics_collector
+            metrics_collector.record_coach_call(
+                provenance=provenance,
+                latency_ms=latency_ms,
+                fallback_reason=fallback_reason,
+            )
+        except Exception as metric_err:
+            logger.debug("Failed to record coach metrics: %s", metric_err)
+
         return AICoachResult(
             session_id=str(session_id),
             summary=summary,
