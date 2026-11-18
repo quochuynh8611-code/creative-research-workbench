@@ -4,7 +4,7 @@
 **Phiên bản:** v1.0.0 (Batch C33 — Productization & Onboarding)  
 **Tác giả:** Senior Product Engineer / UX Engineer  
 **Ngày:** 2026-11-18  
-**Trạng thái:** Draft for Founder Review (Human-in-the-Loop)  
+**Trạng thái:** PR 1 Merged (PR #72), PR 2 Spec & Test-First Phase  
 
 ---
 
@@ -42,6 +42,7 @@ Tuy nhiên, khi tiếp cận người dùng mới hoặc trình diễn sản ph�
    - **Lưu ý về localStorage:** Trạng thái dismiss được lưu client-side; việc cờ này có thể bị reset khi người dùng xóa cache hoặc đổi trình duyệt là sự **chấp nhận có chủ đích** nhằm giữ hệ thống tinh gọn, không cần lưu trữ trạng thái onboarding vào database.
 2. **Sample Data Seeder (`backend/scripts/seed_demo_data.py`):**
    - Script CLI độc lập chạy qua `httpx.AsyncClient` kết nối vào backend local (`http://localhost:8000`).
+   - **Chỉ Chạy Local/Sandbox (Intentional Boundary):** Seeder được thiết kế thuần túy cho môi trường phát triển cục bộ và sandbox; đây KHÔNG PHẢI là công cụ nạp dữ liệu production.
    - Anti-Production Guard: Chỉ cho phép chạy với hostname trong `ALLOWED_HOSTS = {"localhost", "127.0.0.1", "0.0.0.0", "testserver"}`.
    - **Giới hạn số lượng nạp (Strict Seeder Bounds):**
      - Chỉ seed chính xác **2 demo sessions**.
@@ -49,7 +50,13 @@ Tuy nhiên, khi tiếp cận người dùng mới hoặc trình diễn sản ph�
      - KHÔNG nạp quá nhiều dữ liệu gây loãng hay rối phiên làm việc.
      - **Mẫu 1 (Business):** Tối ưu hóa Tốc độ Giao hàng & Chi phí Logistics chặng cuối (1 frame, 2 notes, 2 candidate solutions).
      - **Mẫu 2 (Software/Technical):** Tăng cường Bảo mật Đa tầng & Tối ưu Hóa Độ trễ API (1 frame, 1 note, 1 candidate solution).
-   - Tính lũy đẳng (Idempotency): Kiểm tra trùng tiêu đề trước khi tạo, tránh nhân bản dữ liệu khi chạy nhiều lần.
+   - **Tính lũy đẳng đa tầng (Multi-criteria Idempotency):**
+     - Kiểm tra kết hợp cả tiền tố `[DEMO]` và tiêu đề chính xác (với hoặc không có tiền tố `[DEMO]`).
+     - Tự động bỏ qua (skip) nếu:
+       a) Phiên đã có tiền tố `[DEMO]` (kể cả khi người dùng đổi một phần tiêu đề).
+       b) Phiên có tiêu đề chính xác khớp với bài toán mẫu nhưng bị bỏ mất tiền tố `[DEMO]`.
+     - Tuyệt đối không tạo trùng lặp dữ liệu.
+   - **Không rò rỉ Secret (Zero Secret Leak):** Cả định dạng hiển thị Table và JSON đều được lọc qua bộ mặt nạ bảo mật (`mask_secrets_in_text`).
 3. **Demo Script (`docs/DEMO_SCRIPT.md`):**
    - **Giới hạn kịch bản:** Chỉ duy nhất **1 kịch bản demo 5 phút** chuẩn mực, không thêm nhiều scenario phức tạp.
    - Script tài liệu hóa mốc thời gian rõ ràng (0:00 - 5:00) từ mở app ➔ tạo session ➔ phân tích ➔ AI Coach ➔ lưu solution ➔ export.
@@ -233,9 +240,9 @@ Feature: Welcome Onboarding & Demo Productization
 
 ## 10. Đề Xuất Chiến Lược Phân Rã PR (Batch C33)
 
-- **PR 1: `feat(ux): welcome onboarding modal and quick-start flow`**
+- **PR 1: `feat(ux): welcome onboarding modal and quick-start flow`** [x] DONE (Merged PR #72)
   - Component `WelcomeOnboardingModal`, tích hợp nút replay trên `SessionList`, unit tests trên Next.js/React.
-- **PR 2: `feat(ops): demo data seeder and stakeholder demo script`**
+- **PR 2: `feat(ops): demo data seeder and stakeholder demo script`** [/] IN PROGRESS
   - CLI script `backend/scripts/seed_demo_data.py`, unit test seeder, tài liệu `docs/DEMO_SCRIPT.md`.
-- **PR 3: `docs(product): Batch C33 productization finalization & roadmap update`**
+- **PR 3: `docs(product): Batch C33 productization finalization & roadmap update`** [ ] PLANNED
   - Cập nhật deployment guide, roadmap Batch C33, chuyển ADR-014 sang `Accepted`.
