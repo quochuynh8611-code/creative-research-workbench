@@ -41,9 +41,15 @@ Creative Research Workbench đã hoàn thành triển khai tính năng AI Soluti
 ### Quyết định 4: Đo Lường Fallback Riêng Cho AI Solution Coach
 - **Giải pháp:** Ghi nhận trực tiếp vào Metrics Collector khi `AICoachService` kích hoạt `RuleBasedCoach` fallback, kèm theo lý do (`LLMTimeout`, `HTTP429`, `InvalidJSON`, `EmptySuggestions`).
 
-### Quyết định 5: Local Benchmark Suite Bị Giới Hạn Tải
+### Quyết định 5: Local Benchmark Suite Bị Giới Hạn Tải & Anti-Production Guard
 - **Giải pháp:** Cung cấp script độc lập `backend/scripts/benchmark.py` sử dụng `httpx.AsyncClient`.
-- **Ràng buộc:** Chỉ chạy đối với 4 endpoint ưu tiên trên môi trường local/sandbox; concurrency tối đa là `10`, số request tối đa là `100`. Tuyệt đối không chạy load test đối với production.
+- **Ràng buộc kiểm thử & Giới hạn có chủ đích:**
+  - Benchmark chỉ chạy local/sandbox, **KHÔNG** phải công cụ stress test production. Đây là giới hạn có chủ đích để bảo vệ tài nguyên và loại trừ hoàn toàn nguy cơ tác động tới hạ tầng live.
+  - Chỉ đo kiểm 4 endpoint ưu tiên (`/health`, `/sessions`, `/ai-status`, `/coach/suggestions`).
+  - Concurrency tối đa $c \le 10$, số request tối đa $n \le 100$. Quá giới hạn sẽ raise `ValueError`.
+  - Tích hợp chốt chặn an toàn (Anti-Production Guard): Runner chỉ chấp nhận URL localhost/sandbox (`127.0.0.1`, `localhost`, `0.0.0.0`, `testserver`). Mọi URL/domain khác (ví dụ: `https://api.crw-workbench.com`, `http://staging.crw-workbench.com`, `https://example.com`) đều bị chặn ngay lập tức và raise `ValueError`.
+  - Hỗ trợ tham số `--endpoint` và `--output` (báo cáo bảng ASCII hoặc JSON), zero hard-coded secrets. Cả 2 định dạng `table` và `json` đều được kiểm tra nghiêm ngặt không chứa token/secret.
+  - **SLO là Informational Baseline, không phải Hard Gate:** Do môi trường dev/container có độ trễ biến thiên và tài nguyên phần cứng khác nhau, các ngưỡng p95 không dùng làm hard gate để fail CI hay chặn merge mà chỉ in cảnh báo (warning) nếu vượt ngưỡng.
 
 ---
 
