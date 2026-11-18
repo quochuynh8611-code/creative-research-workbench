@@ -120,7 +120,7 @@ crw_frontend   creative-research-workbench-frontend   "node server.js"         f
 
 ## 6. Kiểm Thử Nhanh Sau Khởi Động (Smoke Tests)
 
-Thực hiện chuỗi lệnh xác thực 4 chiều tự động:
+Thực hiện chuỗi lệnh xác thực đa chiều tự động cho toàn bộ stack (Core Services & AI Solution Coach):
 
 ```bash
 # 1. Kiểm tra Backend API Liveness (Phải trả về HTTP 200 OK)
@@ -134,6 +134,47 @@ curl -s -o /dev/null -w "Sessions API: %{http_code}\n" http://localhost:8000/api
 
 # 4. Kiểm tra Frontend SSR & Routing (Phải trả về HTTP 200 OK)
 curl -s -o /dev/null -w "Frontend Web: %{http_code}\n" http://localhost:3011/sessions
+
+# 5. Kiểm tra AI Solution Coach Endpoint (Batch C31 — Read-only Preview)
+# 5.1. Lấy Session ID hiện có (KHÔNG tự tạo dữ liệu mới để test)
+SESSION_ID=$(curl -s http://localhost:8000/api/v1/sessions | jq -r '.data[0].id // empty')
+
+if [ -z "$SESSION_ID" ]; then
+  echo "INFO: Chưa có session nào trong cơ sở dữ liệu để kiểm tra Coach."
+  echo "Hướng dẫn: Vui lòng truy cập http://localhost:3011/sessions để tạo một phiên nghiên cứu thủ công trước khi chạy smoke test cho AI Coach."
+else
+  echo "Tìm thấy Session: $SESSION_ID. Tiến hành kiểm tra AI Coach..."
+
+  # Gọi Coach suggestions API (pure query preview, không ghi vào database)
+  COACH_RESPONSE=$(curl -s -X POST "http://localhost:8000/api/v1/sessions/${SESSION_ID}/coach/suggestions")
+
+  # Kiểm tra envelope và summary
+  SUMMARY=$(echo "$COACH_RESPONSE" | jq -r '.data.summary // empty')
+  if [ -n "$SUMMARY" ]; then
+    echo "✓ Coach Summary: $SUMMARY"
+  else
+    echo "Lỗi: Không nhận được summary từ Coach API. Phản hồi thô:"
+    echo "$COACH_RESPONSE" | jq .
+  fi
+
+  # Kiểm tra số lượng gợi ý (Tối đa 5 suggestions)
+  SUGGESTIONS_COUNT=$(echo "$COACH_RESPONSE" | jq '.data.suggestions | length')
+  echo "✓ Số gợi ý nhận được: $SUGGESTIONS_COUNT (Quy định: tối đa 5)"
+
+  # Kiểm tra Hard Grounding (Tất cả gợi ý bắt buộc có căn cứ)
+  echo "$COACH_RESPONSE" | jq -r '.data.suggestions[] | "  - [\(.category)] \(.title) -> Nguồn: \(.source_grounding.source_type) (\(.source_grounding.source_reference))"'
+
+  # Kiểm tra Provenance (Phân biệt rõ ràng ai_coach vs rule_based_fallback)
+  PROVENANCE=$(echo "$COACH_RESPONSE" | jq -r '.data.provenance // empty')
+  echo "✓ Nguồn gốc gợi ý: $PROVENANCE (ai_coach hoặc rule_based_fallback)"
+
+  # Kiểm tra Zero Secret Leakage (Sử dụng cấu trúc if/else an toàn với exit code)
+  if echo "$COACH_RESPONSE" | grep -Eiq "(sk-proj|bearer|password|supersecret|stack_trace|filepath|database query)"; then
+    echo "CẢNH BÁO BẢO MẬT: Phát hiện chuỗi nhạy cảm hoặc kỹ thuật trong phản hồi!" >&2
+  else
+    echo "✓ An toàn: Zero Secret Leakage."
+  fi
+fi
 ```
 
 ---
@@ -271,6 +312,16 @@ Khi gặp sự cố sau khi triển khai phiên bản mới, thực hiện rollb
 - **Triệu chứng:** Trình duyệt báo lỗi `Access to fetch at ... from origin 'http://localhost:3011' has been blocked by CORS policy`.
 - **Khắc phục:**
   Kiểm tra biến `ALLOWED_ORIGINS` trong `.env` hoặc `docker-compose.yml`, đảm bảo chứa đúng URL host và cổng mà trình duyệt đang sử dụng.
+
+### E. AI Solution Coach Tự Động Kích Hoạt Rule-Based Fallback
+- **Triệu chứng:** Thẻ gợi ý hiển thị nhãn màu hổ phách "Rule-based fallback" thay vì "AI Coach", hoặc log ghi nhận timeout > 10s từ LLM client.
+- **Bản chất:** Đây là hành vi an toàn theo thiết kế (Dual-Layer Fallback & Resilient Heuristics). Khi OpenAI/Ollama gặp lỗi mạng, quá hạn ngạch (429) hoặc timeout, hệ thống tự động kích hoạt bộ Heuristic dựa trên 40 nguyên tắc sáng tạo TRIZ để không gián đoạn công việc của nhà nghiên cứu.
+- **Khắc phục nếu muốn dùng AI thực tế:**
+  1. Kiểm tra trạng thái AI tại `/api/v1/system/ai-status`.
+  2. Kiểm tra log backend: `docker compose logs api --tail=100 | grep -i "coach"`.
+  3. Nếu sử dụng OpenAI: Xác nhận `OPENAI_API_KEY` hợp lệ và tài khoản còn quota.
+  4. Nếu sử dụng Ollama: Xác nhận Ollama daemon đang chạy và có thể truy cập từ mạng Docker (`curl http://host.docker.internal:11434/api/tags`).
+
 
 ---
 

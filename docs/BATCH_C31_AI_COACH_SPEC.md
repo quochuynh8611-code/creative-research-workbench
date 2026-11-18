@@ -1,8 +1,8 @@
 # BẢN ĐẶC TẢ KỸ THUẬT (SPECIFICATION) — BATCH C31: AI SOLUTION COACH
 
 **Dự án:** Creative Research Workbench (CRW)  
-**Phiên bản:** v1.0.0 (Phase 13 / Batch C31)  
-**Trạng thái:** Spec Draft — Chờ phê duyệt từ Founder trước khi thực thi  
+**Phiên bản:** v1.1.0 (Phase 14 / Batch C31)  
+**Trạng thái:** Spec Implemented — PR 1 & PR 2 Merged, PR 3 in progress  
 **Mục tiêu:** Mở rộng AI Solution Coach thành trợ lý đồng hành phân tích và gợi ý giải pháp theo ngữ cảnh TRIZ, tuân thủ nghiêm ngặt nguyên tắc Human-in-the-Loop, Zero Auto-Overwrite và Grounded Traceability.
 
 ---
