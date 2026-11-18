@@ -74,7 +74,7 @@ Phương pháp luận TRIZ hiện tại trong CRW tập trung chủ yếu vào c
 - ❌ KHÔNG triển khai lên production.
 
 ### 2.3. Bốn Điều Chỉnh Bắt Buộc Trước Khi Code (Founder Mandates)
-Theo chỉ thị phê duyệt từ Founder cho Batch C34 PR 2:
+Theo chỉ thị phê duyệt từ Founder cho Batch C34 PR 2 & PR 3:
 1. **ARIZ STEPPER CHỈ 6 BƯỚC, KHÔNG THÊM:**
    - Giữ đúng 6 bước như spec đã nêu (B1 đến B6).
    - KHÔNG mở rộng thành ARIZ đầy đủ 9 phần (40 bước).
@@ -87,6 +87,10 @@ Theo chỉ thị phê duyệt từ Founder cho Batch C34 PR 2:
 4. **COMPONENTS CHỈ GỌI API READ-ONLY:**
    - Các components frontend chỉ gọi các API endpoints read-only (`GET /api/v1/triz/ariz-steps`, `GET /api/v1/triz/evolution-trends`, `GET /api/v1/triz/resource-taxonomy`).
    - KHÔNG cho phép user edit trực tiếp static JSON. Đây là sự chấp nhận có chủ đích (Intentional Trade-off). Mọi ghi chú và giải pháp được lưu vào `research_notes` qua trường `source_context`.
+5. **ĐIỀU CHỈNH BỔ SUNG CHO PR 3 (DOCS & RUNBOOK FINALIZATION):**
+   - **Command Validation trong Runbook:** Nếu endpoint không load -> kiểm tra file JSON tĩnh; Nếu AI Coach fallback -> kiểm tra `/api/v1/system/ai-status`; Nếu Correlation ID không echo -> kiểm tra middleware `correlation_id.py`.
+   - **Docs Health Check Trước Khi Commit:** Quét `grep -riE "sk-proj|bearer|password=|token=|api_key=" docs/` bảo đảm không lộ secret; kiểm tra liên kết nội bộ.
+   - **PR 3 là Docs-Only:** Không có automated code tests mới, là sự chấp nhận có chủ đích do chỉ cập nhật tài liệu và runbook.
 
 ---
 
@@ -363,12 +367,13 @@ Feature: Security & Safety Guard
    - Cập nhật `backend/src/app/api/v1/endpoints/triz.py` với 3 endpoints read-only mới.
    - Cập nhật Pydantic schemas trong `note_context.py` để hỗ trợ 3 source types mới.
    - 7 unit tests backend PASS 100%, 223/223 backend unit tests PASS.
-2. **PR 2: Frontend Components: ARIZ Stepper, Evolution Explorer & Resource Matrix (`feat(web): advanced triz components and ideation integration`)** [/] IN PROGRESS (Spec & Test-First):
+2. **PR 2: Frontend Components: ARIZ Stepper, Evolution Explorer & Resource Matrix (`feat(web): advanced triz components and ideation integration`)** [x] DONE (Merged PR #76):
    - Thêm component `ariz-stepper-panel.tsx`, `evolution-patterns-explorer.tsx`, `resource-analysis-panel.tsx`.
    - Tích hợp vào `structuring` (ARIZ stepper collapsible) và `ideation` tabs (Evolution & Resource analysis) của `session-detail.tsx`.
    - Thêm 3 client API methods trong `apps/web/lib/api-client.ts` và types trong `apps/web/lib/types.ts`.
-   - 3 frontend test suites trong `apps/web/features/triz/__tests__/`.
-3. **PR 3: Documentation, Runbook & Batch C34 Finalization (`docs(triz): advanced triz method guide, deployment runbook and roadmap`)** [ ] PLANNED:
-   - Cập nhật sổ tay phương pháp luận `docs/DEPLOYMENT_GUIDE.md` và `docs/IMPLEMENTATION_ROADMAP.md`.
+   - 3 frontend test suites trong `apps/web/features/triz/__tests__/` (14/14 tests PASS), 800/800 web tests PASS, CI 3/3 checks PASS.
+3. **PR 3: Documentation, Runbook & Batch C34 Finalization (`docs(triz): advanced triz method guide, deployment runbook and roadmap`)** [/] IN PROGRESS:
+   - Cập nhật sổ tay phương pháp luận mục 15 trong `docs/DEPLOYMENT_GUIDE.md` và `docs/IMPLEMENTATION_ROADMAP.md`.
    - Chuyển `docs/ADR-015-triz-toolkit-advanced.md` sang Accepted.
+   - Docs Health Check (zero secret, internal links clean).
    - Đóng hoàn tất Batch C34.

@@ -1,6 +1,6 @@
 # ADR-015: Kiến Trúc Nâng Cao Chiều Sâu Phương Pháp Luận TRIZ (ARIZ, Evolution Patterns & Resource Analysis)
 
-- **Trạng thái:** Proposed
+- **Trạng thái:** Accepted
 - **Ngày:** 2026-11-18
 - **Tác giả:** Senior Product Engineer / TRIZ Methodologist
 - **Ngữ cảnh:** Creative Research Workbench (CRW) — Batch C34
@@ -82,6 +82,18 @@ Theo chỉ thị phê duyệt từ Founder, kiến trúc hệ thống khóa ch�
 4. **COMPONENTS CHỈ GỌI API READ-ONLY:**
    - Toàn bộ frontend components (`ArizStepperPanel`, `EvolutionPatternsExplorer`, `ResourceAnalysisPanel`) chỉ gọi các API endpoints read-only (`GET /api/v1/triz/ariz-steps`, `GET /api/v1/triz/evolution-trends`, `GET /api/v1/triz/resource-taxonomy`).
    - Tuyệt đối KHÔNG cho phép người dùng sửa đổi trực tiếp các file static JSON. Đây là sự **chấp nhận có chủ đích (Intentional Trade-off)**. Mọi đóng góp/ghi chú người dùng được lưu vào `research_notes` thông qua trường `source_context`.
+
+### Quyết định 7: PR 3 là Docs-Only với Docs Health Check và Command Validation Bắt Buộc (Intentional Acceptance)
+- **Giải pháp:**
+  - PR 3 tập trung toàn diện vào tài liệu hóa, sổ tay vận hành và đóng gói Batch C34.
+  - **Không có automated code test mới cho PR 3:** Đây là sự **chấp nhận có chủ đích** vì phạm vi PR 3 là `docs-only`, không thay đổi bất kỳ dòng mã nguồn runtime nào ở cả backend lẫn frontend.
+  - **Quy chuẩn Validation Cho Commands trong Runbook:**
+    1. Nếu endpoint ARIZ/Evolution/Resource không load: Bắt buộc hướng dẫn kiểm tra tính toàn vẹn và cú pháp của các file JSON tĩnh tại `backend/src/app/data/`.
+    2. Nếu AI Coach fallback: Bắt buộc hướng dẫn kiểm tra trạng thái an toàn qua `GET /api/v1/system/ai-status`.
+    3. Nếu Correlation ID không echo: Bắt buộc hướng dẫn kiểm tra middleware `backend/src/app/core/middleware/correlation_id.py`.
+  - **Checklist "Docs Health Check" Trước Khi Commit:**
+    1. Kiểm tra rò rỉ secret: `grep -riE "sk-proj|bearer|password=|token=|api_key=" docs/` -> Kết quả phải sạch hoặc chỉ chứa placeholder mask (`sk-proj-***`).
+    2. Kiểm tra tính toàn vẹn của liên kết nội bộ Markdown.
 
 ---
 

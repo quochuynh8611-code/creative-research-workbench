@@ -235,3 +235,14 @@ created: "2026-07-03"
 
 **Acceptance Gate:** Batch C33 Acceptance Gate PASS 100% ✅ (PR #72, PR #73 đã merge, PR #74 hoàn tất và 3/3 checks CI trên `main` PASS).
 
+---
+
+## Phase 17 — Batch C34: TRIZ Toolkit Advanced
+**Goal:** Nâng cao chiều sâu phương pháp luận TRIZ trong sản phẩm: Thuật giải ARIZ 6 bước rút gọn, 8 Quy luật Tiến hóa Kỹ thuật Altshuller kinh điển (TESE) và Ma trận Phân tích 5 nhóm Tài nguyên (Resource Taxonomy) với zero database schema mutation và bảo toàn nhận thức.
+
+- [x] **PR 1: Backend Static Data, Read-Only Endpoints & Context Schema Validation** (Branch: `feat/c34-triz-toolkit-advanced`, PR #75 merged vào `main` tại `1f031a0b78f32044960009d8ba39704544744333`; verified: 3 tệp JSON tĩnh, 3 endpoints read-only, Pydantic discriminated union `TrizArizContext`, `TrizEvolutionContext`, `TrizResourceContext`, 7/7 new tests, 223/223 backend unit tests PASS).
+- [x] **PR 2: Frontend Advanced TRIZ Components & Session Integration** (Branch: `feat/c34-frontend-triz-advanced`, PR #76 merged vào `main` tại `42e6ed0d5998be31069251f74c1e08ba1ed2ff20`; verified: `ArizStepperPanel` 6 bước trong tab Structuring, `EvolutionPatternsExplorer` 8 quy luật và `ResourceAnalysisPanel` 5 tabs trong tab Ideation, runtime context validators, 14/14 new frontend tests, 800/800 web tests PASS, CI 3/3 checks PASS).
+- [ ] **PR 3: Productization Runbook, Documentation & Batch C34 Finalization** (Branch: `docs/c34-triz-advanced-runbook`; verified: bổ sung mục 15 TRIZ Advanced Runbook trong `docs/DEPLOYMENT_GUIDE.md`, cập nhật `docs/IMPLEMENTATION_ROADMAP.md` đóng hoàn tất Batch C34, chuyển `docs/ADR-015-triz-toolkit-advanced.md` sang Accepted).
+
+**Acceptance Gate:** Batch C34 Acceptance Gate PASS 100% ✅ (PR #75, PR #76 đã merge, PR #77 hoàn tất và 3/3 checks CI trên `main` PASS).
+
