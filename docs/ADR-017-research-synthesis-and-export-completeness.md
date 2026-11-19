@@ -1,7 +1,7 @@
 # ADR-017: Research Synthesis, Provenance & Export Completeness Architecture
 
 ## Status
-Proposed (Chờ Founder phê duyệt)
+Accepted (Đã nghiệm thu qua Batch C36 PR 1, PR 2 & PR 3)
 
 ## Date
 2026-11-19
@@ -37,7 +37,7 @@ Tuy nhiên, khâu kết xuất tri thức (Export Markdown & JSON, AI Report Syn
 - **Quyết định**:
   - **PR 1**: `backend-only` — Tập trung toàn bộ vào logic serialization, export format, sanitize dữ liệu, và AI report context.
   - **PR 2**: `frontend-only` — Tập trung vào đúng 3 thay đổi UI (nhãn `DOMAIN_LABELS`, dropdown `DOMAIN_OPTIONS`, và `localStorage` persistence cho Workflow Profile).
-  - **PR 3**: `tests + docs only` — Tập trung vào integration tests E2E roundtrip export và tài liệu kỹ thuật, zero production runtime change.
+  - **PR 3**: `tests + docs only` — Tập trung vào integration tests E2E roundtrip export và tài liệu kỹ thuật, tuyệt đối không thay đổi runtime behavior của production.
 - **Lý do & Chấp nhận có chủ đích**: Đảm bảo blast radius của từng PR được kiểm soát hoàn toàn độc lập, dễ dàng review, giảm thiểu rủi ro merge conflict và cô lập lỗi tức thì nếu có hồi quy (regression).
 
 ### Decision 4: Giới Hạn PR 2 Ở Đúng 3 Thay Đổi UI (Loại Bỏ Badge Provenance Khỏi PR 2)
@@ -48,10 +48,10 @@ Tuy nhiên, khâu kết xuất tri thức (Export Markdown & JSON, AI Report Syn
   - **Tuyệt đối KHÔNG thêm badge provenance trong PR 2**.
 - **Lý do**: Giữ cho PR 2 có kích thước nhỏ gọn, không can thiệp sâu vào các components danh sách ghi chú phức tạp (`research-notebook.tsx`, `session-detail.tsx`), tránh làm chậm tiến độ và giảm rủi ro hồi quy UI.
 
-### Decision 5: Giới Hạn PR 3 Ở E2E Export Roundtrip Verification (Zero Testcontainers)
-- **Quyết định**: PR 3 chỉ bao gồm:
-  1. Backend integration test: `test_c36_export_synthesis_integration.py` kiểm chứng xuất Markdown/JSON đầy đủ provenance và kiểm tra tính lũy đẳng roundtrip (`export -> import`).
-  2. Frontend integration test: `c36-export-roundtrip-integration.test.tsx` kiểm chứng trigger download blob ở tầng client mock.
+### Decision 5: Giới Hạn PR 3 Ở E2E Export Roundtrip Verification (Zero Testcontainers) & Xử Lý Edge Case Domain Rỗng
+- **Quyết định**: PR 3 là **tests + docs only**, tuyệt đối không thay đổi behavior production, chỉ bao gồm:
+  1. Backend integration test: `test_c36_export_synthesis_integration.py` kiểm chứng xuất Markdown/JSON đầy đủ provenance, kiểm tra tính lũy đẳng roundtrip (`export -> import`), và bao phủ edge case session không có domain (`domain = null` hoặc chuỗi rỗng) đảm bảo import không crash và fallback an toàn sang `None`.
+  2. Frontend integration test: `c36-export-roundtrip-integration.test.tsx` kiểm chứng trigger download blob ở tầng client mock và khả năng phục hồi khi export thất bại (error resilience).
   3. Cập nhật tài liệu `DEPLOYMENT_GUIDE.md`, `IMPLEMENTATION_ROADMAP.md` và nghiệm thu ADR-017.
   - **Tuyệt đối KHÔNG thêm badge UI trong PR 3** (chỉ xem xét sau nếu còn dư thời gian và được Founder duyệt riêng).
 - **Lý do**: Khép kín vòng đời kiểm chứng tự động mà không phụ thuộc hạ tầng Docker ngoài (Zero Testcontainers), bảo đảm thời gian thực thi test dưới 2 giây.
