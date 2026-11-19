@@ -25,6 +25,8 @@ export const DOMAIN_LABELS: Record<string, string> = {
   education: 'Giáo dục',
   personal: 'Cá nhân',
   research: 'Nghiên cứu',
+  healthcare: 'Y tế / Sức khỏe',
+  sustainability: 'Môi trường / Bền vững',
 }
 
 export const STATUS_LABELS: Record<string, string> = {

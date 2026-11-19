@@ -25,6 +25,11 @@ describe('DOMAIN_LABELS mapping and fallback', () => {
     expect(DOMAIN_LABELS[unknownDomain] ?? unknownDomain).toBe('custom_unknown_domain')
   })
 
+  it('maps healthcare and sustainability domains correctly in DOMAIN_LABELS', () => {
+    expect(DOMAIN_LABELS['healthcare']).toBe('Y tế / Sức khỏe')
+    expect(DOMAIN_LABELS['sustainability']).toBe('Môi trường / Bền vững')
+  })
+
   it('falls back to raw domain string when domain is undefined or unknown', () => {
     const unknownDomain = 'unknown-domain-xyz'
     const renderedLabel = DOMAIN_LABELS[unknownDomain] ?? unknownDomain

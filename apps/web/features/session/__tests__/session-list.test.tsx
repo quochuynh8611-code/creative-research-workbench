@@ -281,6 +281,9 @@ describe('SessionList Create Path', () => {
       { value: 'business', label: 'Kinh tế / Kinh doanh' },
       { value: 'culture', label: 'Văn hóa' },
       { value: 'society', label: 'Xã hội' },
+      { value: 'healthcare', label: 'Y tế / Sức khỏe' },
+      { value: 'education', label: 'Giáo dục' },
+      { value: 'sustainability', label: 'Môi trường / Bền vững' },
     ])
   })
 
@@ -797,6 +800,9 @@ describe('SessionList Lifecycle & Safe Deletion (Phase 5.9)', () => {
         { value: 'business', label: 'Kinh tế / Kinh doanh' },
         { value: 'culture', label: 'Văn hóa' },
         { value: 'society', label: 'Xã hội' },
+        { value: 'healthcare', label: 'Y tế / Sức khỏe' },
+        { value: 'education', label: 'Giáo dục' },
+        { value: 'sustainability', label: 'Môi trường / Bền vững' },
       ])
     })
 
@@ -1516,6 +1522,38 @@ describe('SessionList Lifecycle & Safe Deletion (Phase 5.9)', () => {
           expect(screen.queryByText('Không tìm thấy mẫu nghiên cứu nào.')).not.toBeInTheDocument()
         })
       })
+    })
+  })
+
+  describe('Batch C36 PR 2: DOMAIN_OPTIONS Expansion', () => {
+    it('provides healthcare, education, and sustainability options in create session modal and filter dropdown', async () => {
+      mockedListSessions.mockResolvedValue({
+        data: [],
+        total: 0,
+        page: 1,
+        page_size: 20,
+        total_pages: 1,
+      })
+
+      renderWithClient(<SessionList />)
+
+      // Kiểm tra filter dropdown có đủ 3 domain mới
+      const filterSelect = screen.getByLabelText(/lọc theo lĩnh vực/i) as HTMLSelectElement
+      const filterOptionValues = Array.from(filterSelect.options).map((opt) => opt.value)
+      expect(filterOptionValues).toContain('healthcare')
+      expect(filterOptionValues).toContain('education')
+      expect(filterOptionValues).toContain('sustainability')
+
+      // Mở modal tạo session mới
+      const createButton = screen.getByRole('button', { name: /tạo session mới/i })
+      fireEvent.click(createButton)
+
+      // Kiểm tra create modal domain select có đủ 3 domain mới
+      const createDomainSelect = screen.getByLabelText(/^lĩnh vực$/i) as HTMLSelectElement
+      const createOptionValues = Array.from(createDomainSelect.options).map((opt) => opt.value)
+      expect(createOptionValues).toContain('healthcare')
+      expect(createOptionValues).toContain('education')
+      expect(createOptionValues).toContain('sustainability')
     })
   })
 })
