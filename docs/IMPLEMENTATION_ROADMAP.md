@@ -268,5 +268,28 @@ created: "2026-07-03"
 
 **Acceptance Gate:** Batch C36 Acceptance Gate PASS 100% ✅ (PR #81, PR #82 đã merge và PR #3 hoàn thành verification toàn diện. Batch C36 đóng hoàn tất).
 
+---
 
+## Phase 20 — Batch C37: Founder Experience Validation & UX Hardening
+**Goal:** Kiểm chứng trải nghiệm Founder trên local stack, xử lý UX issue nhỏ theo test-first, và thiết lập backlog C38 mà không mở rộng tính năng.
+
+- [x] PR 1: C37 Spec & ADR-018 (PR #84 merged)
+- [x] PR 2: C37-UX-01 Export Feedback & Filename Polish
+- [x] PR 2: C37-UX-02 Direct Navigation After Template Creation
+- [x] PR #85 merged vào main tại 92401715a4e3b5feef15c9267e6ddedcba1f8a6c
+- [x] CI merge commit 3/3 PASS (Run ID 44529526861)
+- [x] Lô 1 Founder Verified
+- [x] Lô 2 Founder Verified 7/7
+- [x] Lô 3 Founder Verified 6/6
+- [x] Error Recovery simulation DEFERRED to C38 QA Debt
+- [x] Test artifacts archived safely
+
+**Acceptance Gate:** Batch C37 COMPLETE 100% (Error Recovery simulation DEFERRED; không tính là verified).
+
+### C38 Backlog
+- C38-GAP-01: Per-note tagging — Product Gap
+- C38-GAP-02: AI Coach editable draft form — Product Gap
+- C38-GAP-03: Extended-lens save from 9-Windows — Product Gap
+- C38-GAP-04: Browser network failure simulation — QA Debt
+- C38-GAP-05: Form field accessibility improvements — Accessibility Polish
 
