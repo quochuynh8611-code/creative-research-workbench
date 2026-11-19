@@ -20,6 +20,7 @@ import {
   ChevronDown,
   Play,
   CheckCircle2,
+  X,
 } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import { DOMAIN_LABELS, STATUS_LABELS, STAGE_LABELS, WORKFLOW_STAGES, formatDate, cn } from '@/lib/utils'
@@ -61,6 +62,33 @@ const TABS = [
 
 interface SessionDetailProps {
   sessionId: string
+}
+
+export function generateExportFilename(
+  title: string | undefined | null,
+  sessionId: string,
+  extension: 'md' | 'json'
+): string {
+  const shortId = (sessionId || '').slice(0, 8)
+  if (!title || !title.trim()) {
+    return `session_${shortId}.${extension}`
+  }
+  const sanitized = title
+    .trim()
+    .toLowerCase()
+    .replace(/[đĐ]/g, 'd')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9_-]/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^-|-$/g, '')
+    .slice(0, 40)
+    .replace(/^-|-$/g, '')
+
+  if (!sanitized) {
+    return `session_${shortId}.${extension}`
+  }
+  return `session_${sanitized}_${shortId}.${extension}`
 }
 
 export function SessionDetail({ sessionId }: SessionDetailProps) {
@@ -108,6 +136,16 @@ export function SessionDetail({ sessionId }: SessionDetailProps) {
   const [isExporting, setIsExporting] = useState<boolean>(false)
   const [isExportOpen, setIsExportOpen] = useState<boolean>(false)
   const [exportError, setExportError] = useState<string | null>(null)
+  const [exportSuccessMessage, setExportSuccessMessage] = useState<string | null>(null)
+  const exportTimerRef = useRef<NodeJS.Timeout | null>(null)
+
+  useEffect(() => {
+    return () => {
+      if (exportTimerRef.current) {
+        clearTimeout(exportTimerRef.current)
+      }
+    }
+  }, [])
   const [aiReport, setAiReport] = useState<AIResearchReport | null>(null)
   const [isGeneratingReport, setIsGeneratingReport] = useState<boolean>(false)
   const [reportError, setReportError] = useState<string | null>(null)
@@ -197,6 +235,10 @@ export function SessionDetail({ sessionId }: SessionDetailProps) {
     setNoteDraft(null)
     setIsExportOpen(false)
     setExportError(null)
+    setExportSuccessMessage(null)
+    if (exportTimerRef.current) {
+      clearTimeout(exportTimerRef.current)
+    }
     setAiReport(null)
     setIsGeneratingReport(false)
     setReportError(null)
@@ -289,16 +331,24 @@ export function SessionDetail({ sessionId }: SessionDetailProps) {
     setIsExportOpen(false)
     setIsExporting(true)
     setExportError(null)
+    setExportSuccessMessage(null)
+    if (exportTimerRef.current) {
+      clearTimeout(exportTimerRef.current)
+    }
     try {
       const blob = await exportSessionMarkdown(sessionId)
       const url = window.URL.createObjectURL(blob)
       const a = document.createElement('a')
       a.href = url
-      a.download = `session_${sessionId}.md`
+      a.download = generateExportFilename(session?.title, sessionId, 'md')
       document.body.appendChild(a)
       a.click()
       a.remove()
       window.URL.revokeObjectURL(url)
+      setExportSuccessMessage('Xuất bản tệp Markdown thành công!')
+      exportTimerRef.current = setTimeout(() => {
+        setExportSuccessMessage(null)
+      }, 4000)
     } catch (err: any) {
       setExportError(err?.message || 'Có lỗi xảy ra khi xuất file Markdown')
     } finally {
@@ -311,6 +361,10 @@ export function SessionDetail({ sessionId }: SessionDetailProps) {
     setIsExportOpen(false)
     setIsExporting(true)
     setExportError(null)
+    setExportSuccessMessage(null)
+    if (exportTimerRef.current) {
+      clearTimeout(exportTimerRef.current)
+    }
     try {
       const snapshot = await exportSessionJson(sessionId)
       const jsonStr = JSON.stringify(snapshot, null, 2)
@@ -318,11 +372,15 @@ export function SessionDetail({ sessionId }: SessionDetailProps) {
       const url = window.URL.createObjectURL(blob)
       const a = document.createElement('a')
       a.href = url
-      a.download = `session_${sessionId}.json`
+      a.download = generateExportFilename(session?.title, sessionId, 'json')
       document.body.appendChild(a)
       a.click()
       a.remove()
       window.URL.revokeObjectURL(url)
+      setExportSuccessMessage('Xuất bản tệp JSON thành công!')
+      exportTimerRef.current = setTimeout(() => {
+        setExportSuccessMessage(null)
+      }, 4000)
     } catch (err: any) {
       setExportError(err?.message || 'Có lỗi xảy ra khi xuất file JSON')
     } finally {
@@ -565,6 +623,33 @@ export function SessionDetail({ sessionId }: SessionDetailProps) {
         </div>
         </div>
       </div>
+
+      {/* Export Success Alert */}
+      {exportSuccessMessage && (
+        <div
+          role="status"
+          aria-live="polite"
+          className="p-3 rounded-xl border border-emerald-500/30 bg-emerald-500/10 text-xs text-emerald-800 dark:text-emerald-300 flex items-center justify-between gap-2"
+        >
+          <div className="flex items-center gap-2">
+            <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-600 dark:text-emerald-400" />
+            <span>{exportSuccessMessage}</span>
+          </div>
+          <button
+            type="button"
+            onClick={() => {
+              setExportSuccessMessage(null)
+              if (exportTimerRef.current) {
+                clearTimeout(exportTimerRef.current)
+              }
+            }}
+            aria-label="Đóng thông báo"
+            className="text-emerald-800 dark:text-emerald-300 hover:opacity-75 transition-opacity"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+      )}
 
       {/* Export Error Alert */}
       {exportError && (
