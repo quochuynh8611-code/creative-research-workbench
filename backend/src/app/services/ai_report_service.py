@@ -18,7 +18,8 @@ from __future__ import annotations
 import logging
 import time
 import uuid
-from typing import Any, Optional
+from typing import Any
+
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
@@ -50,7 +51,7 @@ class AIResearchReportResult(BaseModel):
     model: str = "mock-model"
     prompt_version: str = PROMPT_VERSION
     latency_ms: float = 0.0
-    fallback_reason: Optional[str] = None
+    fallback_reason: str | None = None
 
 
 # ──────────────────────────────────────────────
@@ -62,7 +63,7 @@ class AIReportService:
 
     def __init__(
         self,
-        llm_client: Optional[LLMClient] = None,
+        llm_client: LLMClient | None = None,
     ) -> None:
         self.llm_client = llm_client or get_llm_client()
 
@@ -140,7 +141,7 @@ class AIReportService:
                 fallback_reason=None,
             )
 
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             logger.warning(
                 f"AIReportService LLM execution failed ({provider}/{model}): {e}. "
                 f"Falling back to Deterministic Template-Based Synthesis."
@@ -167,23 +168,52 @@ class AIReportService:
         title = session_record.title
         report_title = f"Báo cáo Tổng hợp Nghiên cứu: {title}"
 
+        # Trích xuất domain
+        session_domain = getattr(session_record, "domain", None) or session_data.get("session", {}).get("domain")
+        domain_info = f" (Lĩnh vực: {session_domain})" if session_domain else ""
+
         # Trích xuất problem frame
         frame = session_data.get("problem_frame")
         if frame:
             problem_bg = (
-                f"Bài toán nghiên cứu: {frame.get('raw_statement', 'N/A')}\n"
+                f"Bài toán nghiên cứu: {frame.get('raw_statement', 'N/A')}{domain_info}\n"
                 f"Phân loại mâu thuẫn TRIZ: {frame.get('contradiction_type', 'N/A')}. "
                 f"Thông số cải thiện (+): {frame.get('improving_parameter', 'N/A')} | "
                 f"Thông số suy giảm (-): {frame.get('worsening_parameter', 'N/A')}."
             )
         else:
-            problem_bg = f"Phiên nghiên cứu '{title}' hiện chưa hoàn thành bước chuẩn hóa cấu trúc bài toán."
+            problem_bg = f"Phiên nghiên cứu '{title}'{domain_info} hiện chưa hoàn thành bước chuẩn hóa cấu trúc bài toán."
 
         # Trích xuất research notes
         notes = session_data.get("research_notes", [])
         if notes:
+            # Thống kê phân bổ nguồn tri thức
+            source_breakdown: dict[str, int] = {}
+            for n in notes:
+                s_ctx = n.get("source_context")
+                if isinstance(s_ctx, dict):
+                    st = s_ctx.get("source_type", "other")
+                    source_breakdown[st] = source_breakdown.get(st, 0) + 1
+
+            source_summary_parts = []
+            source_labels = {
+                "triz_9_windows": "Lưới 9-Windows",
+                "triz_matrix": "Ma trận TRIZ",
+                "triz_ariz": "Thuật giải ARIZ",
+                "triz_evolution": "Quy luật Tiến hóa",
+                "triz_resource": "Ma trận Tài nguyên",
+                "ai_coach": "AI Solution Coach",
+                "evidence": "Bằng chứng",
+                "candidate_solution": "Giải pháp",
+            }
+            for st, count in source_breakdown.items():
+                lbl = source_labels.get(st, st)
+                source_summary_parts.append(f"{lbl}: {count}")
+
+            source_text = f" (Phân bổ nguồn: {', '.join(source_summary_parts)})" if source_summary_parts else ""
+
             evidence_syn = (
-                f"Hệ thống đã thu thập {len(notes)} ghi chú nghiên cứu và trích dẫn bằng chứng. "
+                f"Hệ thống đã thu thập {len(notes)} ghi chú nghiên cứu và trích dẫn bằng chứng{source_text}. "
                 f"Các chủ đề chính bao gồm: "
                 + ", ".join([f"[{n.get('note_type', 'note').capitalize()}] {n.get('content', '')[:60]}..." for n in notes[:3]])
             )
@@ -262,7 +292,7 @@ class AIReportService:
         provenance: str,
         provider: str,
         model: str,
-        fallback_reason: Optional[str] = None,
+        fallback_reason: str | None = None,
     ) -> str:
         """Sinh tài liệu Markdown hoàn chỉnh cho báo cáo nghiên cứu."""
         lines = [
