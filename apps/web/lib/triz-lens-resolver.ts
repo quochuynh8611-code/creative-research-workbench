@@ -9,7 +9,9 @@ const DOMAIN_TO_LENS_MAP: Record<string, TrizNineWindowsLens> = {
   technical: 'engineering',
   software: 'engineering',
   research: 'engineering',
-  education: 'engineering',
+  education: 'design_thinking',
+  healthcare: 'systems_thinking',
+  sustainability: 'systems_thinking',
 }
 
 export function resolveLensFromDomain(

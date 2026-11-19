@@ -134,9 +134,15 @@ Feature: Security & Architecture Invariants
 
 ### 3.2. Frontend Test Suites
 1. **`apps/web/lib/__tests__/triz-lens-resolver-expansion.test.ts`**:
-   - Kiểm tra `resolveLensFromDomain('healthcare')` -> `'systems_thinking'`.
-   - Kiểm tra `resolveLensFromDomain('education')` -> `'design_thinking'`.
-   - Kiểm tra `resolveLensFromDomain('sustainability')` -> `'systems_thinking'`.
+   - `test_resolves_healthcare_to_systems_thinking`: domain "healthcare" -> "systems_thinking".
+   - `test_resolves_education_to_design_thinking`: domain "education" -> "design_thinking".
+   - `test_resolves_sustainability_to_systems_thinking`: domain "sustainability" -> "systems_thinking".
 2. **`apps/web/features/triz/__tests__/triz-nine-windows-expansion.test.tsx`**:
-   - Kiểm tra render selector với đủ 6 tabs lăng kính.
-   - Kiểm tra click chuyển sang các tab `systems_thinking`, `design_thinking`, `lean_startup` và gọi API tương ứng.
+   - `test_renders_all_6_lens_tabs`: renders đúng 6 tabs lăng kính trong segmented controls.
+   - `test_clicking_systems_thinking_tab_calls_api`: click tab "Tư duy Hệ thống" gọi API với lens `systems_thinking`.
+   - `test_clicking_design_thinking_tab_calls_api`: click tab "Tư duy Thiết kế" gọi API với lens `design_thinking`.
+   - `test_clicking_lean_startup_tab_calls_api`: click tab "Khởi nghiệp Tinh gọn" gọi API với lens `lean_startup`.
+3. **`apps/web/features/session/__tests__/workflow-profile-guidance.test.tsx`**:
+   - `test_renders_all_3_workflow_profiles`: hiển thị đầy đủ Standard TRIZ, Rapid Prototyping, Stakeholder Alignment.
+   - `test_displays_recommended_lenses_and_guidance`: hiển thị badges các recommended lenses.
+   - `test_highlights_active_stage_guidance`: làm nổi bật mục hướng dẫn của giai đoạn hiện tại.

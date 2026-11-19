@@ -38,6 +38,7 @@ import { ResourceAnalysisPanel } from '@/features/triz/resource-analysis-panel'
 import { ResearchNotebook } from '@/features/notebook/research-notebook'
 import { RelatedSessionsPanel } from '@/features/session/related-sessions-panel'
 import { EmbeddingStatusPanel } from '@/features/session/embedding-status-panel'
+import { WorkflowProfileGuidance } from '@/features/session/workflow-profile-guidance'
 
 import type {
   AIResearchReport,
@@ -613,6 +614,9 @@ export function SessionDetail({ sessionId }: SessionDetailProps) {
           }
         }}
       />
+
+      {/* Workflow Profile Guidance (Batch C35) */}
+      <WorkflowProfileGuidance currentStage={currentStage} />
 
       {/* Workflow Error Alert */}
       {workflowError && (

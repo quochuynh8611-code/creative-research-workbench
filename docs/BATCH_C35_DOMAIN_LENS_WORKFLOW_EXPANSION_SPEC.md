@@ -50,7 +50,7 @@ Mở rộng không gian ứng dụng của Creative Research Workbench từ kỹ
   - `standard_triz`: Quy trình 6 bước cổ điển theo FSM tuần tự.
   - `rapid_prototyping`: Luồng tạo mẫu nhanh, tập trung chu kỳ lặp Ideation -> Prototyping -> Assumption Validation.
   - `stakeholder_alignment`: Luồng đồng thuận đa bên, tập trung phân tích mâu thuẫn đa góc nhìn và ma trận tiêu chí thống nhất.
-  - **Bảo toàn FSM**: Workflow Profiles là cấu trúc hướng dẫn cấp ứng dụng (Application-Layer Guidance & Method Recommendation), không can thiệp hay sửa đổi enum `WorkflowState` và bảng `_VALID_TRANSITIONS` của FSM lõi. Đây là quyết định có chủ đích.
+  - **Bảo toàn FSM & Read-Only Invariant**: Workflow Profiles là cấu trúc hướng dẫn cấp ứng dụng (Application-Layer Guidance & Method Recommendation), không can thiệp hay sửa đổi enum `WorkflowState` và bảng `_VALID_TRANSITIONS` của FSM lõi. Tất cả frontend components chỉ gọi API ở chế độ Read-Only, tuyệt đối không cho phép user chỉnh sửa trực tiếp các dữ liệu tĩnh này. Đây là quyết định có chủ đích.
 
 ### 3.2. Out-of-Scope (Ngoài phạm vi)
 - KHÔNG thêm bảng mới, cột mới vào cơ sở dữ liệu PostgreSQL (Zero DB Migration).
@@ -106,17 +106,23 @@ Không làm xáo trộn các trạng thái cơ sở dữ liệu `workflow_state`
 ---
 
 ## 6. Kế Hoạch Triển Khai 3 PR
-- **PR 1: Backend Domain Templates, 9-Windows Lenses & Workflow Profiles**:
-  - Cập nhật `triz_nine_windows.json` (thêm 3 lenses).
+- **PR 1: Backend Domain Templates, 9-Windows Lenses & Workflow Profiles** (MERGED vào `main` tại `15c7a960df768f5c3dafc9259163273e3bf9bcf5`):
+  - Cập nhật `triz_nine_windows.json` (thêm 3 lenses, 27 ô).
   - Cập nhật `domain_templates.py` (thêm 6 templates cho 3 domains).
   - Cập nhật `triz_nine_windows_service.py` và `triz.py`.
-  - Bổ sung module và endpoint `workflow_profiles`.
-  - Backend unit & integration tests.
-- **PR 2: Frontend Lens Tabs, Domain Resolvers & Workflow Profiles UI**:
-  - Mở rộng `types.ts`, `api-client.ts`, `triz-lens-resolver.ts`.
-  - Nâng cấp `triz-nine-windows.tsx` với selector 6 lăng kính.
-  - Nâng cấp modal / banner hướng dẫn workflow profile.
-  - Frontend component tests (100% pass).
+  - Bổ sung `workflow_profiles.py` và endpoint `/sessions/workflow-profiles`.
+  - Backend unit & integration tests (PASS 100%).
+- **PR 2: Frontend Multi-Lens Tabs, Domain Resolver & Workflow Guidance** (IN PROGRESS):
+  - Mở rộng `types.ts`: `TargetDomainType`, `TrizNineWindowsLens` (6 lenses), `WorkflowProfile`, `WorkflowProfileId`, `WorkflowProfilesResponse`.
+  - Mở rộng `api-client.ts`: `getWorkflowProfiles()`, hỗ trợ 6 lenses trong `getTrizNineWindows()`.
+  - Cập nhật `triz-lens-resolver.ts`: `healthcare -> systems_thinking`, `education -> design_thinking`, `sustainability -> systems_thinking`.
+  - Nâng cấp `triz-nine-windows.tsx` với selector 6 lăng kính hỗ trợ horizontal scroll cho mobile.
+  - Xây dựng component `apps/web/features/session/workflow-profile-guidance.tsx` hiển thị chi tiết 3 profiles và hướng dẫn theo từng giai đoạn nghiên cứu.
+  - Tích hợp `WorkflowProfileGuidance` vào `session-detail.tsx`.
+  - Frontend test suites:
+    - `triz-lens-resolver-expansion.test.ts`: kiểm tra giải mã 3 domain mới.
+    - `triz-nine-windows-expansion.test.tsx`: kiểm tra render 6 tabs và tương tác.
+    - `workflow-profile-guidance.test.tsx`: kiểm tra render 3 profiles và highlight giai đoạn hiện tại.
 - **PR 3: Documentation, Runbook & Batch C35 Finalization**:
   - Cập nhật `DEPLOYMENT_GUIDE.md` và `IMPLEMENTATION_ROADMAP.md`.
   - Đóng hoàn tất Batch C35 sau khi CI 3/3 PASS.
