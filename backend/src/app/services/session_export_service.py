@@ -3,8 +3,8 @@ session_export_service.py — Dịch vụ xuất dữ liệu Session thành báo
 """
 from __future__ import annotations
 
-import uuid
-from typing import Any, Optional
+from typing import Any
+
 from sqlalchemy.orm import Session
 
 from app.domain.models import (
@@ -50,11 +50,15 @@ def export_session_as_markdown(session: ResearchSession, db: Session) -> str:
     created_iso = session.created_at.isoformat() if session.created_at else ""
     updated_iso = session.updated_at.isoformat() if session.updated_at else created_iso
 
+    domain_str = session.domain or ""
+    domain_display = session.domain or "N/A"
+
     # 1. YAML Frontmatter
     lines = [
         "---",
         f'title: "{session.title}"',
         f'session_id: "{session.id}"',
+        f'domain: "{domain_str}"',
         f"status: {status_str}",
         f"workflow_state: {session.workflow_state}",
         f"created_at: {created_iso}",
@@ -64,7 +68,7 @@ def export_session_as_markdown(session: ResearchSession, db: Session) -> str:
         f"# {session.title}",
         "",
         f"> **Mã phiên nghiên cứu:** `{session.id}`  ",
-        f"> **Trạng thái:** `{status_str}` | **Giai đoạn:** `{session.workflow_state}`  ",
+        f"> **Lĩnh vực:** `{domain_display}` | **Trạng thái:** `{status_str}` | **Giai đoạn:** `{session.workflow_state}`  ",
         f"> **Thời gian tạo:** {created_iso} | **Cập nhật:** {updated_iso}",
         "",
     ]
@@ -82,7 +86,7 @@ def export_session_as_markdown(session: ResearchSession, db: Session) -> str:
         "",
     ])
 
-    frame: Optional[ProblemFrame] = (
+    frame: ProblemFrame | None = (
         db.query(ProblemFrame)
         .filter_by(session_id=session.id)
         .order_by(ProblemFrame.created_at.desc())
@@ -208,6 +212,37 @@ def export_session_as_markdown(session: ResearchSession, db: Session) -> str:
                     context_str = f" | Nguồn: Bằng chứng [{escaped_ref}]"
                 elif st == "candidate_solution":
                     context_str = f" | Nguồn: Giải pháp [{ctx.get('solution_id')}]"
+                elif st == "triz_ariz":
+                    step_id = ctx.get("step_id")
+                    step_title = escape_markdown_inline(str(ctx.get("step_title") or ""))
+                    if step_id is not None and step_title:
+                        context_str = f" | Nguồn: Thuật giải ARIZ [Bước {step_id}: {step_title}]"
+                    elif step_id is not None:
+                        context_str = f" | Nguồn: Thuật giải ARIZ [Bước {step_id}]"
+                    elif step_title:
+                        context_str = f" | Nguồn: Thuật giải ARIZ [{step_title}]"
+                    else:
+                        context_str = " | Nguồn: Thuật giải ARIZ"
+                elif st == "triz_evolution":
+                    pattern_name = escape_markdown_inline(str(ctx.get("pattern_name") or ctx.get("pattern_id") or ""))
+                    if pattern_name:
+                        context_str = f" | Nguồn: Quy luật Tiến hóa [{pattern_name}]"
+                    else:
+                        context_str = " | Nguồn: Quy luật Tiến hóa"
+                elif st == "triz_resource":
+                    res_group = escape_markdown_inline(str(ctx.get("resource_group") or ""))
+                    item_name = escape_markdown_inline(str(ctx.get("item_name") or ""))
+                    if res_group and item_name:
+                        context_str = f" | Nguồn: Ma trận Tài nguyên [{res_group} • {item_name}]"
+                    elif res_group:
+                        context_str = f" | Nguồn: Ma trận Tài nguyên [{res_group}]"
+                    elif item_name:
+                        context_str = f" | Nguồn: Ma trận Tài nguyên [{item_name}]"
+                    else:
+                        context_str = " | Nguồn: Ma trận Tài nguyên"
+                elif st == "ai_coach":
+                    suggestion_type = escape_markdown_inline(str(ctx.get("suggestion_type") or "gợi ý"))
+                    context_str = f" | Nguồn: AI Solution Coach [{suggestion_type}]"
 
             lines.extend([
                 f"### {idx}. [{note_type_badge}] {note_time}",
@@ -291,10 +326,15 @@ def export_session_as_json(session: ResearchSession, db: Session) -> dict[str, A
     created_iso = session.created_at.isoformat() if session.created_at else None
     updated_iso = session.updated_at.isoformat() if session.updated_at else created_iso
 
+    session_tags = getattr(session, "tags", None)
+    tags_list: list[Any] = list(session_tags) if isinstance(session_tags, (list, tuple)) else []
+
     session_payload = {
         "id": str(session.id),
         "title": session.title,
         "description": session.description,
+        "domain": getattr(session, "domain", None),
+        "tags": tags_list,
         "status": status_str,
         "workflow_state": session.workflow_state,
         "created_at": created_iso,
@@ -302,7 +342,7 @@ def export_session_as_json(session: ResearchSession, db: Session) -> dict[str, A
     }
 
     # 1. Problem Frame
-    frame: Optional[ProblemFrame] = (
+    frame: ProblemFrame | None = (
         db.query(ProblemFrame)
         .filter_by(session_id=session.id)
         .order_by(ProblemFrame.created_at.desc())
