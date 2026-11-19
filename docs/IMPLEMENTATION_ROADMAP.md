@@ -246,3 +246,15 @@ created: "2026-07-03"
 
 **Acceptance Gate:** Batch C34 Acceptance Gate PASS 100% ✅ (PR #75, PR #76, PR #77 đã merge và 3/3 checks CI trên `main` PASS. Batch C34 đóng hoàn tất).
 
+---
+
+## Phase 18 — Batch C35: Domain, Lens & Workflow Expansion
+**Goal:** Mở rộng phạm vi ứng dụng của Creative Research Workbench sang các lĩnh vực liên ngành: 3 domain mới (Healthcare, Education, Sustainability), 3 lăng kính TRIZ 9-Windows mới (Systems Thinking, Design Thinking, Lean Startup), và 3 Workflow Profiles (Standard TRIZ, Rapid Prototyping, Stakeholder Alignment) với zero database schema mutation và bảo toàn nhận thức.
+
+- [x] **PR 1: Backend Domain Templates, 9-Windows Multi-Lens & Workflow Profiles** (Branch: `feat/c35-domain-lens-workflow-expansion`, PR #78 merged vào `main` tại `15c7a960df768f5c3dafc9259163273e3bf9bcf5`; verified: 6 domain templates mới cho healthcare/education/sustainability, 3 lăng kính 9-windows mới trong `triz_nine_windows.json`, catalog 3 workflow profiles, route `GET /api/v1/sessions/workflow-profiles`, 11/11 expansion tests, 229/229 backend unit tests PASS).
+- [x] **PR 2: Frontend Multi-Lens Tabs, Domain Resolver & Workflow Guidance** (Branch: `feat/c35-frontend-multi-lens`, PR #79 merged vào `main` tại `515591b76d7915e801187f5dd0ca6effc696cd09`; verified: segmented controls 6 tabs với horizontal scroll trên mobile, dynamic domain-to-lens resolver cho 3 domain mới, component `WorkflowProfileGuidance` 3 profiles tích hợp vào `SessionDetail`, client API read-only contract, 11/11 new tests, 811/811 web tests PASS).
+- [ ] **PR 3: Backend Integration & E2E Workflow Validation** (Branch: `feat/c35-integration-e2e-validation`; verified: integration tests backend `test_c35_e2e_workflow_integration.py` không dùng Testcontainers, frontend integration tests `c35-workflow-lens-integration.test.tsx` mock ở network/client layer, xác minh happy path, error path và empty fallback, tài liệu kỹ thuật hoàn chỉnh).
+
+**Acceptance Gate:** Batch C35 Acceptance Gate (PR #78, PR #79 đã merge, PR #3 hoàn tất).
+
+

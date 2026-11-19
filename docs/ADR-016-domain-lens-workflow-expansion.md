@@ -57,6 +57,16 @@ Tuy nhiên, phạm vi ứng dụng thực tế của sản phẩm đang đối m
   - **Domain Resolver**: Ánh xạ đúng 3 domain mới (`healthcare -> systems_thinking`, `education -> design_thinking`, `sustainability -> systems_thinking` - KHÔNG thêm domain khác).
 - **Lý do**: Cung cấp công cụ trực quan hỗ trợ nhà nghiên cứu đổi mới sáng tạo áp dụng đúng phương pháp luận mà không cần ghi nhớ quy tắc phức tạp.
 
+### Decision 6: Xác Minh Tích Hợp End-to-End & Đồng Bộ Hóa Hợp Đồng API (PR 3)
+- **Quyết định**:
+  - **Phạm vi Docs & Tests Only**: PR 3 thuần túy là kiểm thử tích hợp (Integration Tests) và cập nhật tài liệu vận hành. Tuyệt đối không thay đổi runtime behavior của backend hay frontend trong môi trường production.
+  - **Không dùng Testcontainers**: Backend integration test (`test_c35_e2e_workflow_integration.py`) ưu tiên sử dụng in-memory/test double hoặc dependency override cho database session, loại bỏ hoàn toàn việc phụ thuộc vào Docker/Testcontainers giúp test chạy nhanh, ổn định và teardown tức thì.
+  - **Frontend Mock API ở Client/Network Layer**: Frontend integration test (`c35-workflow-lens-integration.test.tsx`) chỉ mock API ở tầng `api-client` / network layer, tuyệt đối không gọi backend live để tránh flaky và phụ thuộc môi trường mạng.
+  - Viết suite integration test backend bao phủ happy path và error path cho `GET /api/v1/sessions/workflow-profiles` (schema, lens recommendations, 405 error), `GET /api/v1/triz/nine-windows` (6 lenses, 422 error), và lifecycle tạo session từ template mới (`POST /api/v1/sessions/from-template`).
+  - Viết suite frontend E2E/integration test bao phủ happy path, switching profiles, dynamic lens resolution, và error boundary / empty fallback resilience.
+  - Khẳng định tính bất biến: Zero Schema Mutation, Zero Backend Business Logic Drift, Zero Secret Leakage.
+- **Lý do**: Khép kín vòng đời kiểm thử theo kim chỉ nam Test-First và bảo đảm chất lượng chuyển giao giữa backend capability và frontend UI consumption.
+
 ## Consequences
 
 ### Positive
