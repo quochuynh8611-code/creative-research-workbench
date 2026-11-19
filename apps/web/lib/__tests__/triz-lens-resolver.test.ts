@@ -19,12 +19,11 @@ describe('TRIZ Lens Resolver — Batch C5 (Context Mapping)', () => {
     expect(resolveLensFromDomain('society')).toBe('everyday')
   })
 
-  // 4. technical, software, research, education -> engineering
-  it('4. test_resolves_technical_software_research_and_education_domains_to_engineering_lens: technical, software, research, education ánh xạ sang "engineering"', () => {
+  // 4. technical, software, research -> engineering
+  it('4. test_resolves_technical_software_and_research_domains_to_engineering_lens: technical, software, research ánh xạ sang "engineering"', () => {
     expect(resolveLensFromDomain('technical')).toBe('engineering')
     expect(resolveLensFromDomain('software')).toBe('engineering')
     expect(resolveLensFromDomain('research')).toBe('engineering')
-    expect(resolveLensFromDomain('education')).toBe('engineering')
   })
 
   // 5. null, undefined, empty, whitespace, unknown -> engineering

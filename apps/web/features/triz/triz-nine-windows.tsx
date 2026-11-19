@@ -23,6 +23,9 @@ const LENSES: { key: TrizNineWindowsLens; label: string }[] = [
   { key: 'engineering', label: 'Kỹ thuật' },
   { key: 'business', label: 'Kinh doanh' },
   { key: 'everyday', label: 'Đời sống' },
+  { key: 'systems_thinking', label: 'Tư duy Hệ thống' },
+  { key: 'design_thinking', label: 'Tư duy Thiết kế' },
+  { key: 'lean_startup', label: 'Khởi nghiệp Tinh gọn' },
 ]
 
 interface TrizNineWindowsProps {
@@ -69,7 +72,7 @@ export function TrizNineWindows({
         <div
           role="group"
           aria-label="Chọn lăng kính TRIZ"
-          className="inline-flex items-center rounded-lg border border-border p-1 bg-muted/40 self-start md:self-auto"
+          className="inline-flex items-center rounded-lg border border-border p-1 bg-muted/40 self-start md:self-auto overflow-x-auto max-w-full scrollbar-none gap-1"
         >
           {LENSES.map(({ key, label }) => {
             const isActive = activeLens === key
@@ -79,7 +82,7 @@ export function TrizNineWindows({
                 type="button"
                 aria-pressed={isActive ? 'true' : 'false'}
                 onClick={() => setActiveLens(key)}
-                className={`px-3 py-1.5 text-xs md:text-sm font-medium rounded-md transition-all focus-visible:ring-2 focus-visible:ring-primary focus:outline-none ${
+                className={`shrink-0 px-3 py-1.5 text-xs md:text-sm font-medium rounded-md transition-all focus-visible:ring-2 focus-visible:ring-primary focus:outline-none ${
                   isActive
                     ? 'bg-background text-foreground shadow-sm font-semibold'
                     : 'text-muted-foreground hover:text-foreground hover:bg-background/50'

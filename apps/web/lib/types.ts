@@ -1,7 +1,7 @@
 // Shared TypeScript types mirroring the backend domain models
 // Source of Truth: docs/DOMAIN_SCHEMA.md, docs/API_CONTRACTS.md, backend endpoints
 
-export type TargetDomainType = 'life' | 'business' | 'culture' | 'society'
+export type TargetDomainType = 'life' | 'business' | 'culture' | 'society' | 'healthcare' | 'sustainability'
 export type LegacyDomainType = 'technical' | 'education' | 'personal' | 'research' | 'software'
 export type DomainType = TargetDomainType | LegacyDomainType
 export type SessionStatus = 'active' | 'paused' | 'completed' | 'archived' | 'draft'
@@ -668,7 +668,13 @@ export interface AnalyticsOverviewResponse {
 // TRIZ 9-Windows Types (Batch C2)
 // ──────────────────────────────────────────────
 
-export type TrizNineWindowsLens = 'engineering' | 'business' | 'everyday'
+export type TrizNineWindowsLens =
+  | 'engineering'
+  | 'business'
+  | 'everyday'
+  | 'systems_thinking'
+  | 'design_thinking'
+  | 'lean_startup'
 export type TrizSystemLevel = 'supersystem' | 'system' | 'subsystem'
 export type TrizTimeHorizon = 'past' | 'present' | 'future'
 
@@ -854,5 +860,32 @@ export interface AICoachResult {
 export interface AICoachResponse {
   data: AICoachResult
 }
+
+// ──────────────────────────────────────────────
+// Workflow Profiles Types (Batch C35)
+// ──────────────────────────────────────────────
+
+export type WorkflowProfileId =
+  | 'standard_triz'
+  | 'rapid_prototyping'
+  | 'stakeholder_alignment'
+
+export interface WorkflowProfile {
+  id: WorkflowProfileId
+  name_vi: string
+  name_en: string
+  description_vi: string
+  description_en: string
+  recommended_lenses: TrizNineWindowsLens[]
+  stages_guidance: Record<string, string>
+}
+
+export interface WorkflowProfilesResponse {
+  data: WorkflowProfile[]
+  meta: {
+    total: number
+  }
+}
+
 
 

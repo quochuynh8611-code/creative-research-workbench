@@ -49,6 +49,14 @@ Tuy nhiên, phạm vi ứng dụng thực tế của sản phẩm đang đối m
   - `sustainability` -> `systems_thinking`
   - Trường hợp không xác định được: Fallback về `'engineering'` một cách an toàn.
 
+### Decision 5: Giao Diện Người Dùng 6 Tabs & Component Hướng Dẫn Workflow Profiles (Read-Only)
+- **Quyết định**:
+  - `apps/web/features/triz/triz-nine-windows.tsx` mở rộng segmented controls từ 3 tabs thành đúng 6 tabs (`engineering`, `business`, `everyday`, `systems_thinking`, `design_thinking`, `lean_startup` - KHÔNG thêm lens khác) với container `overflow-x-auto` và responsive styling giúp trải nghiệm trên mobile không bị tràn viền hoặc co rúm nhãn.
+  - Xây dựng component độc lập `WorkflowProfileGuidance` (`apps/web/features/session/workflow-profile-guidance.tsx`) hiển thị đúng 3 profiles (`standard_triz`, `rapid_prototyping`, `stakeholder_alignment` - KHÔNG thêm profile khác), recommended lenses và checklist hành động theo từng giai đoạn nghiên cứu, tích hợp vào `session-detail.tsx`.
+  - **Read-Only API Call Contract**: Tất cả các components frontend liên quan đến 9-Windows và Workflow Profiles chỉ gọi các REST API read-only (`GET /api/v1/triz/nine-windows`, `GET /api/v1/sessions/workflow-profiles`), tuyệt đối không cung cấp cơ chế cho người dùng chỉnh sửa trực tiếp các file JSON tĩnh từ UI. Đây là một chấp nhận có chủ đích (intentional design decision) nhằm bảo toàn tính toàn vẹn của kho tri thức chuẩn hóa.
+  - **Domain Resolver**: Ánh xạ đúng 3 domain mới (`healthcare -> systems_thinking`, `education -> design_thinking`, `sustainability -> systems_thinking` - KHÔNG thêm domain khác).
+- **Lý do**: Cung cấp công cụ trực quan hỗ trợ nhà nghiên cứu đổi mới sáng tạo áp dụng đúng phương pháp luận mà không cần ghi nhớ quy tắc phức tạp.
+
 ## Consequences
 
 ### Positive

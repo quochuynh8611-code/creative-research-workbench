@@ -47,6 +47,7 @@ import type {
   TrizPrinciplesResponse,
   TrizResourceTaxonomyResponse,
   UpdateCandidateSolutionInput,
+  WorkflowProfilesResponse,
   WorkflowRunResponse,
 } from './types'
 
@@ -546,4 +547,13 @@ export async function getTrizResourceTaxonomy(): Promise<TrizResourceTaxonomyRes
   const response = await apiClient.get<TrizResourceTaxonomyResponse>('/api/v1/triz/resource-taxonomy')
   return response.data
 }
+
+/**
+ * 41. Lấy danh mục 3 hồ sơ quy trình làm việc (Workflow Profiles) (Batch C35 PR 2).
+ */
+export async function getWorkflowProfiles(): Promise<WorkflowProfilesResponse> {
+  const response = await apiClient.get<WorkflowProfilesResponse>('/api/v1/sessions/workflow-profiles')
+  return response.data
+}
+
 
