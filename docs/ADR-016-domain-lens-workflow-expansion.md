@@ -1,7 +1,7 @@
 # ADR-016: Domain, Lens & Workflow Expansion Architecture
 
 ## Status
-Proposed (Chờ Founder phê duyệt)
+Accepted (Phê duyệt hoàn tất cùng Batch C35: PR #78, PR #79, PR #80)
 
 ## Date
 2026-11-18
