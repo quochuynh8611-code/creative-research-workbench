@@ -1319,6 +1319,100 @@ describe('Phase 5.4 — Problem Intake & Structuring Canvas Tests', () => {
       expect(anchorClickSpy).toHaveBeenCalledTimes(1)
     })
 
+    it('C37-UX-01: chọn Xuất Markdown (.md) hiển thị thông báo thành công và đặt tên file sanitized chứa title và short id', async () => {
+      let downloadedFilename = ''
+      anchorClickSpy.mockImplementation(function (this: HTMLAnchorElement) {
+        downloadedFilename = this.download
+      })
+
+      mockedGetSession.mockResolvedValue(MOCK_SESSION_WITH_FRAME)
+      const mockBlob = new Blob(['# Markdown content'], { type: 'text/markdown' })
+      mockedExportSessionMarkdown.mockResolvedValueOnce(mockBlob)
+
+      renderWithClient(<SessionDetail sessionId="ses-456" />)
+
+      await waitFor(() => {
+        expect(screen.getByText('Tối ưu độ bền và trọng lượng cánh tay robot')).toBeInTheDocument()
+      })
+
+      const exportTrigger = screen.getByRole('button', { name: /Xuất dữ liệu|Export/i })
+      fireEvent.click(exportTrigger)
+
+      const mdItem = await screen.findByRole('menuitem', { name: /Xuất Markdown|Markdown/i })
+      fireEvent.click(mdItem)
+
+      await waitFor(() => {
+        expect(screen.getByText(/Xuất bản tệp Markdown thành công/i)).toBeInTheDocument()
+      })
+      expect(downloadedFilename).toMatch(/^session_toi-uu-do-ben-va-trong-luong-canh-tay-ro_ses-456\.md$/)
+    })
+
+    it('C37-UX-01: chọn Xuất JSON (.json) hiển thị thông báo thành công và đặt tên file sanitized chứa title và short id', async () => {
+      let downloadedFilename = ''
+      anchorClickSpy.mockImplementation(function (this: HTMLAnchorElement) {
+        downloadedFilename = this.download
+      })
+
+      mockedGetSession.mockResolvedValue(MOCK_SESSION_WITH_FRAME)
+      const mockSnapshot = {
+        session: { id: 'ses-456', title: 'Tối ưu độ bền và trọng lượng cánh tay robot' },
+        problem_frame: null,
+        recommended_methods: [],
+        research_notes: [],
+        candidate_solutions: [],
+      }
+      mockedExportSessionJson.mockResolvedValueOnce(mockSnapshot as any)
+
+      renderWithClient(<SessionDetail sessionId="ses-456" />)
+
+      await waitFor(() => {
+        expect(screen.getByText('Tối ưu độ bền và trọng lượng cánh tay robot')).toBeInTheDocument()
+      })
+
+      const exportTrigger = screen.getByRole('button', { name: /Xuất dữ liệu|Export/i })
+      fireEvent.click(exportTrigger)
+
+      const jsonItem = await screen.findByRole('menuitem', { name: /Xuất JSON|JSON Snapshot/i })
+      fireEvent.click(jsonItem)
+
+      await waitFor(() => {
+        expect(screen.getByText(/Xuất bản tệp JSON thành công/i)).toBeInTheDocument()
+      })
+      expect(downloadedFilename).toMatch(/^session_toi-uu-do-ben-va-trong-luong-canh-tay-ro_ses-456\.json$/)
+    })
+
+    it('C37-UX-01: tên file export fallback về session_<shortId> khi title rỗng hoặc chỉ có khoảng trắng', async () => {
+      let downloadedFilename = ''
+      anchorClickSpy.mockImplementation(function (this: HTMLAnchorElement) {
+        downloadedFilename = this.download
+      })
+
+      const sessionEmptyTitle = {
+        ...MOCK_SESSION_WITH_FRAME,
+        title: '   ',
+      }
+      mockedGetSession.mockResolvedValue(sessionEmptyTitle)
+      const mockBlob = new Blob(['# Markdown content'], { type: 'text/markdown' })
+      mockedExportSessionMarkdown.mockResolvedValueOnce(mockBlob)
+
+      renderWithClient(<SessionDetail sessionId="ses-456" />)
+
+      await waitFor(() => {
+        expect(screen.getByRole('button', { name: /Xuất dữ liệu|Export/i })).toBeInTheDocument()
+      })
+
+      const exportTrigger = screen.getByRole('button', { name: /Xuất dữ liệu|Export/i })
+      fireEvent.click(exportTrigger)
+
+      const mdItem = await screen.findByRole('menuitem', { name: /Xuất Markdown|Markdown/i })
+      fireEvent.click(mdItem)
+
+      await waitFor(() => {
+        expect(screen.getByText(/Xuất bản tệp Markdown thành công/i)).toBeInTheDocument()
+      })
+      expect(downloadedFilename).toBe('session_ses-456.md')
+    })
+
     it('chọn Xuất JSON (.json) gọi exportSessionJson và trigger download file json', async () => {
       mockedGetSession.mockResolvedValue(MOCK_SESSION_WITH_FRAME)
       const mockSnapshot = {

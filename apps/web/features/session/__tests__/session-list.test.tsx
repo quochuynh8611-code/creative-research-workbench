@@ -777,6 +777,96 @@ describe('SessionList Lifecycle & Safe Deletion (Phase 5.9)', () => {
     })
   })
 
+  it('C37-UX-02: Bấm Áp dụng mẫu này hiển thị thông báo thành công kèm link hành động "Mở phiên ngay" trỏ đến /sessions/{id}', async () => {
+    mockedListSessions.mockResolvedValue({
+      data: MOCK_ACTIVE_SESSIONS,
+      meta: { total: 1 },
+    })
+    mockedGetSessionTemplates.mockResolvedValue([
+      {
+        id: 'engineering_composite_arm',
+        title: 'Tối ưu hóa Trọng lượng & Độ bền Cơ học',
+        domain: 'technical',
+        description: 'Mẫu cơ khí TRIZ',
+        tags: ['engineering'],
+        workflow_state: 'structuring',
+      },
+    ])
+    mockedCreateSessionFromTemplate.mockResolvedValueOnce({
+      id: 'session-template-1234',
+      title: 'Tối ưu hóa Trọng lượng & Độ bền Cơ học',
+      domain: 'technical',
+      status: 'active',
+      workflow_state: 'structuring',
+      tags: ['engineering'],
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    } as any)
+
+    renderWithClient(<SessionList />)
+
+    await waitFor(() => {
+      expect(screen.getByText('Session Hoạt Động')).toBeInTheDocument()
+    })
+
+    // Mở modal
+    fireEvent.click(screen.getByRole('button', { name: /mẫu nghiên cứu/i }))
+
+    await waitFor(() => {
+      expect(screen.getByText('Tối ưu hóa Trọng lượng & Độ bền Cơ học')).toBeInTheDocument()
+    })
+
+    // Bấm nút "Áp dụng mẫu này"
+    fireEvent.click(screen.getByRole('button', { name: /áp dụng mẫu này/i }))
+
+    // Kiểm tra thông báo thành công và action link điều hướng trực tiếp
+    await waitFor(() => {
+      expect(screen.getByText(/Đã khởi tạo phiên nghiên cứu từ Mẫu: "Tối ưu hóa Trọng lượng & Độ bền Cơ học"/i)).toBeInTheDocument()
+      const openSessionLink = screen.getByRole('link', { name: /mở phiên ngay/i })
+      expect(openSessionLink).toBeInTheDocument()
+      expect(openSessionLink).toHaveAttribute('href', '/sessions/session-template-1234')
+    })
+  })
+
+  it('C37-UX-02: Tạo session từ template thất bại không hiển thị link hành động "Mở phiên ngay"', async () => {
+    mockedListSessions.mockResolvedValue({
+      data: MOCK_ACTIVE_SESSIONS,
+      meta: { total: 1 },
+    })
+    mockedGetSessionTemplates.mockResolvedValue([
+      {
+        id: 'engineering_composite_arm',
+        title: 'Tối ưu hóa Trọng lượng & Độ bền Cơ học',
+        domain: 'technical',
+        description: 'Mẫu cơ khí TRIZ',
+        tags: ['engineering'],
+        workflow_state: 'structuring',
+      },
+    ])
+    mockedCreateSessionFromTemplate.mockRejectedValueOnce(new Error('Tạo phiên thất bại'))
+
+    renderWithClient(<SessionList />)
+
+    await waitFor(() => {
+      expect(screen.getByText('Session Hoạt Động')).toBeInTheDocument()
+    })
+
+    // Mở modal
+    fireEvent.click(screen.getByRole('button', { name: /mẫu nghiên cứu/i }))
+
+    await waitFor(() => {
+      expect(screen.getByText('Tối ưu hóa Trọng lượng & Độ bền Cơ học')).toBeInTheDocument()
+    })
+
+    // Bấm nút "Áp dụng mẫu này"
+    fireEvent.click(screen.getByRole('button', { name: /áp dụng mẫu này/i }))
+
+    await waitFor(() => {
+      expect(screen.getByText(/Tạo phiên thất bại/i)).toBeInTheDocument()
+      expect(screen.queryByRole('link', { name: /mở phiên ngay/i })).not.toBeInTheDocument()
+    })
+  })
+
   describe('SessionList Domain Filter & Badges', () => {
     it('20. Hiển thị dropdown bộ lọc Lĩnh vực với option "Tất cả lĩnh vực" và 4 domain mục tiêu', async () => {
       renderWithClient(<SessionList />)

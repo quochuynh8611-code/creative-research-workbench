@@ -71,7 +71,11 @@ export function SessionList() {
   const [isTemplateModalOpen, setIsTemplateModalOpen] = useState(false)
   const [isWelcomeModalOpen, setIsWelcomeModalOpen] = useState(false)
   const [templateDomainFilter, setTemplateDomainFilter] = useState<string>('all')
-  const [importNotification, setImportNotification] = useState<{ type: 'success' | 'error'; message: string } | null>(null)
+  const [importNotification, setImportNotification] = useState<{
+    type: 'success' | 'error'
+    message: string
+    action?: { label: string; href: string }
+  } | null>(null)
   const fileInputRef = useRef<HTMLInputElement | null>(null)
 
   useEffect(() => {
@@ -206,6 +210,10 @@ export function SessionList() {
       setImportNotification({
         type: 'success',
         message: `Đã khởi tạo phiên nghiên cứu từ Mẫu: "${res.title}".`,
+        action: {
+          label: 'Mở phiên ngay ➔',
+          href: `/sessions/${res.id}`,
+        },
       })
       setTimeout(() => setImportNotification(null), 6000)
     },
@@ -392,25 +400,36 @@ export function SessionList() {
       {/* Import Notification Banner */}
       {importNotification && (
         <div
+          role={importNotification.type === 'error' ? 'alert' : 'status'}
+          aria-live="polite"
           className={cn(
-            'p-4 rounded-md text-sm flex items-center justify-between border',
+            'p-4 rounded-md text-sm flex items-center justify-between border gap-3',
             importNotification.type === 'success'
               ? 'bg-emerald-50 border-emerald-200 text-emerald-800 dark:bg-emerald-950/50 dark:border-emerald-800 dark:text-emerald-300'
               : 'bg-destructive/10 border-destructive/20 text-destructive'
           )}
         >
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             {importNotification.type === 'success' ? (
               <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-600 dark:text-emerald-400" />
             ) : (
               <AlertCircle className="w-4 h-4 shrink-0" />
             )}
             <span>{importNotification.message}</span>
+            {importNotification.action && (
+              <Link
+                href={importNotification.action.href}
+                className="inline-flex items-center gap-1 font-semibold underline hover:opacity-80 transition-opacity ml-1"
+              >
+                {importNotification.action.label}
+              </Link>
+            )}
           </div>
           <button
             type="button"
             onClick={() => setImportNotification(null)}
-            className="p-1 rounded hover:bg-black/5 dark:hover:bg-white/5 transition-colors"
+            aria-label="Đóng thông báo"
+            className="p-1 rounded hover:bg-black/5 dark:hover:bg-white/5 transition-colors shrink-0"
           >
             <X className="w-4 h-4" />
           </button>
