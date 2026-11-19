@@ -112,37 +112,104 @@ Feature: Security & Architecture Invariants
     And no new Alembic migration scripts exist in backend/alembic/versions
 ```
 
+### Kịch bản 6: PR 3 Backend E2E Integration — Contract Validation & Error Resilience
+```gherkin
+Feature: Backend E2E Workflow Profiles & Multi-Lens Contract
+  As an API consumer and frontend integration layer
+  I want the backend endpoints to enforce strict data contracts and error resilience
+  So that frontend clients always receive valid catalogs or predictable error codes
+
+  Scenario: Strict schema contract on workflow profiles
+    When a GET request is sent to "/api/v1/sessions/workflow-profiles"
+    Then the response status is 200 OK
+    And the response contains meta.total == 3
+    And every profile contains valid fields ("id", "name_vi", "name_en", "description_vi", "description_en", "recommended_lenses", "stages_guidance")
+    And all recommended lenses must be one of the 6 valid lenses
+    And each profile provides stage guidance for "intake", "structuring", and "ideation"
+
+  Scenario: Rejecting unsupported HTTP methods on workflow profiles
+    When a POST request is sent to "/api/v1/sessions/workflow-profiles"
+    Then the response status is 405 Method Not Allowed
+
+  Scenario Outline: 9-Windows comprehensive multi-lens verification
+    When a GET request is sent to "/api/v1/triz/nine-windows" with lens "<lens>"
+    Then the response status is 200 OK
+    And the response grid contains exactly 9 cells
+    And all cells have non-empty "label_vi", "prompt_vi", and "description_vi"
+
+    Examples:
+      | lens             |
+      | engineering      |
+      | business         |
+      | everyday         |
+      | systems_thinking |
+      | design_thinking  |
+      | lean_startup     |
+
+  Scenario: 9-Windows rejecting invalid lens query parameter
+    When a GET request is sent to "/api/v1/triz/nine-windows" with lens "invalid_quantum_lens"
+    Then the response status is 422 Unprocessable Entity
+
+  Scenario Outline: Session creation from expansion domain templates
+    When a user creates a session from template "<template_id>"
+    Then the created session has domain "<expected_domain>"
+    And the session has a valid problem_frame matching the template contradiction
+    And the session workflow_state is "intake"
+
+    Examples:
+      | template_id              | expected_domain |
+      | tpl-healthcare-triage-ai | healthcare      |
+      | tpl-edu-hybrid-engage    | education       |
+      | tpl-sus-packaging-waste  | sustainability  |
+```
+
+### Kịch bản 7: PR 3 Frontend E2E Integration — UI Guidance Consumption & Error Recovery
+```gherkin
+Feature: Frontend E2E Workflow Profile Guidance & Lens Integration
+  As a user navigating a research session
+  I want the workflow guidance component and lens selector to work reliably across happy, error, and empty paths
+  So that my research flow is never disrupted by network blips or unexpected data
+
+  Scenario: Happy path guidance rendering and profile switching
+    Given the user is on the Session Detail view for a "healthcare" session
+    When the workflow profiles are fetched from "/api/v1/sessions/workflow-profiles"
+    Then all 3 profile options are available
+    And the resolved default lens is "systems_thinking"
+    And switching profiles updates the recommended lenses and stage highlights
+
+  Scenario: Graceful recovery on workflow profiles API error
+    Given the backend returns a 500 Internal Server Error for "/api/v1/sessions/workflow-profiles"
+    When the Session Detail view renders
+    Then the WorkflowProfileGuidance shows an error alert without crashing the page
+    And the rest of the session detail views (stepper, problem frame) continue functioning
+
+  Scenario: Safe handling of empty profiles response
+    Given the backend returns an empty profile list
+    When the WorkflowProfileGuidance mounts
+    Then it renders null without throwing uncaught exceptions
+```
+
 ---
 
 ## 3. Planned Failing Test Suites (Trước khi viết code sản phẩm)
 
 ### 3.1. Backend Test Suites
-1. **`backend/tests/unit/test_domain_templates_expansion.py`**:
-   - `test_healthcare_templates_exist_and_valid()`: Kiểm tra các mẫu y tế có đủ thuộc tính.
-   - `test_education_templates_exist_and_valid()`: Kiểm tra các mẫu giáo dục có đủ thuộc tính.
-   - `test_sustainability_templates_exist_and_valid()`: Kiểm tra các mẫu bền vững có đủ thuộc tính.
-2. **`backend/tests/unit/test_nine_windows_expansion.py`**:
-   - `test_systems_thinking_lens_contains_9_windows()`: 9 ô hợp lệ.
-   - `test_design_thinking_lens_contains_9_windows()`: 9 ô hợp lệ.
-   - `test_lean_startup_lens_contains_9_windows()`: 9 ô hợp lệ.
-   - `test_nine_windows_validator_accepts_all_6_lenses()`: Bộ validator chấp thuận cả 6 lăng kính.
-3. **`backend/tests/integration/test_triz_nine_windows_api_expansion.py`**:
-   - `test_api_get_systems_thinking_lens()`: HTTP 200.
-   - `test_api_get_design_thinking_lens()`: HTTP 200.
-   - `test_api_get_lean_startup_lens()`: HTTP 200.
-   - `test_api_workflow_profiles_endpoint()`: HTTP 200 trả về 3 profiles.
+1. **`backend/tests/unit/test_domain_templates_expansion.py`** (PASS)
+2. **`backend/tests/unit/test_nine_windows_expansion.py`** (PASS)
+3. **`backend/tests/integration/test_triz_nine_windows_api_expansion.py`** (PASS)
+4. **`backend/tests/integration/test_c35_e2e_workflow_integration.py`** (PR 3 MỚI):
+   - `test_workflow_profiles_schema_contract`: kiểm tra schema 3 profiles, lenses, stages.
+   - `test_workflow_profiles_method_not_allowed`: POST trả về 405.
+   - `test_all_six_lenses_nine_windows_api`: duyệt đủ 6 lenses, mỗi lens đủ 9 ô.
+   - `test_nine_windows_invalid_lens_returns_422`: lens lạ trả về 422.
+   - `test_e2e_session_creation_from_expansion_templates`: tạo session từ templates healthcare, education, sustainability.
 
 ### 3.2. Frontend Test Suites
-1. **`apps/web/lib/__tests__/triz-lens-resolver-expansion.test.ts`**:
-   - `test_resolves_healthcare_to_systems_thinking`: domain "healthcare" -> "systems_thinking".
-   - `test_resolves_education_to_design_thinking`: domain "education" -> "design_thinking".
-   - `test_resolves_sustainability_to_systems_thinking`: domain "sustainability" -> "systems_thinking".
-2. **`apps/web/features/triz/__tests__/triz-nine-windows-expansion.test.tsx`**:
-   - `test_renders_all_6_lens_tabs`: renders đúng 6 tabs lăng kính trong segmented controls.
-   - `test_clicking_systems_thinking_tab_calls_api`: click tab "Tư duy Hệ thống" gọi API với lens `systems_thinking`.
-   - `test_clicking_design_thinking_tab_calls_api`: click tab "Tư duy Thiết kế" gọi API với lens `design_thinking`.
-   - `test_clicking_lean_startup_tab_calls_api`: click tab "Khởi nghiệp Tinh gọn" gọi API với lens `lean_startup`.
-3. **`apps/web/features/session/__tests__/workflow-profile-guidance.test.tsx`**:
-   - `test_renders_all_3_workflow_profiles`: hiển thị đầy đủ Standard TRIZ, Rapid Prototyping, Stakeholder Alignment.
-   - `test_displays_recommended_lenses_and_guidance`: hiển thị badges các recommended lenses.
-   - `test_highlights_active_stage_guidance`: làm nổi bật mục hướng dẫn của giai đoạn hiện tại.
+1. **`apps/web/lib/__tests__/triz-lens-resolver-expansion.test.ts`** (PASS)
+2. **`apps/web/features/triz/__tests__/triz-nine-windows-expansion.test.tsx`** (PASS)
+3. **`apps/web/features/session/__tests__/workflow-profile-guidance.test.tsx`** (PASS)
+4. **`apps/web/features/session/__tests__/c35-workflow-lens-integration.test.tsx`** (PR 3 MỚI):
+   - `test_session_detail_workflow_profile_guidance_e2e`: happy path tích hợp Session Detail + Guidance + Lens.
+   - `test_workflow_profile_guidance_error_boundary_resilience`: error path (API 500) không làm sập trang.
+   - `test_workflow_profile_guidance_empty_payload_safety`: empty list không văng exception.
+   - `test_cross_domain_lens_resolution_consistency`: kiểm tra mapping domain sang lens nhất quán.

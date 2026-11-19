@@ -112,7 +112,7 @@ Không làm xáo trộn các trạng thái cơ sở dữ liệu `workflow_state`
   - Cập nhật `triz_nine_windows_service.py` và `triz.py`.
   - Bổ sung `workflow_profiles.py` và endpoint `/sessions/workflow-profiles`.
   - Backend unit & integration tests (PASS 100%).
-- **PR 2: Frontend Multi-Lens Tabs, Domain Resolver & Workflow Guidance** (IN PROGRESS):
+- **PR 2: Frontend Multi-Lens Tabs, Domain Resolver & Workflow Guidance** (MERGED vào `main` tại `515591b76d7915e801187f5dd0ca6effc696cd09` — PR #79):
   - Mở rộng `types.ts`: `TargetDomainType`, `TrizNineWindowsLens` (6 lenses), `WorkflowProfile`, `WorkflowProfileId`, `WorkflowProfilesResponse`.
   - Mở rộng `api-client.ts`: `getWorkflowProfiles()`, hỗ trợ 6 lenses trong `getTrizNineWindows()`.
   - Cập nhật `triz-lens-resolver.ts`: `healthcare -> systems_thinking`, `education -> design_thinking`, `sustainability -> systems_thinking`.
@@ -120,9 +120,19 @@ Không làm xáo trộn các trạng thái cơ sở dữ liệu `workflow_state`
   - Xây dựng component `apps/web/features/session/workflow-profile-guidance.tsx` hiển thị chi tiết 3 profiles và hướng dẫn theo từng giai đoạn nghiên cứu.
   - Tích hợp `WorkflowProfileGuidance` vào `session-detail.tsx`.
   - Frontend test suites:
-    - `triz-lens-resolver-expansion.test.ts`: kiểm tra giải mã 3 domain mới.
-    - `triz-nine-windows-expansion.test.tsx`: kiểm tra render 6 tabs và tương tác.
-    - `workflow-profile-guidance.test.tsx`: kiểm tra render 3 profiles và highlight giai đoạn hiện tại.
-- **PR 3: Documentation, Runbook & Batch C35 Finalization**:
-  - Cập nhật `DEPLOYMENT_GUIDE.md` và `IMPLEMENTATION_ROADMAP.md`.
-  - Đóng hoàn tất Batch C35 sau khi CI 3/3 PASS.
+    - `triz-lens-resolver-expansion.test.ts`: kiểm tra giải mã 3 domain mới (PASS).
+    - `triz-nine-windows-expansion.test.tsx`: kiểm tra render 6 tabs và tương tác (PASS).
+    - `workflow-profile-guidance.test.tsx`: kiểm tra render 3 profiles và highlight giai đoạn hiện tại (PASS).
+- **PR 3: Backend Integration & E2E Workflow Validation** (IN PROGRESS):
+  - **Ràng buộc kiểm thử**:
+    - PR 3 là test & documentation only, tuyệt đối không thay đổi logic nghiệp vụ production.
+    - Backend integration test không dùng Testcontainers (ưu tiên in-memory / mock test double cho DB session) để kiểm thử nhanh và ổn định.
+    - Frontend E2E / integration test chỉ mock ở tầng API client / network layer, không gọi live backend để loại bỏ flaky.
+  - Backend integration test suite: `backend/tests/integration/test_c35_e2e_workflow_integration.py`
+    - Kiểm tra `GET /api/v1/sessions/workflow-profiles` trả đủ đúng 3 profiles (`standard_triz`, `rapid_prototyping`, `stakeholder_alignment`) kèm schema đầy đủ.
+    - Kiểm tra `GET /api/v1/triz/nine-windows` trả về đủ 6 lăng kính (9 ô mỗi lăng kính), kiểm tra 422 cho invalid lens.
+    - Kiểm tra lifecycle tạo phiên từ template mới (`POST /api/v1/sessions/from-template`) cho các domain mới với in-memory/mock DB session.
+  - Frontend integration / E2E test suite: `apps/web/features/session/__tests__/c35-workflow-lens-integration.test.tsx`
+    - Kiểm tra Session Detail tích hợp `WorkflowProfileGuidance` và `TrizNineWindows` với đầy đủ happy path, error path và empty fallback.
+    - Kiểm tra tính nhất quán của domain resolver (`healthcare`, `education`, `sustainability`).
+  - Cập nhật tài liệu: SPEC, ADR-016, Gherkin Matrix, Implementation Roadmap, task log Obsidian.
