@@ -1529,10 +1529,7 @@ describe('SessionList Lifecycle & Safe Deletion (Phase 5.9)', () => {
     it('provides healthcare, education, and sustainability options in create session modal and filter dropdown', async () => {
       mockedListSessions.mockResolvedValue({
         data: [],
-        total: 0,
-        page: 1,
-        page_size: 20,
-        total_pages: 1,
+        meta: { total: 0 },
       })
 
       renderWithClient(<SessionList />)
