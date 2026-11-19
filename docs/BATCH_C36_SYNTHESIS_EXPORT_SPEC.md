@@ -84,6 +84,7 @@ Theo chỉ thị phê duyệt và điều chỉnh bắt buộc từ Founder, Bat
      - Xác minh `GET /api/v1/sessions/{id}/export/markdown` xuất đủ metadata frontmatter và chuỗi nguồn chuẩn hóa.
      - Xác minh `GET /api/v1/sessions/{id}/export/json` chứa đầy đủ `domain`, `tags` và `source_context`.
      - Kiểm tra Roundtrip: Nạp JSON snapshot vào `session_import_service` bảo đảm không suy hao dữ liệu.
+     - Bao phủ Edge Case: Kiểm tra phiên nghiên cứu không có domain (`domain = null` hoặc chuỗi rỗng `""`), bảo đảm quá trình import không crash và fallback an toàn sang `None`.
      - Tuân thủ Zero Testcontainers: Sử dụng in-memory/test double dependency override.
   2. Frontend Integration Test:
      - Giả lập (mock) client layer gọi `exportSessionMarkdown` và `exportSessionJson`, xác minh trigger download blob thành công và hiển thị trạng thái loading/error chính xác.

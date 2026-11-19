@@ -257,4 +257,16 @@ created: "2026-07-03"
 
 **Acceptance Gate:** Batch C35 Acceptance Gate PASS 100% ✅ (PR #78, PR #79, PR #80 đã merge và 3/3 checks CI trên `main` PASS. Batch C35 đóng hoàn tất).
 
+---
+
+## Phase 19 — Batch C36: Research Synthesis, Provenance & Export Completeness
+**Goal:** Hoàn thiện 100% tính truy nguyên (Provenance), làm giàu siêu dữ liệu xuất bản Markdown và JSON snapshot (domain, tags, và 4 nguồn tri thức mới: ARIZ, Evolution, Resource, AI Coach), tối ưu hóa trải nghiệm lựa chọn domain và lưu trữ bền vững Workflow Profile trên frontend, đồng thời kiểm chứng tính toàn vẹn khép kín E2E Export Roundtrip với zero database schema mutation.
+
+- [x] **PR 1: Backend Provenance & Export Serialization Enrichment** (Branch: `feat/c36-backend-export-provenance`, PR #81 merged vào `main` tại `51b64ad8383a8f5c9281a6c4217da7dcfe1fe686`; verified: `session.domain` và `tags` trong JSON export, YAML frontmatter & overview trong Markdown export, định dạng 4 nguồn provenance mới có defensive inline escaping, làm giàu AI report payload, 10/10 new tests, 239/239 backend tests PASS).
+- [x] **PR 2: Frontend Domain Labels & Workflow Persistence** (Branch: `feat/c36-frontend-domain-labels-workflow-persistence`, PR #82 merged vào `main` tại `e313da98dddb1faa48380ec133f7de2afaf69c60`; verified: `DOMAIN_LABELS` bổ sung tiếng Việt cho `healthcare` và `sustainability`, `DOMAIN_OPTIONS` mở rộng 3 domain mới trong form tạo & filter session, `WorkflowProfileGuidance` persistence an toàn qua `localStorage` với key versioning `v1`, 818/818 web tests PASS, CI 3/3 checks PASS).
+- [x] **PR 3: E2E Export Roundtrip Verification & Documentation** (Branch: `feat/c36-e2e-export-roundtrip-docs`; verified: 5 backend integration tests trong `test_c36_export_synthesis_integration.py` bao phủ đầy đủ 4 nguồn provenance, roundtrip import không suy hao và edge case domain rỗng không crash qua Zero Testcontainers, 4 frontend integration tests trong `c36-export-roundtrip-integration.test.tsx` kiểm chứng chu trình tải xuống blob và cơ chế phục hồi lỗi, cập nhật mục 16 trong `DEPLOYMENT_GUIDE.md`, nghiệm thu `ADR-017` chuyển sang Accepted).
+
+**Acceptance Gate:** Batch C36 Acceptance Gate PASS 100% ✅ (PR #81, PR #82 đã merge và PR #3 hoàn thành verification toàn diện. Batch C36 đóng hoàn tất).
+
+
 

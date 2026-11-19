@@ -612,4 +612,51 @@ Trước khi bắt đầu buổi demo với đối tác hoặc ban lãnh đạo,
        - Nếu status là `error`: Kiểm tra kết nối mạng ra ngoài hoặc quota tài khoản AI provider.
      - *Lưu ý:* Cơ chế fallback là tính năng an toàn fail-safe được thiết kế có chủ đích, bảo đảm phiên nghiên cứu không bao giờ bị gián đoạn hay treo hệ thống.
 
+---
+
+## 16. Vận Hành Xuất Bản Tri Thức & Kiểm Tra Toàn Vẹn Sao Lưu (Batch C36 — Export & Snapshot Runbook)
+
+### 16.1. Xuất Bản Markdown (.md) Đầy Đủ Truy Nguyên (Full Provenance)
+- Endpoint: `GET /api/v1/sessions/{session_id}/export?format=markdown`
+- Định dạng: GitHub Flavored Markdown (GFM) kèm YAML frontmatter và overview.
+- **Lệnh curl kiểm tra xuất bản:**
+  ```bash
+  curl -s http://localhost:8000/api/v1/sessions/<SESSION_ID>/export?format=markdown > session_export.md
+  head -n 15 session_export.md
+  ```
+- **Xác thực cấu trúc xuất bản:**
+  - Frontmatter phải có trường `domain: "<domain>"` (ví dụ `sustainability`, `healthcare`, `education`).
+  - Toàn bộ ghi chú nghiên cứu tạo từ các công cụ nâng cao phải có chuỗi nguồn truy nguyên đầy đủ:
+    - Thuật giải ARIZ: `| Nguồn: Thuật giải ARIZ [Bước {step_id}: {step_title}]`
+    - Quy luật Tiến hóa: `| Nguồn: Quy luật Tiến hóa [{pattern_name}]`
+    - Ma trận Tài nguyên: `| Nguồn: Ma trận Tài nguyên [{resource_group} • {item_name}]`
+    - AI Solution Coach: `| Nguồn: AI Solution Coach [{suggestion_type}]`
+  - Các ký tự đặc biệt trong metadata phải được escape an toàn bằng `escape_markdown_inline` để tránh vỡ bảng Markdown.
+
+### 16.2. Xuất Bản & Sao Lưu JSON Snapshot Toàn Vẹn
+- Endpoint: `GET /api/v1/sessions/{session_id}/export?format=json`
+- **Lệnh curl trích xuất snapshot:**
+  ```bash
+  curl -s http://localhost:8000/api/v1/sessions/<SESSION_ID>/export?format=json | jq .session
+  ```
+- **Xác thực dữ liệu snapshot:**
+  - Đối tượng `session` phải chứa đầy đủ trường `domain` và mảng `tags`.
+  - Mảng `research_notes` chứa cấu trúc `source_context` nguyên vẹn của từng nguồn.
+
+### 16.3. Kiểm Chứng Roundtrip Toàn Vẹn Dữ Liệu (Export ➔ Import)
+- Nhập lại bản snapshot vào hệ thống qua endpoint: `POST /api/v1/sessions/import`
+- **Lệnh curl thực hiện roundtrip:**
+  ```bash
+  # 1. Trích xuất snapshot JSON
+  curl -s http://localhost:8000/api/v1/sessions/<SOURCE_ID>/export?format=json > snapshot.json
+
+  # 2. Nhập snapshot vào phiên mới
+  curl -s -X POST -H "Content-Type: application/json" -d @snapshot.json http://localhost:8000/api/v1/sessions/import | jq .
+  ```
+- **Quy chuẩn xác thực Roundtrip (Zero Data Loss):**
+  1. Phiên mới được cấp UUID mới, giữ nguyên 100% `title`, `description`, `domain`, và `tags`.
+  2. Toàn bộ `problem_frame`, các mâu thuẫn kỹ thuật/vật lý, ghi chú nghiên cứu và giải pháp ứng viên được khôi phục đầy đủ.
+  3. **Edge Case Handling:** Nếu phiên nghiên cứu gốc có `domain = null` hoặc chuỗi rỗng `""`, quá trình import phải thành công mà không gây lỗi runtime, đồng thời trường domain của phiên mới tự động fallback an toàn về `null`.
+
+
 

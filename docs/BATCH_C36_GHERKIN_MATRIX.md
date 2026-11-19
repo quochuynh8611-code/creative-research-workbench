@@ -156,3 +156,18 @@ Feature: Frontend Export Blob Handling
     And a Blob download URL must be created and triggered
     And no error alert should be displayed
 ```
+
+#### Scenario 9 (SC-C36-09): Roundtrip Import Với Edge Case Domain Rỗng/Null
+```gherkin
+Feature: Edge Case Domain Roundtrip Robustness
+  As a QA engineer
+  I want to verify that sessions with null or empty domain string can be exported and imported
+  So that legacy or unclassified sessions never crash the import pipeline.
+
+  Scenario: Exporting and importing a session without domain
+    Given a session with domain set to null or empty string ""
+    When the session is exported to JSON
+    And the exported payload is fed into session_import_service
+    Then the import must succeed without crashing
+    And the imported session domain must safely fallback to null
+```
