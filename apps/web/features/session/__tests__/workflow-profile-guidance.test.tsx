@@ -112,4 +112,35 @@ describe('Workflow Profile Guidance Component — Batch C35', () => {
 
     expect(screen.getByText('Sinh phương án MVP tối thiểu.')).toBeInTheDocument()
   })
+
+  it('4. test_persists_selected_profile_to_local_storage_and_restores_on_remount', async () => {
+    const sessionId = 'session-c36-test'
+    const storageKey = `crw:session:${sessionId}:workflow-profile:v1`
+    localStorage.clear()
+
+    const { unmount } = renderComponent({ sessionId })
+
+    await waitFor(() => {
+      expect(screen.getByText('Quy trình TRIZ Tiêu chuẩn (6 Bước)')).toBeInTheDocument()
+    })
+
+    // Chọn profile Rapid Prototyping
+    const rapidTab = screen.getByRole('button', { name: /Tạo Mẫu Thử Nghiệm Nhanh/i })
+    fireEvent.click(rapidTab)
+
+    // Kiểm tra localStorage đã lưu profile
+    expect(localStorage.getItem(storageKey)).toBe('rapid_prototyping')
+
+    // Unmount component
+    unmount()
+
+    // Re-mount với cùng sessionId
+    renderComponent({ sessionId })
+
+    // Phải tự động khôi phục profile Rapid Prototyping
+    await waitFor(() => {
+      expect(screen.getByText('Chi tiết: Tạo Mẫu Thử Nghiệm Nhanh (Rapid Prototyping)')).toBeInTheDocument()
+      expect(screen.getByText('Sinh phương án MVP tối thiểu.')).toBeInTheDocument()
+    })
+  })
 })

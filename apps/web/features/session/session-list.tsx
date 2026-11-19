@@ -52,6 +52,9 @@ const DOMAIN_OPTIONS: { value: DomainType; label: string }[] = [
   { value: 'business', label: 'Kinh tế / Kinh doanh' },
   { value: 'culture', label: 'Văn hóa' },
   { value: 'society', label: 'Xã hội' },
+  { value: 'healthcare', label: 'Y tế / Sức khỏe' },
+  { value: 'education', label: 'Giáo dục' },
+  { value: 'sustainability', label: 'Môi trường / Bền vững' },
 ]
 
 export function SessionList() {

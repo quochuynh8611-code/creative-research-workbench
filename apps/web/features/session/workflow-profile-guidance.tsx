@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Compass, CheckCircle2, Sparkles, AlertCircle, Loader2 } from 'lucide-react'
 import { getWorkflowProfiles } from '@/lib/api-client'
@@ -33,18 +33,62 @@ const STAGE_LABELS: Record<string, string> = {
   completed: 'Hoàn thành',
 }
 
+const VALID_PROFILE_IDS: Set<string> = new Set([
+  'standard_triz',
+  'rapid_prototyping',
+  'stakeholder_alignment',
+])
+
+function getStorageKey(sessionId?: string): string {
+  return `crw:session:${sessionId || 'default'}:workflow-profile:v1`
+}
+
+function readSavedProfileId(sessionId?: string): WorkflowProfileId {
+  if (typeof window === 'undefined') return 'standard_triz'
+  try {
+    const key = getStorageKey(sessionId)
+    const saved = window.localStorage?.getItem(key)
+    if (saved && VALID_PROFILE_IDS.has(saved)) {
+      return saved as WorkflowProfileId
+    }
+  } catch {
+    // Graceful fallback on storage access restrictions
+  }
+  return 'standard_triz'
+}
+
 interface WorkflowProfileGuidanceProps {
+  sessionId?: string
   currentStage?: WorkflowStage | string
   onSelectLens?: (lens: TrizNineWindowsLens) => void
   className?: string
 }
 
 export function WorkflowProfileGuidance({
+  sessionId,
   currentStage = 'intake',
   onSelectLens,
   className,
 }: WorkflowProfileGuidanceProps) {
-  const [selectedProfileId, setSelectedProfileId] = useState<WorkflowProfileId>('standard_triz')
+  const [selectedProfileId, setSelectedProfileId] = useState<WorkflowProfileId>(() =>
+    readSavedProfileId(sessionId)
+  )
+
+  useEffect(() => {
+    setSelectedProfileId(readSavedProfileId(sessionId))
+  }, [sessionId])
+
+  const handleSelectProfile = (profileId: WorkflowProfileId) => {
+    setSelectedProfileId(profileId)
+    if (typeof window !== 'undefined') {
+      try {
+        const key = getStorageKey(sessionId)
+        window.localStorage?.setItem(key, profileId)
+      } catch {
+        // Silently ignore storage quota or permission errors
+      }
+    }
+  }
 
   const { data, isLoading, isError, error } = useQuery<WorkflowProfilesResponse>({
     queryKey: ['sessions', 'workflow-profiles'],
@@ -123,7 +167,7 @@ export function WorkflowProfileGuidance({
                 key={profile.id}
                 role="button"
                 aria-pressed={isSelected ? 'true' : 'false'}
-                onClick={() => setSelectedProfileId(profile.id)}
+                onClick={() => handleSelectProfile(profile.id)}
                 className={cn(
                   'shrink-0 px-3 py-1.5 text-xs font-medium rounded-lg transition-all focus-visible:ring-2 focus-visible:ring-primary focus:outline-none cursor-pointer',
                   isSelected
