@@ -63,6 +63,7 @@ export function SessionList() {
   const [filterDomain, setFilterDomain] = useState<string>('all')
   const [isCreating, setIsCreating] = useState(false)
   const [formTitle, setFormTitle] = useState('')
+  const titleInputRef = useRef<HTMLInputElement>(null)
   const [formDescription, setFormDescription] = useState('')
   const [formDomain, setFormDomain] = useState<DomainType>('life')
   const [formTags, setFormTags] = useState('')
@@ -309,6 +310,7 @@ export function SessionList() {
     const trimmedTitle = formTitle.trim()
     if (!trimmedTitle) {
       setValidationError('Vui lòng nhập tiêu đề session')
+      titleInputRef.current?.focus()
       return
     }
 
@@ -492,7 +494,11 @@ export function SessionList() {
           <form onSubmit={handleSubmitCreate} className="space-y-4">
             {/* Validation Error Banner */}
             {validationError && (
-              <div className="bg-destructive/10 border border-destructive/20 text-destructive text-sm px-4 py-2.5 rounded-md flex items-center gap-2">
+              <div
+                id="session-title-validation-error"
+                role="alert"
+                className="bg-destructive/10 border border-destructive/20 text-destructive text-sm px-4 py-2.5 rounded-md flex items-center gap-2"
+              >
                 <AlertCircle className="w-4 h-4 shrink-0" />
                 <span>{validationError}</span>
               </div>
@@ -500,7 +506,11 @@ export function SessionList() {
 
             {/* Mutation Server Error Banner */}
             {createMutation.isError && (
-              <div className="bg-destructive/10 border border-destructive/20 text-destructive text-sm px-4 py-2.5 rounded-md flex items-center gap-2">
+              <div
+                id="session-title-server-error"
+                role="alert"
+                className="bg-destructive/10 border border-destructive/20 text-destructive text-sm px-4 py-2.5 rounded-md flex items-center gap-2"
+              >
                 <AlertCircle className="w-4 h-4 shrink-0" />
                 <span>
                   {createMutation.error instanceof Error
@@ -517,7 +527,17 @@ export function SessionList() {
               </label>
               <input
                 id="session-title"
+                ref={titleInputRef}
                 aria-label="Tiêu đề"
+                aria-required="true"
+                aria-invalid={Boolean(validationError)}
+                aria-describedby={
+                  validationError
+                    ? 'session-title-validation-error'
+                    : createMutation.isError
+                    ? 'session-title-server-error'
+                    : undefined
+                }
                 value={formTitle}
                 onChange={(e) => {
                   setFormTitle(e.target.value)
@@ -597,7 +617,6 @@ export function SessionList() {
               </button>
               <button
                 type="submit"
-                onClick={handleSubmitCreate}
                 disabled={createMutation.isPending}
                 className="inline-flex items-center gap-2 bg-primary text-primary-foreground px-5 py-2 rounded-md text-sm font-medium hover:opacity-90 transition-opacity disabled:opacity-50"
               >
@@ -809,6 +828,8 @@ export function SessionList() {
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
           <input
+            id="session-search-input"
+            aria-label="Tìm session theo tên"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Tìm session theo tên..."

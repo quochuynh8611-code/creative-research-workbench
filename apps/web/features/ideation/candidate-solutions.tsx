@@ -65,6 +65,8 @@ export function CandidateSolutions({
 }: CandidateSolutionsProps) {
   const queryClient = useQueryClient()
   const formRef = useRef<HTMLDivElement>(null)
+  const titleInputRef = useRef<HTMLInputElement>(null)
+  const mechanismInputRef = useRef<HTMLTextAreaElement>(null)
   const [title, setTitle] = useState(initialDraft?.title || '')
   const [mechanism, setMechanism] = useState(initialDraft?.mechanism || '')
   const [noveltyScore, setNoveltyScore] = useState<number>(0.5)
@@ -155,10 +157,12 @@ export function CandidateSolutions({
 
     if (!trimmedTitle) {
       setValidationError('Vui lòng nhập tiêu đề giải pháp')
+      titleInputRef.current?.focus()
       return
     }
     if (!trimmedMechanism) {
       setValidationError('Vui lòng nhập mô tả cơ chế giải pháp')
+      mechanismInputRef.current?.focus()
       return
     }
 
@@ -232,7 +236,11 @@ export function CandidateSolutions({
               </label>
               <input
                 id="solution-title"
+                ref={titleInputRef}
                 type="text"
+                aria-required="true"
+                aria-invalid={validationError && !title.trim() ? 'true' : undefined}
+                aria-describedby={validationError ? 'solution-validation-error' : actionError ? 'solution-action-error' : undefined}
                 value={title}
                 onChange={(e) => {
                   setTitle(e.target.value)
@@ -249,7 +257,11 @@ export function CandidateSolutions({
               </label>
               <textarea
                 id="solution-mechanism"
+                ref={mechanismInputRef}
                 rows={3}
+                aria-required="true"
+                aria-invalid={validationError && !mechanism.trim() ? 'true' : undefined}
+                aria-describedby={validationError ? 'solution-validation-error' : actionError ? 'solution-action-error' : undefined}
                 value={mechanism}
                 onChange={(e) => {
                   setMechanism(e.target.value)
@@ -333,14 +345,22 @@ export function CandidateSolutions({
           </div>
 
           {validationError && (
-            <div className="p-3 bg-destructive/10 border border-destructive/20 rounded-xl text-xs font-medium text-destructive flex items-center gap-2">
+            <div
+              id="solution-validation-error"
+              role="alert"
+              className="p-3 bg-destructive/10 border border-destructive/20 rounded-xl text-xs font-medium text-destructive flex items-center gap-2"
+            >
               <AlertCircle className="w-4 h-4 shrink-0" />
               <span>{validationError}</span>
             </div>
           )}
 
           {actionError && (
-            <div className="p-3 bg-destructive/10 border border-destructive/20 rounded-xl text-xs font-medium text-destructive flex items-center gap-2">
+            <div
+              id="solution-action-error"
+              role="alert"
+              className="p-3 bg-destructive/10 border border-destructive/20 rounded-xl text-xs font-medium text-destructive flex items-center gap-2"
+            >
               <AlertCircle className="w-4 h-4 shrink-0" />
               <span>{actionError}</span>
             </div>
