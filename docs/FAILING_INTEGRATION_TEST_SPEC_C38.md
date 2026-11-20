@@ -439,3 +439,23 @@ describe('Lô 4: AI Coach Editable Draft Specification', () => {
   - `backend`: **631 passed, 9 warnings in 38.25s** (100% GREEN).
 - **Zero Schema Mutation / Zero API Breaking**: Không thay đổi schema cơ sở dữ liệu, không thay đổi API contract.
 
+### Lô 4: AI Coach Editable Draft Form (C38-GAP-02) — HOÀN THÀNH 100%
+
+- **Thời điểm hoàn thành**: 2026-11-20
+- **Test files tạo mới**:
+  - `apps/web/features/ideation/__tests__/ai-coach-editable-draft.test.tsx` (10 tests)
+- **Chu kỳ TDD (Red -> Green)**:
+  - **RED**: Chạy `npm test -- ai-coach-editable-draft.test.tsx` => 6/7 tests FAILED do `AICoachPanel` sử dụng confirmation modal tĩnh, thiếu các trường biên tập `Tiêu đề giải pháp`, `Cơ chế hoạt động`, `Nội dung ghi chú`, `Loại ghi chú`, `Tags` và thiếu cơ chế Unsaved-Changes Guard khi dirty.
+  - **GREEN**: Tạo `EditableDraftModal` với đầy đủ trường dữ liệu có thể chỉnh sửa, prefill thông minh từ gợi ý AI, bảo toàn bản nháp gốc của AI, Unsaved-Changes Guard bảo vệ khi hủy form dirty, và bảo toàn 100% dữ liệu đã soạn khi gặp sự cố mạng hoặc HTTP 500 kèm thông báo lỗi `role="alert"`.
+- **Hợp Đồng Lưu Trữ & Phân Biệt Các Loại Guard**:
+  - **Append-Only Contract**: Luồng lưu từ AI Coach luôn tạo mới bản ghi (`POST .../solutions` hoặc `POST .../notes`), tuyệt đối KHÔNG có overwrite path đối với các Solution hoặc Note đã có trong database.
+  - **Notebook Draft Isolation**: Bản nháp đang soạn thảo dở dang trong Sổ tay nghiên cứu (`ResearchNotebook`) của Founder hoàn toàn không bị ảnh hưởng, không bị ghi đè.
+  - **Unsaved-Changes Guard**: Bảo vệ form biên tập dở dang trong `EditableDraftModal` khi người dùng vô tình bấm Escape/Hủy.
+  - **Resilience & Zero Partial Item**: Lỗi mạng hoặc HTTP 500 không đóng modal, không làm mất nội dung người dùng đã gõ, và không tạo bất kỳ partial item nào vào hệ thống.
+- **Kết quả kiểm thử toàn diện**:
+  - `apps/web/features/ideation/__tests__/ai-coach-editable-draft.test.tsx`: **10/10 passed** (100% GREEN).
+  - `apps/web/features/ideation/__tests__/ai-coach-panel.test.tsx`: **13/13 passed** (100% GREEN).
+  - Toàn bộ `apps/web`: **82 test suites passed, 870 tests passed, 0 failed** (100% GREEN).
+  - Toàn bộ `backend`: **652 passed, 9 warnings in 46.10s** (100% GREEN).
+- **Zero Database Migration**: Hoàn toàn không phát sinh migration cơ sở dữ liệu (Alembic head = `007`).
+
