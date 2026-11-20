@@ -202,171 +202,42 @@ describe('Lô 1: Browser Network Failure Simulation & Draft Preservation', () =>
 
 ---
 
-## Lô 2: Notebook Tagging (C38-GAP-01)
+## Lô 2: Notebook Tagging (C38-GAP-01: Normalized Tagging Architecture)
 
-### Test 2.1: Backend Schema & API Integration Test
+### Test 2.1: Backend Schema & Normalized API Integration Test
 
-- **File**: `backend/tests/integration/test_c38_note_tags_api.py`
-- **Mục tiêu**: Kiểm thử migration 007, tạo note kèm tags, chuẩn hóa tag, và lọc note theo tag.
+- **File**: `backend/tests/integration/test_c38_note_tags_normalized_api.py`
+- **Mục tiêu**: Kiểm thử migration 007 (`tags` + `note_tags`), tạo note kèm tags, chuẩn hóa tag (lowercase, strip, dedup, max 10 tags, max 50 chars), chia sẻ canonical tag, lọc theo tag, gỡ liên kết tag (`DELETE /notes/{note_id}/tags/{tag_slug}`), cập nhật tags (`PUT /notes/{note_id}/tags`), và bảo toàn bản ghi canonical tag (Zero hard-delete).
+- **Kết quả nghiệm thu**: 9/9 tests PASS.
 
 ```python
-import uuid
-import pytest
-from fastapi import status
-from app.domain.models import ResearchNote, ResearchSession
-
-@pytest.mark.asyncio
-async def test_create_note_with_tags_and_normalize(client, db_session):
-    """RED: Cần migration 007 và ResearchNoteCreate schema hỗ trợ tags."""
-    # 1. Tạo session
-    session_id = uuid.uuid4()
-    session = ResearchSession(id=session_id, title="Test Tagging Session", status="active")
-    db_session.add(session)
-    db_session.commit()
-
-    # 2. Gửi request tạo note có tags với khoảng trắng và chữ hoa
-    payload = {
-        "content": "Ý tưởng bọc cách điện nano",
-        "note_type": "hypothesis",
-        "tags": [" Battery ", "BATTERY", "thermal-runaway", "nano "],
-    }
-    response = await client.post(f"/api/v1/sessions/{session_id}/notes", json=payload)
-    assert response.status_code == status.HTTP_201_CREATED
-    data = response.json()
-
-    # 3. Kiểm tra chuẩn hóa tags: lower, strip, dedup
-    assert "tags" in data
-    assert data["tags"] == ["battery", "thermal-runaway", "nano"]
-
-    # 4. Kiểm tra trong DB
-    note_db = db_session.query(ResearchNote).filter_by(id=uuid.UUID(data["id"])).first()
-    assert note_db is not None
-    assert note_db.tags == ["battery", "thermal-runaway", "nano"]
-
-@pytest.mark.asyncio
-async def test_filter_notes_by_tag(client, db_session):
-    """RED: Endpoint GET /api/v1/sessions/{id}/notes?tag=..."""
-    session_id = uuid.uuid4()
-    session = ResearchSession(id=session_id, title="Filter Test", status="active")
-    db_session.add(session)
-    
-    note1 = ResearchNote(session_id=session_id, content="Note 1", tags=["battery", "safety"])
-    note2 = ResearchNote(session_id=session_id, content="Note 2", tags=["cost", "supply"])
-    db_session.add_all([note1, note2])
-    db_session.commit()
-
-    # Lọc theo tag 'battery'
-    res = await client.get(f"/api/v1/sessions/{session_id}/notes?tag=battery")
-    assert res.status_code == status.HTTP_200_OK
-    items = res.json()["data"]
-    assert len(items) == 1
-    assert items[0]["content"] == "Note 1"
+# Các kịch bản kiểm thử tích hợp chuẩn hóa đã được kiểm chứng (Red -> Green):
+# 1. test_create_note_with_normalized_tags_and_deduplication
+# 2. test_multiple_notes_reuse_same_canonical_tag
+# 3. test_validation_rejects_more_than_10_tags_or_tag_over_50_chars
+# 4. test_delete_note_removes_association_but_preserves_canonical_tag
+# 5. test_filter_notes_by_tag
+# 6. test_remove_tag_association_preserves_canonical_tag_and_note
+# 7. test_remove_tag_association_updates_filtering
+# 8. test_update_note_tags_syncs_associations_and_preserves_canonical
+# 9. test_remove_nonexistent_tag_returns_404
 ```
 
-### Test 2.2: Frontend Note Tagging Component Test
+### Test 2.2: Frontend Note Tagging & Chip Removal Component Test
 
 - **File**: `apps/web/features/notebook/__tests__/research-notebook-tagging.test.tsx`
-- **Mục tiêu**: Kiểm thử nhập tags trong form, hiển thị tag chips trên note card và lọc theo tag.
+- **Mục tiêu**: Kiểm thử nhập tags trong form, hiển thị badges `#tag`, lọc theo tag từ toolbar, nút gỡ tag (remove chip) trên note card gọi `removeNoteTag`, và bảo toàn draft input khi gặp network failure / HTTP 500.
+- **Kết quả nghiệm thu**: 6/6 tests PASS.
 
 ```typescript
-import React from 'react'
-import { render, screen, fireEvent, waitFor } from '@testing-library/react'
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { ResearchNotebook } from '@/features/notebook/research-notebook'
-import * as apiClient from '@/lib/api-client'
-
-jest.mock('@/lib/api-client')
-
-describe('Lô 2: Frontend Notebook Tagging Specification', () => {
-  let queryClient: QueryClient
-
-  beforeEach(() => {
-    queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
-    jest.clearAllMocks()
-  })
-
-  it('2.2.1 Form tạo ghi chú cho phép nhập tags và truyền mảng tags vào createResearchNote', async () => {
-    ;(apiClient.listResearchNotes as jest.Mock).mockResolvedValue({
-      data: [],
-      meta: { total: 0 },
-    })
-    ;(apiClient.createResearchNote as jest.Mock).mockResolvedValue({
-      id: 'note-1',
-      session_id: 'ses-1',
-      content: 'Ghi chú về pin',
-      note_type: 'insight',
-      tags: ['battery', 'safety'],
-      created_at: new Date().toISOString(),
-    })
-
-    render(
-      <QueryClientProvider client={queryClient}>
-        <ResearchNotebook
-          sessionId="ses-1"
-          initialDraft={null}
-          content="Ghi chú về pin"
-          noteType="insight"
-          onContentChange={jest.fn()}
-          onNoteTypeChange={jest.fn()}
-          onClearDraft={jest.fn()}
-          onNoteCreated={jest.fn()}
-        />
-      </QueryClientProvider>
-    )
-
-    // Nhập tags
-    const tagInput = screen.getByPlaceholderText(/Nhập tags, phân tách bằng dấu phẩy/i)
-    fireEvent.change(tagInput, { target: { value: 'battery, safety' } })
-
-    const submitBtn = screen.getByRole('button', { name: /Thêm ghi chú/i })
-    fireEvent.click(submitBtn)
-
-    await waitFor(() => {
-      expect(apiClient.createResearchNote).toHaveBeenCalledWith('ses-1', {
-        content: 'Ghi chú về pin',
-        note_type: 'insight',
-        tags: ['battery', 'safety'],
-      })
-    })
-  })
-
-  it('2.2.2 Note Card hiển thị danh sách tags dưới dạng badges', async () => {
-    ;(apiClient.listResearchNotes as jest.Mock).mockResolvedValue({
-      data: [
-        {
-          id: 'note-1',
-          session_id: 'ses-1',
-          content: 'Nội dung ghi chú có tags',
-          note_type: 'insight',
-          tags: ['thermal', 'cooling'],
-          created_at: new Date().toISOString(),
-        },
-      ],
-      meta: { total: 1 },
-    })
-
-    render(
-      <QueryClientProvider client={queryClient}>
-        <ResearchNotebook
-          sessionId="ses-1"
-          initialDraft={null}
-          content=""
-          noteType="insight"
-          onContentChange={jest.fn()}
-          onNoteTypeChange={jest.fn()}
-          onClearDraft={jest.fn()}
-          onNoteCreated={jest.fn()}
-        />
-      </QueryClientProvider>
-    )
-
-    await waitFor(() => {
-      expect(screen.getByText('Nội dung ghi chú có tags')).toBeInTheDocument()
-      expect(screen.getByText('#thermal')).toBeInTheDocument()
-      expect(screen.getByText('#cooling')).toBeInTheDocument()
-    })
-  })
-})
+// Các kịch bản kiểm thử component đã được kiểm chứng (Red -> Green):
+// 2.2.1 Form tạo ghi chú cho phép nhập tags và truyền mảng tags vào createResearchNote
+// 2.2.2 Note Card hiển thị danh sách tags dưới dạng badges
+// 2.2.3 Lọc danh sách note theo tag được chọn từ toolbar (aria-label="Lọc theo tag #{tag}")
+// 2.2.4 Bảo toàn draft tags khi mutation thất bại (draft preservation under network failure / HTTP 500)
+// 2.2.5 Nút gỡ tag (remove chip) trên note card gọi removeNoteTag với tham số đúng
+// 2.2.6 Network failure / HTTP 500 khi gỡ tag hiển thị thông báo lỗi role="alert" và bảo toàn draft form input
+```
 ```
 
 ---
