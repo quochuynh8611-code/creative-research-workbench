@@ -242,125 +242,43 @@ describe('Lô 1: Browser Network Failure Simulation & Draft Preservation', () =>
 
 ---
 
-## Lô 3: Extended-Lens Save from 9-Windows (C38-GAP-03)
+## Lô 3: Extended-Lens Save from 9-Windows (C38-GAP-03: Multi-Lens Context & Provenance)
 
-### Test 3.1: Context Validators & API Contract Test
+### Test 3.1: Backend Schema & Extended Lens API Test
 
-- **File**: `apps/web/lib/__tests__/triz-9-windows-extended-lens-validator.test.ts`
-- **Mục tiêu**: Kiểm thử `validateTriz9WindowsContext` chấp nhận đầy đủ cả 6 lăng kính.
+- **File**: `backend/tests/integration/test_c38_extended_lens_save_api.py`
+- **Mục tiêu**: Kiểm thử schema `Triz9WindowsContext` chấp nhận đầy đủ cả 6 lăng kính (bao gồm 3 lăng kính mở rộng: `systems_thinking`, `design_thinking`, `lean_startup`), bảo toàn 3 lăng kính nền tảng (`engineering`, `business`, `everyday`), từ chối lăng kính không hợp lệ, và lưu trữ bền vững kèm `source_context` trong endpoint `POST /api/v1/sessions/{session_id}/notes`.
+- **Kết quả nghiệm thu**: 10/10 tests PASS.
 
-```typescript
-import { validateTriz9WindowsContext } from '../triz-9-windows-context-validator'
-
-describe('Lô 3: Extended-Lens Save Context Validator Specification', () => {
-  const extendedLenses = ['systems_thinking', 'design_thinking', 'lean_startup'] as const
-
-  extendedLenses.forEach((lens) => {
-    it(`3.1.1 Chấp nhận context hợp lệ cho lăng kính mở rộng: ${lens}`, () => {
-      const candidate = {
-        schema_version: 1,
-        source_type: 'triz_9_windows',
-        lens: lens,
-        level: 'system',
-        time: 'future',
-        cell_label: 'Hệ thống thích ứng động tương lai',
-      }
-
-      const result = validateTriz9WindowsContext(candidate)
-      expect(result.ok).toBe(true)
-      if (result.ok) {
-        expect(result.data.lens).toBe(lens)
-        expect(result.data.cell_label).toBe('Hệ thống thích ứng động tương lai')
-      }
-    })
-  })
-
-  it('3.1.2 Vẫn từ chối lens lạ nằm ngoài danh mục 6 lăng kính', () => {
-    const candidate = {
-      schema_version: 1,
-      source_type: 'triz_9_windows',
-      lens: 'quantum_physics', // lens lạ
-      level: 'system',
-      time: 'present',
-      cell_label: 'Nhãn mẫu',
-    }
-
-    const result = validateTriz9WindowsContext(candidate)
-    expect(result.ok).toBe(false)
-    if (!result.ok) {
-      expect(result.error).toContain('lens')
-    }
-  })
-})
+```python
+# Các kịch bản kiểm thử đã được kiểm chứng (Red -> Green):
+# 1. test_schema_accepts_extended_lenses[systems_thinking]
+# 2. test_schema_accepts_extended_lenses[design_thinking]
+# 3. test_schema_accepts_extended_lenses[lean_startup]
+# 4. test_schema_preserves_baseline_lenses[engineering]
+# 5. test_schema_preserves_baseline_lenses[business]
+# 6. test_schema_preserves_baseline_lenses[everyday]
+# 7. test_schema_rejects_invalid_or_missing_lens
+# 8. test_api_create_and_fetch_note_with_extended_lenses[systems_thinking]
+# 9. test_api_create_and_fetch_note_with_extended_lenses[design_thinking]
+# 10. test_api_create_and_fetch_note_with_extended_lenses[lean_startup]
 ```
 
-### Test 3.2: 9-Windows Component Save Action Test
+### Test 3.2: Frontend Context Validator & 9-Windows Save Component Test
 
-- **File**: `apps/web/features/triz/__tests__/triz-nine-windows-extended-save.test.tsx`
-- **Mục tiêu**: Bấm "Lưu vào sổ tay" tại lăng kính `systems_thinking` không bị lỗi `cellError` và gọi `onSaveAsNote` với context chuẩn.
+- **Files**:
+  - `apps/web/lib/__tests__/triz-9-windows-extended-lens-validator.test.ts` (7 tests)
+  - `apps/web/features/triz/__tests__/triz-nine-windows-extended-save.test.tsx` (4 tests)
+- **Mục tiêu**: Kiểm thử `validateTriz9WindowsContext` chấp nhận 6 lăng kính, `TrizNineWindows` lưu ô thuộc các lăng kính mở rộng thành công, không xuất hiện `cellError`, `onSaveAsNote` nhận context chuẩn, và `NoteSourceBadge` hiển thị đúng nhãn tiếng Việt `Lưới 9 màn hình` kèm tooltip provenance.
+- **Kết quả nghiệm thu**: 11/11 tests PASS.
 
 ```typescript
-import React from 'react'
-import { render, screen, fireEvent, waitFor } from '@testing-library/react'
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { TrizNineWindows } from '@/features/triz/triz-nine-windows'
-import * as apiClient from '@/lib/api-client'
-
-jest.mock('@/lib/api-client')
-
-describe('Lô 3: TrizNineWindows Extended Lens Save Action', () => {
-  let queryClient: QueryClient
-
-  beforeEach(() => {
-    queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
-    jest.clearAllMocks()
-  })
-
-  it('3.2.1 Lưu ô thuộc lăng kính Systems Thinking thành công, không hiển thị lỗi cellError', async () => {
-    ;(apiClient.getTrizNineWindows as jest.Mock).mockResolvedValue({
-      lens: 'systems_thinking',
-      lens_title: 'Tư duy Hệ thống',
-      grid: [
-        {
-          level: 'system',
-          time: 'present',
-          label_vi: 'Cân bằng vòng lặp phản hồi',
-          prompt_vi: 'Vòng lặp nào đang duy trì vấn đề?',
-          description_vi: 'Mô tả vòng lặp',
-          examples_vi: ['Ví dụ vòng lặp kiểm soát nhiệt độ'],
-        },
-      ],
-    })
-
-    const onSaveAsNote = jest.fn()
-
-    render(
-      <QueryClientProvider client={queryClient}>
-        <TrizNineWindows initialLens="systems_thinking" onSaveAsNote={onSaveAsNote} />
-      </QueryClientProvider>
-    )
-
-    await waitFor(() => {
-      expect(screen.getByText('Cân bằng vòng lặp phản hồi')).toBeInTheDocument()
-    })
-
-    const saveBtn = screen.getByRole('button', { name: /Lưu vào sổ tay/i })
-    fireEvent.click(saveBtn)
-
-    // Tuyệt đối không xuất hiện alert lỗi
-    expect(screen.queryByRole('alert')).toBeNull()
-
-    // Phải gọi onSaveAsNote với source_context có lens là systems_thinking
-    expect(onSaveAsNote).toHaveBeenCalledTimes(1)
-    const draft = onSaveAsNote.mock.calls[0][0]
-    expect(draft.source_context).toMatchObject({
-      schema_version: 1,
-      source_type: 'triz_9_windows',
-      lens: 'systems_thinking',
-      cell_label: 'Cân bằng vòng lặp phản hồi',
-    })
-  })
-})
+// Các kịch bản kiểm thử frontend đã được kiểm chứng (Red -> Green):
+// 3.1.1 Chấp nhận context hợp lệ cho lăng kính mở rộng: systems_thinking, design_thinking, lean_startup
+// 3.1.2 Bảo toàn context hợp lệ cho lăng kính nền tảng: engineering, business, everyday
+// 3.1.3 Từ chối lăng kính lạ không thuộc 6 lăng kính
+// 3.2.1 Lưu ô thuộc lăng kính mở rộng thành công, gọi onSaveAsNote với source_context chuẩn và render NoteSourceBadge
+// 3.2.2 Dữ liệu ô có ký tự điều khiển ngắt dòng hiển thị thông báo lỗi và chặn onSaveAsNote
 ```
 
 ---
