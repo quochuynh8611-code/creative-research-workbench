@@ -25,6 +25,7 @@ from app.domain.models import (
     SessionStatus,
     Tag,
 )
+from app.schemas.batch_export import BatchExportFilter, BatchExportRequest
 from app.schemas.note_context import NoteSourceContextUnion
 from app.services.ai_analysis_service import AIAnalysisService
 from app.services.ai_coach_service import AICoachService
@@ -36,6 +37,7 @@ from app.services.problem_structuring_service import (
     get_separation_strategies_for_contradiction,
 )
 from app.services.session_export_service import (
+    create_multi_session_zip_archive,
     export_session_as_json,
     export_session_as_markdown,
 )
@@ -704,6 +706,172 @@ async def create_session_from_template(
     return {
         "data": session_payload,
     }
+
+
+# ──────────────────────────────────────────────
+# Multi-Session Batch Export & Archive (C39 Lô 1)
+# ──────────────────────────────────────────────
+
+@router.post("/batch-export")
+async def batch_export_sessions(
+    request: BatchExportRequest,
+    db: Session | None = Depends(get_db),
+):
+    """
+    Xuất hàng loạt các phiên nghiên cứu ra một tệp nén ZIP duy nhất (C39 Lô 1).
+    - Hỗ trợ đóng gói Markdown (.md), JSON snapshot (.json), hoặc cả hai kèm manifest.json.
+    - Hỗ trợ lọc theo session_ids cụ thể hoặc theo filters (tag, status, domain, date range, q).
+    - Giới hạn trần an toàn: <= 100 phiên / lần xuất. Vượt quá sẽ trả về HTTP 422 (X-Error-Code: EXCEED_BATCH_LIMIT).
+    - Tùy chọn archive_after_export: chuyển trạng thái sang 'archived' mà không xóa bất kỳ dữ liệu nào.
+    - Streaming in-memory trực tiếp ra HTTP response (Zero Disk Leak, Zero New Dependencies).
+    """
+    if db is None:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Database connection is unavailable for batch export.",
+        )
+
+    # 1. Kiểm tra định dạng xuất
+    clean_format = (request.format or "both").strip().lower()
+    if clean_format == "pdf":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Unsupported export format 'pdf'. Batch export supports: both, markdown, json",
+        )
+    if clean_format not in {"both", "markdown", "json", "md"}:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Unsupported export format '{request.format}'. Supported formats: both, markdown, json",
+        )
+
+    # 2. Kiểm tra chỉ định đối tượng xuất
+    has_session_ids = request.session_ids is not None and len(request.session_ids) > 0
+    has_filters = False
+    if request.filters is not None:
+        filter_data = request.filters.model_dump(exclude_unset=True)
+        has_filters = any(v is not None and v != "" for v in filter_data.values())
+
+    if not has_session_ids and not has_filters:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Yêu cầu không hợp lệ: Bắt buộc phải cung cấp danh sách 'session_ids' hoặc bộ lọc 'filters'.",
+        )
+
+    # 3. Thu thập danh sách sessions
+    sessions: list[ResearchSession] = []
+    applied_filters: dict[str, Any] = {}
+
+    if has_session_ids and request.session_ids:
+        if len(request.session_ids) > 100:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail=f"Số lượng phiên yêu cầu ({len(request.session_ids)}) vượt quá giới hạn an toàn (100 phiên). Vui lòng thu hẹp phạm vi để xuất từng đợt.",
+                headers={"X-Error-Code": "EXCEED_BATCH_LIMIT"},
+            )
+        sessions = (
+            db.query(ResearchSession)
+            .filter(ResearchSession.id.in_(request.session_ids))
+            .order_by(ResearchSession.created_at.desc(), ResearchSession.id.desc())
+            .all()
+        )
+        applied_filters["session_ids"] = [str(sid) for sid in request.session_ids]
+    elif request.filters:
+        f = request.filters
+        query = db.query(ResearchSession)
+
+        if f.status:
+            clean_status = f.status.strip().lower()
+            if clean_status != "all":
+                query = query.filter(ResearchSession.status == clean_status)
+            applied_filters["status"] = f.status
+        else:
+            query = query.filter(ResearchSession.status != SessionStatus.archived)
+
+        if f.domain:
+            clean_domain = f.domain.strip()
+            if clean_domain:
+                query = query.filter(ResearchSession.domain == clean_domain)
+                applied_filters["domain"] = clean_domain
+
+        if f.tag:
+            clean_tag = f.tag.strip().lower()
+            if clean_tag:
+                query = (
+                    query.join(ResearchSession.research_notes)
+                    .join(ResearchNote.tags)
+                    .filter(Tag.canonical_slug == clean_tag)
+                )
+                applied_filters["tag"] = clean_tag
+
+        if f.date_from:
+            query = query.filter(ResearchSession.created_at >= f.date_from)
+            applied_filters["date_from"] = f.date_from.isoformat()
+
+        if f.date_to:
+            query = query.filter(ResearchSession.created_at <= f.date_to)
+            applied_filters["date_to"] = f.date_to.isoformat()
+
+        if f.q:
+            clean_q = f.q.strip()
+            if clean_q:
+                query = query.filter(ResearchSession.title.ilike(f"%{clean_q}%"))
+                applied_filters["q"] = clean_q
+
+        total_matching = query.distinct().count()
+        if total_matching > 100:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail=f"Số lượng phiên phù hợp ({total_matching}) vượt quá giới hạn an toàn (100 phiên). Vui lòng thu hẹp bộ lọc ngày hoặc thẻ.",
+                headers={"X-Error-Code": "EXCEED_BATCH_LIMIT"},
+            )
+
+        sessions = (
+            query.distinct()
+            .order_by(ResearchSession.created_at.desc(), ResearchSession.id.desc())
+            .all()
+        )
+
+    if not sessions:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Không tìm thấy phiên nghiên cứu nào phù hợp với tiêu chí xuất.",
+        )
+
+    # 4. Sinh tệp nén ZIP hoàn toàn trong RAM (In-Memory Buffer)
+    try:
+        zip_buffer = create_multi_session_zip_archive(
+            sessions=sessions,
+            db=db,
+            requested_format=clean_format,
+            applied_filters=applied_filters,
+        )
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e),
+        )
+
+    # 5. Tùy chọn archive_after_export không phá hủy
+    if request.archive_after_export:
+        for s in sessions:
+            if s.status != SessionStatus.archived:
+                s.status = SessionStatus.archived
+                s.updated_at = datetime.now(timezone.utc)
+        db.commit()
+        _invalidate_analytics()
+
+    # 6. Stream ZIP binary
+    timestamp_str = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
+    filename = f"creative-research-archive-{timestamp_str}.zip"
+
+    return Response(
+        content=zip_buffer.getvalue(),
+        media_type="application/zip",
+        headers={
+            "Content-Disposition": f'attachment; filename="{filename}"',
+            "X-Exported-Count": str(len(sessions)),
+        },
+    )
 
 
 @router.post("/{session_id}/archive", status_code=status.HTTP_200_OK)

@@ -3,6 +3,12 @@ session_export_service.py — Dịch vụ xuất dữ liệu Session thành báo
 """
 from __future__ import annotations
 
+import io
+import json
+import re
+import unicodedata
+import zipfile
+from datetime import datetime, timezone
 from typing import Any
 
 from sqlalchemy.orm import Session
@@ -423,3 +429,101 @@ def export_session_as_json(session: ResearchSession, db: Session) -> dict[str, A
         "research_notes": notes_payload,
         "candidate_solutions": solutions_payload,
     }
+
+
+def slugify(text: str) -> str:
+    """
+    Chuyển đổi tiêu đề thành chuỗi slug an toàn cho tên tệp (bỏ dấu, chỉ chứa a-z, 0-9, dấu gạch ngang).
+    """
+    if not text:
+        return "session"
+    normalized = unicodedata.normalize("NFKD", text).encode("ascii", "ignore").decode("ascii")
+    cleaned = re.sub(r"[^\w\s-]", "", normalized).strip().lower()
+    slug = re.sub(r"[-\s]+", "-", cleaned)
+    return slug[:40].strip("-") or "session"
+
+
+def generate_safe_archive_filename(title: str, session_id: Any, ext: str) -> str:
+    """
+    Sinh tên tệp chuẩn hóa trong tệp nén: {safe_slug}_{uuid_first_8}.{ext}
+    """
+    clean_slug = slugify(title)
+    short_id = str(session_id)[:8]
+    clean_ext = ext.lstrip(".")
+    return f"{clean_slug}_{short_id}.{clean_ext}"
+
+
+def create_multi_session_zip_archive(
+    sessions: list[ResearchSession],
+    db: Session,
+    requested_format: str = "both",
+    applied_filters: dict[str, Any] | None = None,
+) -> io.BytesIO:
+    """
+    Tạo tệp nén ZIP trong bộ nhớ (In-Memory Buffer) chứa tài liệu Markdown và/hoặc
+    JSON snapshot của danh sách ResearchSession, kèm siêu dữ liệu manifest.json (C39 Lô 1).
+
+    Ràng buộc:
+      - Zero Disk Leak: Sử dụng hoàn toàn io.BytesIO trong RAM
+      - Zero Data Drift: Tái sử dụng trực tiếp export_session_as_markdown và export_session_as_json
+      - Định dạng format hỗ trợ: 'both', 'markdown', 'md', 'json'
+    """
+    clean_format = (requested_format or "both").strip().lower()
+    if clean_format not in {"both", "markdown", "json", "md"}:
+        raise ValueError(f"Unsupported export format '{requested_format}'. Supported formats: both, markdown, json")
+
+    zip_buffer = io.BytesIO()
+    with zipfile.ZipFile(zip_buffer, mode="w", compression=zipfile.ZIP_DEFLATED) as zf:
+        sessions_index: list[dict[str, Any]] = []
+
+        for sess in sessions:
+            status_str = sess.status.value if hasattr(sess.status, "value") else str(sess.status)
+            created_iso = sess.created_at.isoformat() if sess.created_at else None
+
+            md_filename = None
+            json_filename = None
+
+            if clean_format in {"both", "markdown", "md"}:
+                md_text = export_session_as_markdown(sess, db)
+                fname = generate_safe_archive_filename(sess.title, sess.id, "md")
+                md_path = f"markdown/{fname}"
+                zf.writestr(md_path, md_text.encode("utf-8"))
+                md_filename = md_path
+
+            if clean_format in {"both", "json"}:
+                json_data = export_session_as_json(sess, db)
+                fname = generate_safe_archive_filename(sess.title, sess.id, "json")
+                json_path = f"json/{fname}"
+                zf.writestr(json_path, json.dumps(json_data, ensure_ascii=False, indent=2).encode("utf-8"))
+                json_filename = json_path
+
+            # Đếm số lượng notes & solutions
+            notes_count = len(sess.research_notes) if hasattr(sess, "research_notes") and sess.research_notes is not None else db.query(ResearchNote).filter_by(session_id=sess.id).count()
+            solutions_count = len(sess.candidate_solutions) if hasattr(sess, "candidate_solutions") and sess.candidate_solutions is not None else db.query(CandidateSolution).filter_by(session_id=sess.id).count()
+
+            sessions_index.append({
+                "id": str(sess.id),
+                "title": sess.title,
+                "domain": getattr(sess, "domain", None),
+                "status": status_str,
+                "workflow_state": sess.workflow_state,
+                "created_at": created_iso,
+                "notes_count": notes_count,
+                "solutions_count": solutions_count,
+                "filename_markdown": md_filename,
+                "filename_json": json_filename,
+            })
+
+        manifest = {
+            "archive_version": "1.0",
+            "exported_at": datetime.now(timezone.utc).isoformat(),
+            "total_sessions": len(sessions),
+            "requested_format": clean_format,
+            "applied_filters": applied_filters or {},
+            "sessions_index": sessions_index,
+        }
+        zf.writestr("manifest.json", json.dumps(manifest, ensure_ascii=False, indent=2).encode("utf-8"))
+
+    zip_buffer.seek(0)
+    return zip_buffer
+

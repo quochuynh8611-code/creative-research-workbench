@@ -254,3 +254,52 @@ def test_export_session_regression_legacy_provenances_preserved():
 
     assert "Nguồn: Lưới 9-Windows [systems_thinking • system - present]" in md
     assert "Nguồn: Ma trận TRIZ [Nguyên tắc 15]" in md
+
+
+def test_slugify_and_filename_generator():
+    """Kiểm tra hàm chuẩn hóa slug và sinh tên file an toàn cho ZIP."""
+    from app.services.session_export_service import generate_safe_archive_filename, slugify
+
+    assert slugify("Nghiên cứu Pin Thể Rắn (Cực âm)") == "nghien-cuu-pin-the-ran-cuc-am"
+    assert slugify("") == "session"
+    assert slugify("   ") == "session"
+
+    fname = generate_safe_archive_filename("Thiết kế bánh răng", "550e8400-e29b-41d4-a716-446655440000", "md")
+    assert fname == "thiet-ke-banh-rang_550e8400.md"
+
+
+def test_create_multi_session_zip_archive_unit():
+    """Kiểm tra dịch vụ đóng gói tệp nén ZIP và tạo manifest.json."""
+    import io
+    import json
+    import zipfile
+    from app.services.session_export_service import create_multi_session_zip_archive
+
+    s1 = _create_mock_session(title="Alpha")
+    s2 = _create_mock_session(title="Beta")
+    db = _create_mock_db()
+
+    buf = create_multi_session_zip_archive([s1, s2], db, requested_format="both", applied_filters={"tag": "demo"})
+    assert isinstance(buf, io.BytesIO)
+
+    with zipfile.ZipFile(buf, "r") as zf:
+        namelist = zf.namelist()
+        assert "manifest.json" in namelist
+        manifest = json.loads(zf.read("manifest.json").decode("utf-8"))
+        assert manifest["total_sessions"] == 2
+        assert manifest["applied_filters"] == {"tag": "demo"}
+        assert len([f for f in namelist if f.startswith("markdown/")]) == 2
+        assert len([f for f in namelist if f.startswith("json/")]) == 2
+
+
+def test_create_multi_session_zip_archive_invalid_format_raises_value_error():
+    """Kiểm tra bắt lỗi format không hợp lệ."""
+    import pytest
+    from app.services.session_export_service import create_multi_session_zip_archive
+
+    s1 = _create_mock_session(title="Alpha")
+    db = _create_mock_db()
+
+    with pytest.raises(ValueError, match="Unsupported export format 'pdf'"):
+        create_multi_session_zip_archive([s1], db, requested_format="pdf")
+
