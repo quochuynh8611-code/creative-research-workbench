@@ -47,6 +47,37 @@ Danh sách sessions. Query params: `status`, `limit`, `offset`.
 ### GET /sessions/{id}
 Lấy chi tiết session + problem_frame hiện tại.
 
+### POST /sessions/batch-export
+Xuất lưu trữ hàng loạt (Multi-Session Batch Export & Safe Archive) nhiều phiên nghiên cứu ra tệp nén ZIP dưới dạng streaming response (Batch C39, C39-FEAT-02).
+
+**Request:**
+```json
+{
+  "session_ids": ["uuid-1", "uuid-2"],
+  "filters": {
+    "status": "active",
+    "domain": "business",
+    "q": "pin lithium",
+    "tag": "silicon",
+    "date_from": "2026-01-01T00:00:00Z",
+    "date_to": "2026-12-31T23:59:59Z"
+  },
+  "format": "both",
+  "archive_after_export": false
+}
+```
+
+**Response 200 (`application/zip`):**
+Binary ZIP file stream chứa:
+- `manifest.json`: Siêu dữ liệu lô xuất, tổng số phiên, mục lục phiên.
+- `markdown/{slug}_{id_prefix}.md`: Tài liệu Markdown tổng hợp cho từng phiên.
+- `json/{slug}_{id_prefix}.json`: Snapshot dữ liệu JSON đầy đủ cho từng phiên.
+
+**Mã lỗi quy chuẩn:**
+- `400 Bad Request`: Không truyền cả `session_ids` lẫn `filters`.
+- `404 Not Found`: Không tìm thấy phiên nào khớp với yêu cầu.
+- `422 Unprocessable Content`: Số lượng phiên khớp vượt quá ngưỡng an toàn tối đa (100 phiên). Header: `X-Error-Code: EXCEED_BATCH_LIMIT`.
+
 ---
 
 ## Problem Frames

@@ -325,11 +325,15 @@ created: "2026-07-03"
 
 ---
 
-## Phase 22 — Batch C39: Next Horizons (Planning)
-**Status:** PLANNING PENDING — Chưa bắt đầu.
-**Goal:** Tiếp tục mở rộng trải nghiệm người dùng và năng lực nghiên cứu theo đề xuất backlog sau Batch C38.
-- [ ] C39 Backlog Definition & Scoping
-- [ ] ADR & Specification
+## Phase 22 — Batch C39: Multi-Session Export & Safe Archive (C39-FEAT-02)
+**Goal:** Xây dựng tính năng xuất lưu trữ hàng loạt (Multi-Session Batch Export) ra tệp nén ZIP chứa tài liệu Markdown tổng hợp và snapshot JSON, hỗ trợ lựa chọn nhiều phiên (multi-select), lọc theo thẻ/ngày/trạng thái và tùy chọn lưu trữ an toàn (Safe Archive), tuân thủ nghiêm ngặt kỷ luật Test-First, bảo toàn dữ liệu Founder/Golden Documents và zero schema mutation.
+
+- [x] **Lô 1: Backend Batch Export Service & Streaming API** (commit `2c69bd6`; verified: Service `SessionExportService.create_multi_session_zip_archive` tạo in-memory streaming ZIP với `manifest.json`, `markdown/`, `json/`; endpoint `POST /api/v1/sessions/batch-export` hỗ trợ cả `session_ids` và `filters`; tùy chọn `archive_after_export` cập nhật `status='archived'` an toàn; chặn quá tải với ngưỡng an toàn 100 phiên trả về HTTP 422 `X-Error-Code: EXCEED_BATCH_LIMIT`; 10/10 integration tests PASS, 12/12 unit tests PASS; full backend 665/665 PASS; Alembic head giữ nguyên 007).
+- [x] **Lô 2: Frontend API Client & Accessible BatchExportModal** (commit `146d964`; verified: `api-client.ts` thêm `batchExportSessions(request)`; modal `BatchExportModal` đạt chuẩn WCAG 2.1 AA với `role="dialog"`, `aria-modal="true"`, focus trap, escape key, focus restoration, `role="alert"`; hỗ trợ 3 định dạng `markdown`, `json`, `both`; checkbox an toàn `archive_after_export`; xử lý streaming blob download trực tiếp không tạo file client tạm; 10/10 component tests PASS; full frontend 880/880 PASS; lint 0 errors, 0 warnings).
+- [x] **Lô 3: Frontend Multi-Select & SessionList Integration** (commit `d144fb3`; verified: Tích hợp multi-select checkbox trên từng thẻ session card kèm `aria-label`; Master checkbox chọn/bỏ chọn tất cả phiên trên trang; FloatingBatchToolbar cố định chân trang hiển thị bộ đếm `aria-live="polite"`, nút "Xuất các phiên đã chọn" và "Bỏ chọn tất cả"; Nút "Xuất lưu trữ hàng loạt" trên header mở modal theo bộ lọc; Tự động dọn dẹp cache `['sessions']` và reset selection khi xuất thành công kèm lưu trữ; 8/8 integration tests PASS; 50/50 session tests PASS; full frontend 888/888 PASS; lint 0 errors, 0 warnings).
+- [/] **Lô 4: E2E Smoke, Documentation & Close-Out** (IN PROGRESS; verified: Full backend 665/665 PASS; Full frontend 888/888 PASS; Migration & Runtime 40/40 PASS; Alembic head 007; Secret scan 0 findings; cập nhật API Contracts, Roadmap, ADR-020, Spec C39 và test spec).
+
+**Acceptance Gate:** Batch C39 Lô 1, 2, 3 COMPLETE; Lô 4 Close-Out Verification IN PROGRESS.
 
 
 
