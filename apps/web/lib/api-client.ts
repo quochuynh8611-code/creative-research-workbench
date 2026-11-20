@@ -6,6 +6,7 @@ import type {
   AIResearchReport,
   AIStatusResponse,
   AnalyticsOverviewResponse,
+  BatchExportRequest,
   CandidateSolution,
   CandidateSolutionsResponse,
   CreateCandidateSolutionInput,
@@ -588,5 +589,16 @@ export async function getWorkflowProfiles(): Promise<WorkflowProfilesResponse> {
   const response = await apiClient.get<WorkflowProfilesResponse>('/api/v1/sessions/workflow-profiles')
   return response.data
 }
+
+/**
+ * 42. Xuất hàng loạt các phiên nghiên cứu ra tệp nén ZIP (Batch C39 Lô 2).
+ */
+export async function batchExportSessions(request: BatchExportRequest): Promise<Blob> {
+  const response = await apiClient.post<Blob>('/api/v1/sessions/batch-export', request, {
+    responseType: 'blob',
+  })
+  return response.data
+}
+
 
 

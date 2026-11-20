@@ -890,5 +890,28 @@ export interface WorkflowProfilesResponse {
   }
 }
 
+// ──────────────────────────────────────────────
+// Batch Export & Archive Types (Batch C39)
+// ──────────────────────────────────────────────
+
+export type BatchExportFormat = 'both' | 'markdown' | 'json'
+
+export interface BatchExportFilter {
+  status?: string | null
+  domain?: string | null
+  tag?: string | null
+  date_from?: string | null
+  date_to?: string | null
+  q?: string | null
+}
+
+export interface BatchExportRequest {
+  session_ids?: string[] | null
+  filters?: BatchExportFilter | null
+  format?: BatchExportFormat
+  archive_after_export?: boolean
+}
+
+
 
 
