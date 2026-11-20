@@ -18,10 +18,12 @@ from app.domain.models import (
     Chunk,
     Contradiction,
     Document,
+    NoteTag,
     ProblemFrame,
     ResearchNote,
     ResearchSession,
     SessionStatus,
+    Tag,
 )
 from app.schemas.note_context import NoteSourceContextUnion
 from app.services.ai_analysis_service import AIAnalysisService
@@ -186,6 +188,7 @@ VALID_SOLUTION_STATUSES = {"candidate", "accepted", "rejected"}
 class ResearchNoteCreate(BaseModel):
     content: str = Field(..., min_length=1)
     note_type: str = "insight"
+    tags: Optional[list[str]] = Field(default_factory=list)
     source_chunk_id: Optional[uuid.UUID] = None
     source_context: Optional[NoteSourceContextUnion] = None
 
@@ -196,6 +199,26 @@ class ResearchNoteCreate(BaseModel):
             raise ValueError("content must not be empty or whitespace only")
         return v.strip()
 
+    @field_validator("tags")
+    @classmethod
+    def validate_tags(cls, v: Optional[list[str]]) -> list[str]:
+        if not v:
+            return []
+        cleaned: list[str] = []
+        for raw in v:
+            if not raw or not isinstance(raw, str):
+                continue
+            item = raw.strip().lower()
+            if not item:
+                continue
+            if len(item) > 50:
+                raise ValueError(f"Tag '{item[:10]}...' vượt quá độ dài tối đa 50 ký tự")
+            if item not in cleaned:
+                cleaned.append(item)
+        if len(cleaned) > 10:
+            raise ValueError(f"Tối đa 10 tags trên mỗi ghi chú, nhận được {len(cleaned)}")
+        return cleaned
+
     @field_validator("note_type")
     @classmethod
     def validate_note_type(cls, v: str) -> str:
@@ -205,6 +228,30 @@ class ResearchNoteCreate(BaseModel):
                 f"Invalid note_type '{v}'. Must be one of: {sorted(list(VALID_NOTE_TYPES))}"
             )
         return clean
+
+
+class NoteTagsUpdate(BaseModel):
+    tags: list[str] = Field(default_factory=list, description="Danh sách tag mới thay thế toàn bộ tag hiện tại của note")
+
+    @field_validator("tags")
+    @classmethod
+    def validate_tags(cls, v: Optional[list[str]]) -> list[str]:
+        if not v:
+            return []
+        cleaned: list[str] = []
+        for raw in v:
+            if not raw or not isinstance(raw, str):
+                continue
+            item = raw.strip().lower()
+            if not item:
+                continue
+            if len(item) > 50:
+                raise ValueError(f"Tag '{item[:10]}...' vượt quá độ dài tối đa 50 ký tự")
+            if item not in cleaned:
+                cleaned.append(item)
+        if len(cleaned) > 10:
+            raise ValueError(f"Tối đa 10 tags trên mỗi ghi chú, nhận được {len(cleaned)}")
+        return cleaned
 
 
 class CandidateSolutionCreate(BaseModel):
@@ -1079,6 +1126,7 @@ async def advance_stage(session_id: str, body: dict):
 @router.get("/{session_id}/notes")
 async def list_research_notes(
     session_id: uuid.UUID,
+    tag: Optional[str] = None,
     db: Session | None = Depends(get_db),
 ):
     """Liệt kê tất cả research notes của một session (sắp xếp mới nhất trước)."""
@@ -1095,12 +1143,12 @@ async def list_research_notes(
             detail=f"ResearchSession with id '{session_id}' not found.",
         )
 
-    notes = (
-        db.query(ResearchNote)
-        .filter_by(session_id=session_id)
-        .order_by(ResearchNote.created_at.desc(), ResearchNote.id.desc())
-        .all()
-    )
+    query = db.query(ResearchNote).filter_by(session_id=session_id)
+    if tag and tag.strip():
+        clean_tag = tag.strip().lower()
+        query = query.join(ResearchNote.tags).filter(Tag.canonical_slug == clean_tag)
+
+    notes = query.order_by(ResearchNote.created_at.desc(), ResearchNote.id.desc()).all()
 
     items = []
     for n in notes:
@@ -1109,6 +1157,7 @@ async def list_research_notes(
             "session_id": str(n.session_id),
             "content": n.content,
             "note_type": n.note_type,
+            "tags": [t.canonical_slug for t in n.tags],
             "source_chunk_id": str(n.source_chunk_id) if n.source_chunk_id else None,
             "source_context": n.source_context,
             "created_at": n.created_at.isoformat() if n.created_at else None,
@@ -1155,6 +1204,16 @@ async def create_research_note(
     )
     db.add(note)
     db.flush()
+
+    if body.tags:
+        for clean_slug in body.tags:
+            tag_obj = db.query(Tag).filter_by(canonical_slug=clean_slug).first()
+            if not tag_obj:
+                tag_obj = Tag(canonical_slug=clean_slug, display_label=clean_slug)
+                db.add(tag_obj)
+                db.flush()
+            note.tags.append(tag_obj)
+
     db.commit()
     db.refresh(note)
     _invalidate_analytics()
@@ -1164,6 +1223,7 @@ async def create_research_note(
         "session_id": str(note.session_id),
         "content": note.content,
         "note_type": note.note_type,
+        "tags": [t.canonical_slug for t in note.tags],
         "source_chunk_id": str(note.source_chunk_id) if note.source_chunk_id else None,
         "source_context": note.source_context,
         "created_at": note.created_at.isoformat() if note.created_at else None,
@@ -1216,6 +1276,148 @@ async def delete_research_note(
         "status": "deleted",
         "id": str(note_id),
         "session_id": str(session_id),
+    }
+
+
+@router.delete("/{session_id}/notes/{note_id}/tags/{tag_slug}", status_code=status.HTTP_200_OK)
+async def remove_research_note_tag(
+    session_id: uuid.UUID,
+    note_id: uuid.UUID,
+    tag_slug: str,
+    db: Session | None = Depends(get_db),
+):
+    """
+    Gỡ bỏ liên kết tag khỏi một research note (C38-GAP-01 Normalized Tagging).
+    Chỉ xóa liên kết trong bảng note_tags; tag canonical trong bảng tags vẫn TỒN TẠI (zero hard-delete).
+    """
+    if db is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"ResearchSession with id '{session_id}' not found.",
+        )
+
+    session_record = db.query(ResearchSession).filter_by(id=session_id).first()
+    if not session_record:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"ResearchSession with id '{session_id}' not found.",
+        )
+
+    note = (
+        db.query(ResearchNote)
+        .filter_by(id=note_id, session_id=session_id)
+        .first()
+    )
+    if not note:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"ResearchNote with id '{note_id}' not found in session '{session_id}'.",
+        )
+
+    clean_slug = tag_slug.strip().lower()
+    tag_obj = None
+    for t in note.tags:
+        if t.canonical_slug == clean_slug:
+            tag_obj = t
+            break
+
+    if not tag_obj:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Tag '{clean_slug}' not found on note '{note_id}'.",
+        )
+
+    note.tags.remove(tag_obj)
+    db.commit()
+    db.refresh(note)
+    _invalidate_analytics()
+
+    payload = {
+        "id": str(note.id),
+        "session_id": str(note.session_id),
+        "content": note.content,
+        "note_type": note.note_type,
+        "tags": [t.canonical_slug for t in note.tags],
+        "source_chunk_id": str(note.source_chunk_id) if note.source_chunk_id else None,
+        "source_context": note.source_context,
+        "created_at": note.created_at.isoformat() if note.created_at else None,
+        "updated_at": note.updated_at.isoformat() if note.updated_at else None,
+    }
+
+    return {
+        **payload,
+        "data": payload,
+        "status": "success",
+        "removed_tag": clean_slug,
+    }
+
+
+@router.put("/{session_id}/notes/{note_id}/tags", status_code=status.HTTP_200_OK)
+async def update_research_note_tags(
+    session_id: uuid.UUID,
+    note_id: uuid.UUID,
+    body: NoteTagsUpdate,
+    db: Session | None = Depends(get_db),
+):
+    """
+    Cập nhật danh sách tags của một research note (C38-GAP-01 Normalized Tagging).
+    Đồng bộ liên kết trong note_tags: thêm tag mới, gỡ tag bị bỏ.
+    Không bao giờ hard-delete canonical tag trong bảng tags.
+    """
+    if db is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"ResearchSession with id '{session_id}' not found.",
+        )
+
+    session_record = db.query(ResearchSession).filter_by(id=session_id).first()
+    if not session_record:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"ResearchSession with id '{session_id}' not found.",
+        )
+
+    note = (
+        db.query(ResearchNote)
+        .filter_by(id=note_id, session_id=session_id)
+        .first()
+    )
+    if not note:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"ResearchNote with id '{note_id}' not found in session '{session_id}'.",
+        )
+
+    new_tags_list: list[Tag] = []
+    for clean_slug in body.tags:
+        tag_obj = db.query(Tag).filter_by(canonical_slug=clean_slug).first()
+        if not tag_obj:
+            tag_obj = Tag(canonical_slug=clean_slug, display_label=clean_slug)
+            db.add(tag_obj)
+            db.flush()
+        new_tags_list.append(tag_obj)
+
+    note.tags = new_tags_list
+    db.commit()
+    db.refresh(note)
+    _invalidate_analytics()
+
+    payload = {
+        "id": str(note.id),
+        "session_id": str(note.session_id),
+        "content": note.content,
+        "note_type": note.note_type,
+        "tags": [t.canonical_slug for t in note.tags],
+        "source_chunk_id": str(note.source_chunk_id) if note.source_chunk_id else None,
+        "source_context": note.source_context,
+        "created_at": note.created_at.isoformat() if note.created_at else None,
+        "updated_at": note.updated_at.isoformat() if note.updated_at else None,
+    }
+
+    return {
+        **payload,
+        "data": payload,
+        "status": "success",
     }
 
 

@@ -384,6 +384,7 @@ def export_session_as_json(session: ResearchSession, db: Session) -> dict[str, A
             "session_id": str(n.session_id),
             "content": n.content,
             "note_type": n.note_type,
+            "tags": [t.canonical_slug for t in getattr(n, "tags", [])],
             "source_chunk_id": str(n.source_chunk_id) if n.source_chunk_id else None,
             "source_context": getattr(n, "source_context", None),
             "created_at": n.created_at.isoformat() if n.created_at else None,

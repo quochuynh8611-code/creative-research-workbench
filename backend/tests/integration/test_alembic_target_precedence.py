@@ -64,6 +64,8 @@ def _assert_disposable_target(engine: Engine, label: str) -> None:
 def _clean_database(engine: Engine) -> None:
     """Dọn dẹp sạch toàn bộ bảng và enum types trên target database."""
     with engine.begin() as conn:
+        conn.execute(text("DROP TABLE IF EXISTS note_tags CASCADE"))
+        conn.execute(text("DROP TABLE IF EXISTS tags CASCADE"))
         conn.execute(text("DROP TABLE IF EXISTS background_jobs CASCADE"))
         conn.execute(text("DROP TABLE IF EXISTS candidate_solutions CASCADE"))
         conn.execute(text("DROP TABLE IF EXISTS research_notes CASCADE"))

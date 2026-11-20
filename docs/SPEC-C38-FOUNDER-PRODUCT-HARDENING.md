@@ -38,30 +38,50 @@ Batch C38 tập trung làm vững chắc hóa sản phẩm (Product Hardening) d
 
 ## 3. Data Model & Schema Changes
 
-### 3.1 Bảng `research_notes` (C38-GAP-01)
+### 3.1 Bảng `tags` và `note_tags` (C38-GAP-01: Normalized Tagging)
 
-Bảng `research_notes` được bổ sung một cột mới:
+Thay vì dùng `ARRAY(String)` không tương thích chuẩn và khó mở rộng phân tích, hệ thống triển khai kiến trúc chuẩn hóa (Normalized Tagging Architecture) qua 2 bảng:
 
 ```sql
--- Migration: 007_add_tags_to_research_notes.py
-ALTER TABLE research_notes 
-ADD COLUMN tags VARCHAR[] NOT NULL DEFAULT '{}';
+-- Migration: 007_create_tags_and_note_tags_tables.py
+CREATE TABLE tags (
+    id UUID PRIMARY KEY,
+    canonical_slug VARCHAR(50) NOT NULL UNIQUE,
+    display_label VARCHAR(100),
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX ix_tags_canonical_slug ON tags (canonical_slug);
 
--- Index tùy chọn phục vụ tìm kiếm tag nhanh
-CREATE INDEX ix_research_notes_tags ON research_notes USING gin (tags);
+CREATE TABLE note_tags (
+    note_id UUID NOT NULL REFERENCES research_notes (id) ON DELETE CASCADE,
+    tag_id UUID NOT NULL REFERENCES tags (id) ON DELETE CASCADE,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    PRIMARY KEY (note_id, tag_id)
+);
+CREATE INDEX ix_note_tags_note_id ON note_tags (note_id);
+CREATE INDEX ix_note_tags_tag_id ON note_tags (tag_id);
 ```
 
 **SQLAlchemy ORM Mapping (`backend/src/app/domain/models.py`)**:
 ```python
+class Tag(Base):
+    __tablename__ = "tags"
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    canonical_slug: Mapped[str] = mapped_column(String(50), unique=True, index=True, nullable=False)
+    display_label: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=func.now())
+    notes = relationship("ResearchNote", secondary="note_tags", back_populates="tags")
+
+class NoteTag(Base):
+    __tablename__ = "note_tags"
+    note_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("research_notes.id", ondelete="CASCADE"), primary_key=True)
+    tag_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("tags.id", ondelete="CASCADE"), primary_key=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=func.now())
+
 class ResearchNote(Base):
     __tablename__ = "research_notes"
-
-    # ... các cột hiện có ...
-    tags: Mapped[list[str]] = mapped_column(
-        ARRAY(String),
-        nullable=False,
-        server_default="{}",
-    )
+    # ... các cột hiện có giữ nguyên ...
+    tags = relationship("Tag", secondary="note_tags", back_populates="notes", lazy="selectin")
 ```
 
 ### 3.2 Note Source Context Schema (C38-GAP-03)
@@ -168,6 +188,57 @@ export interface Triz9WindowsSourceContext {
       }
     ],
     "meta": { "total": 1 }
+  }
+  ```
+
+### 4.3 Gỡ Bỏ Tag Association Khỏi Note
+
+**`DELETE /api/v1/sessions/{session_id}/notes/{note_id}/tags/{tag_slug}`**
+
+- **URL Params**:
+  - `session_id` (UUID): ID của session.
+  - `note_id` (UUID): ID của ghi chú.
+  - `tag_slug` (string): Slug của tag cần gỡ.
+- **Behavior**:
+  - Gỡ bỏ liên kết giữa note và tag trong bảng `note_tags`.
+  - Giữ nguyên bản ghi canonical tag trong bảng `tags` (Zero hard-delete).
+  - Giữ nguyên nội dung và trạng thái ghi chú.
+- **Response 200 OK**:
+  ```json
+  {
+    "id": "c1a9c372-8f92-4d51-b847-ef9905c74281",
+    "session_id": "f5b80421-2e6b-4e67-93e8-8a8b27df9452",
+    "content": "...",
+    "note_type": "hypothesis",
+    "tags": ["thermal-runaway"],
+    "status": "success",
+    "removed_tag": "battery"
+  }
+  ```
+
+### 4.4 Cập Nhật Danh Sách Tags Của Note
+
+**`PUT /api/v1/sessions/{session_id}/notes/{note_id}/tags`**
+
+- **Request Body**:
+  ```json
+  {
+    "tags": ["thermal-runaway", "safety-margin"]
+  }
+  ```
+- **Behavior**:
+  - Đồng bộ liên kết trong bảng `note_tags`: Thêm association cho tag mới, xóa association cho tag bị loại bỏ.
+  - Tự động tạo bản ghi canonical trong bảng `tags` nếu chưa tồn tại.
+  - Không xóa các bản ghi canonical trong bảng `tags` khi bị gỡ khỏi note.
+- **Response 200 OK**:
+  ```json
+  {
+    "id": "c1a9c372-8f92-4d51-b847-ef9905c74281",
+    "session_id": "f5b80421-2e6b-4e67-93e8-8a8b27df9452",
+    "content": "...",
+    "note_type": "hypothesis",
+    "tags": ["thermal-runaway", "safety-margin"],
+    "status": "success"
   }
   ```
 

@@ -196,8 +196,12 @@ export async function lookupTrizMatrix(params: TrizLookupQuery): Promise<TrizLoo
 /**
  * 12. Lấy danh sách Research Notes của một session.
  */
-export async function listResearchNotes(sessionId: string): Promise<ResearchNotesResponse> {
-  const response = await apiClient.get<ResearchNotesResponse>(`/api/v1/sessions/${sessionId}/notes`)
+export async function listResearchNotes(
+  sessionId: string,
+  params?: { tag?: string }
+): Promise<ResearchNotesResponse> {
+  const query = params?.tag ? `?tag=${encodeURIComponent(params.tag)}` : ''
+  const response = await apiClient.get<ResearchNotesResponse>(`/api/v1/sessions/${sessionId}/notes${query}`)
   return response.data
 }
 
@@ -226,6 +230,35 @@ export async function deleteResearchNote(
     `/api/v1/sessions/${sessionId}/notes/${noteId}`
   )
   return response.data
+}
+
+/**
+ * 14b. Gỡ một tag khỏi Research Note (C38-GAP-01 Normalized Tagging).
+ */
+export async function removeNoteTag(
+  sessionId: string,
+  noteId: string,
+  tagSlug: string
+): Promise<ResearchNote> {
+  const response = await apiClient.delete<{ data?: ResearchNote } & ResearchNote>(
+    `/api/v1/sessions/${sessionId}/notes/${noteId}/tags/${encodeURIComponent(tagSlug)}`
+  )
+  return response.data.data ?? response.data
+}
+
+/**
+ * 14c. Cập nhật danh sách tags của Research Note (C38-GAP-01 Normalized Tagging).
+ */
+export async function updateNoteTags(
+  sessionId: string,
+  noteId: string,
+  tags: string[]
+): Promise<ResearchNote> {
+  const response = await apiClient.put<{ data?: ResearchNote } & ResearchNote>(
+    `/api/v1/sessions/${sessionId}/notes/${noteId}/tags`,
+    { tags }
+  )
+  return response.data.data ?? response.data
 }
 
 /**

@@ -309,6 +309,7 @@ export interface ResearchNote {
   session_id: string
   content: string
   note_type: NoteType
+  tags?: string[]
   source_chunk_id?: string | null
   source_context?: unknown | null
   created_at: string
@@ -322,6 +323,7 @@ export interface ResearchNotesResponse {
 export interface CreateResearchNoteInput {
   content: string
   note_type?: NoteType
+  tags?: string[]
   source_chunk_id?: string | null
   source_context?: NoteSourceContext | null
 }
@@ -335,6 +337,7 @@ export interface DeleteResearchNoteResponse {
 export interface NoteDraft {
   content: string
   note_type: NoteType
+  tags?: string[]
   source_chunk_id?: string | null
   source_context?: NoteSourceContext | null
 }

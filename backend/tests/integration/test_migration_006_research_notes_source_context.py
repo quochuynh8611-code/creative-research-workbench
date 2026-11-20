@@ -43,11 +43,12 @@ def test_migration_006_source_heads_is_single_linear_006():
     """
     GIVEN: Thư mục migration Alembic
     WHEN: Đọc source heads
-    THEN: Phải có đúng 1 head duy nhất là '006' (RED phase hiện tại đang là '005').
+    THEN: Phải có đúng 1 head duy nhất (tối thiểu '006').
     """
     script_location = str(REPO_ROOT / "alembic")
     heads = read_source_heads(script_location)
-    assert heads == ("006",), f"Expected single migration head ('006',), got: {heads}"
+    assert len(heads) == 1, f"Expected single linear migration head, got: {heads}"
+    assert heads[0] >= "006", f"Expected head revision >= '006', got: {heads}"
 
 
 def test_migration_006_upgrade_and_downgrade():
@@ -189,6 +190,6 @@ def test_migration_runner_and_postflight_accepts_head_006():
             database_url=raw_url,
         )
 
-        assert snapshot.database_revision == "006"
-        assert snapshot.source_heads == ("006",)
+        assert snapshot.database_revision in ("006", "007")
+        assert snapshot.source_heads in (("006",), ("007",))
         assert snapshot.index_name == "ix_chunks_embedding_cosine"

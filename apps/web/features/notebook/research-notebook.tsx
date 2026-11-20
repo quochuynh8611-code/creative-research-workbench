@@ -8,6 +8,8 @@ import {
   listResearchNotes,
   createResearchNote,
   deleteResearchNote,
+  removeNoteTag,
+  updateNoteTags,
 } from '@/lib/api-client'
 import { validateNoteSourceContext } from '@/lib/note-source-context-validator'
 import { extractApiErrorMessage } from '@/lib/api-error-message'
@@ -112,6 +114,8 @@ export function ResearchNotebook({
   const [validationError, setValidationError] = useState<string | null>(null)
   const [actionError, setActionError] = useState<string | null>(null)
   const [noteToDelete, setNoteToDelete] = useState<ResearchNote | null>(null)
+  const [tagsInput, setTagsInput] = useState('')
+  const [selectedTag, setSelectedTag] = useState<string | null>(null)
 
   const [copyStatus, setCopyStatus] = useState<CopyStatus>(null)
   const latestRequestIdRef = useRef<number>(0)
@@ -200,9 +204,16 @@ export function ResearchNotebook({
     }
   }
 
+  useEffect(() => {
+    if (initialDraft?.tags && initialDraft.tags.length > 0) {
+      setTagsInput(initialDraft.tags.join(', '))
+    }
+  }, [initialDraft])
+
   const handleDiscardDraft = () => {
     setValidationError(null)
     setActionError(null)
+    setTagsInput('')
     onClearDraft()
   }
 
@@ -224,6 +235,7 @@ export function ResearchNotebook({
       queryClient.invalidateQueries({ queryKey: ['sessions', sessionId, 'notes'] })
       setValidationError(null)
       setActionError(null)
+      setTagsInput('')
       onNoteCreated()
     },
     onError: (err: unknown) => {
@@ -243,6 +255,23 @@ export function ResearchNotebook({
     },
   })
 
+  const removeTagMutation = useMutation({
+    mutationFn: ({ noteId, tagSlug }: { noteId: string; tagSlug: string }) =>
+      removeNoteTag(sessionId, noteId, tagSlug),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['sessions', sessionId, 'notes'] })
+      setActionError(null)
+    },
+    onError: (err: any) => {
+      setActionError(extractApiErrorMessage(err, 'Không thể xóa tag. Vui lòng thử lại.'))
+    },
+  })
+
+  const handleRemoveTag = (noteId: string, tagSlug: string) => {
+    setActionError(null)
+    removeTagMutation.mutate({ noteId, tagSlug })
+  }
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     const trimmed = content.trim()
@@ -255,9 +284,19 @@ export function ResearchNotebook({
     setValidationError(null)
     setActionError(null)
 
+    const parsedTags = tagsInput
+      .split(',')
+      .map((t) => t.trim().toLowerCase())
+      .filter(Boolean)
+
     const payload: CreateResearchNoteInput = {
       content: trimmed,
       note_type: noteType,
+    }
+    if (parsedTags.length > 0) {
+      payload.tags = parsedTags
+    } else if (initialDraft?.tags && initialDraft.tags.length > 0) {
+      payload.tags = initialDraft.tags
     }
     if (initialDraft?.source_chunk_id) {
       payload.source_chunk_id = initialDraft.source_chunk_id
@@ -330,6 +369,12 @@ export function ResearchNotebook({
     sourceCounters.evidence > 0 ||
     sourceCounters.candidate_solution > 0
 
+  const allTags = Array.from(
+    new Set(
+      notes.flatMap((note) => (Array.isArray(note.tags) ? note.tags : []))
+    )
+  ).filter(Boolean)
+
   const filteredNotes = notes.filter((note) => {
     let noteSource: SourceFilter = 'manual'
     try {
@@ -343,12 +388,15 @@ export function ResearchNotebook({
     const matchesSearch =
       !searchQuery.trim() ||
       note.content.toLowerCase().includes(searchQuery.trim().toLowerCase())
-    return matchesSource && matchesType && matchesSearch
+    const matchesTag =
+      !selectedTag || (Array.isArray(note.tags) && note.tags.includes(selectedTag))
+    return matchesSource && matchesType && matchesSearch && matchesTag
   })
 
   const handleClearFilters = () => {
     setSelectedType('all')
     setSelectedSource('all')
+    setSelectedTag(null)
     setSearchQuery('')
   }
 
@@ -665,6 +713,24 @@ export function ResearchNotebook({
                 {validationError}
               </p>
             )}
+          </div>
+
+          <div>
+            <label
+              htmlFor="note-tags"
+              className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1"
+            >
+              Tags / Nhãn (phân tách bằng dấu phẩy)
+            </label>
+            <input
+              id="note-tags"
+              type="text"
+              aria-label="Tags / Nhãn"
+              value={tagsInput}
+              onChange={(e) => setTagsInput(e.target.value)}
+              placeholder="Nhập tags, phân tách bằng dấu phẩy (vd: pin, hiệu-năng)..."
+              className="w-full px-3 py-1.5 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-xs"
+            />
           </div>
 
           <div className="flex flex-wrap items-center justify-between gap-3 pt-1">
@@ -1084,6 +1150,42 @@ export function ResearchNotebook({
                 )
               })}
             </div>
+
+            {/* Tag Filter Buttons */}
+            {allTags.length > 0 && (
+              <div className="flex flex-wrap items-center gap-1.5" role="toolbar" aria-label="Bộ lọc tags">
+                <span className="text-xs text-slate-500 dark:text-slate-400 mr-1">Tags:</span>
+                {allTags.map((tag) => {
+                  const isActive = selectedTag === tag
+                  return (
+                    <button
+                      key={tag}
+                      type="button"
+                      onClick={() => setSelectedTag(isActive ? null : tag)}
+                      aria-pressed={isActive}
+                      aria-label={`Lọc theo tag #${tag}`}
+                      className={cn(
+                        'inline-flex items-center px-2 py-0.5 text-xs font-medium rounded-full border transition-colors cursor-pointer',
+                        isActive
+                          ? 'bg-indigo-600 text-white border-indigo-600 shadow-2xs font-semibold'
+                          : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-200 dark:hover:bg-slate-700'
+                      )}
+                    >
+                      <span>#{tag}</span>
+                    </button>
+                  )
+                })}
+                {selectedTag && (
+                  <button
+                    type="button"
+                    onClick={() => setSelectedTag(null)}
+                    className="text-xs text-indigo-600 dark:text-indigo-400 hover:underline cursor-pointer ml-1"
+                  >
+                    Bỏ lọc tag
+                  </button>
+                )}
+              </div>
+            )}
           </div>
         )}
 
@@ -1186,6 +1288,27 @@ export function ResearchNotebook({
                 <p className="text-sm text-slate-800 dark:text-slate-200 whitespace-pre-wrap leading-relaxed">
                   {note.content}
                 </p>
+
+                {Array.isArray(note.tags) && note.tags.length > 0 && (
+                  <div className="flex flex-wrap items-center gap-1.5 pt-1">
+                    {note.tags.map((tag) => (
+                      <span
+                        key={tag}
+                        className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-medium bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-700"
+                      >
+                        <span>#{tag}</span>
+                        <button
+                          type="button"
+                          aria-label={`Xóa tag #${tag}`}
+                          onClick={() => handleRemoveTag(note.id, tag)}
+                          className="hover:text-rose-600 focus:outline-none focus:ring-1 focus:ring-rose-500 rounded p-0.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer"
+                        >
+                          <X className="w-2.5 h-2.5" />
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                )}
               </div>
             ))}
           </div>
