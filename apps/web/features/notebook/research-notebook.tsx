@@ -108,6 +108,7 @@ export function ResearchNotebook({
   className = '',
 }: ResearchNotebookProps) {
   const queryClient = useQueryClient()
+  const contentInputRef = useRef<HTMLTextAreaElement>(null)
   const [validationError, setValidationError] = useState<string | null>(null)
   const [actionError, setActionError] = useState<string | null>(null)
   const [noteToDelete, setNoteToDelete] = useState<ResearchNote | null>(null)
@@ -247,6 +248,7 @@ export function ResearchNotebook({
     const trimmed = content.trim()
     if (!trimmed) {
       setValidationError('Vui lòng nhập nội dung ghi chú')
+      contentInputRef.current?.focus()
       return
     }
 
@@ -635,17 +637,31 @@ export function ResearchNotebook({
             </label>
             <textarea
               id="note-content"
+              ref={contentInputRef}
               rows={3}
               value={content}
+              aria-label="Nội dung ghi chú"
+              aria-required="true"
+              aria-invalid={Boolean(validationError)}
+              aria-describedby={validationError ? 'note-validation-error' : actionError ? 'note-action-error' : undefined}
               onChange={(e) => {
                 onContentChange(e.target.value)
                 if (validationError) setValidationError(null)
               }}
               placeholder="Nhập ghi chú nghiên cứu (quan sát, giả thuyết, quyết định)..."
-              className="w-full px-3.5 py-2.5 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm resize-y"
+              className={cn(
+                'w-full px-3.5 py-2.5 rounded-lg border bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm resize-y',
+                validationError
+                  ? 'border-rose-500 focus:ring-rose-500'
+                  : 'border-slate-300 dark:border-slate-700'
+              )}
             />
             {validationError && (
-              <p className="mt-1.5 text-xs font-medium text-rose-600 dark:text-rose-400">
+              <p
+                id="note-validation-error"
+                role="alert"
+                className="mt-1.5 text-xs font-medium text-rose-600 dark:text-rose-400"
+              >
                 {validationError}
               </p>
             )}
@@ -711,7 +727,11 @@ export function ResearchNotebook({
         </form>
 
         {actionError && (
-          <div className="mt-3 p-3 bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800 rounded-lg text-xs text-rose-700 dark:text-rose-300">
+          <div
+            id="note-action-error"
+            role="alert"
+            className="mt-3 p-3 bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800 rounded-lg text-xs text-rose-700 dark:text-rose-300"
+          >
             {actionError}
           </div>
         )}

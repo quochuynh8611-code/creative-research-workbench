@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { Plus, X, ChevronRight, Loader2, AlertCircle, Sparkles, Zap, BookOpen } from 'lucide-react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { cn } from '@/lib/utils'
@@ -158,6 +158,8 @@ export function IntakeForm({
   const [wantText, setWantText] = useState('')
   const [obstacleText, setObstacleText] = useState('')
   const [contextText, setContextText] = useState('')
+  const wantInputRef = useRef<HTMLInputElement>(null)
+  const obstacleInputRef = useRef<HTMLInputElement>(null)
 
   const handleWantChange = (val: string) => {
     setWantText(val)
@@ -286,7 +288,17 @@ export function IntakeForm({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     setSubmitError(null)
-    if (form.goal.trim().length < 10) return
+
+    if (form.goal.trim().length < 10) {
+      setSubmitError('Mô tả vấn đề phải có độ dài tối thiểu 10 ký tự.')
+      if (wantInputRef.current && !wantText.trim()) {
+        wantInputRef.current.focus()
+      } else if (obstacleInputRef.current && !obstacleText.trim()) {
+        obstacleInputRef.current.focus()
+      }
+      return
+    }
+
     const statement = composeStatement()
     if (!statement) return
     mutation.mutate(statement)
@@ -305,14 +317,21 @@ export function IntakeForm({
       </div>
 
       {submitError && (
-        <div className="flex items-center gap-2 p-3 text-sm text-destructive bg-destructive/10 border border-destructive/20 rounded-md">
+        <div
+          id="intake-submit-error"
+          role="alert"
+          className="flex items-center gap-2 p-3 text-sm text-destructive bg-destructive/10 border border-destructive/20 rounded-md"
+        >
           <AlertCircle className="w-4 h-4 shrink-0" />
           <span>{submitError}</span>
         </div>
       )}
 
       {aiError && (
-        <div className="flex items-center gap-2 p-3 text-sm text-destructive bg-destructive/10 border border-destructive/20 rounded-md">
+        <div
+          role="alert"
+          className="flex items-center gap-2 p-3 text-sm text-destructive bg-destructive/10 border border-destructive/20 rounded-md"
+        >
           <AlertCircle className="w-4 h-4 shrink-0" />
           <span>{aiError}</span>
         </div>
@@ -386,11 +405,23 @@ export function IntakeForm({
             </label>
             <input
               id="want-input"
+              ref={wantInputRef}
               type="text"
+              aria-required="true"
+              aria-invalid={submitError && (!wantText.trim() || form.goal.trim().length < 10) ? 'true' : undefined}
+              aria-describedby={submitError ? 'intake-submit-error' : undefined}
               value={wantText}
-              onChange={(e) => handleWantChange(e.target.value)}
+              onChange={(e) => {
+                handleWantChange(e.target.value)
+                if (submitError) setSubmitError(null)
+              }}
               placeholder="Ví dụ: Dậy sớm lúc 5h sáng để rèn luyện thói quen và đọc sách..."
-              className="w-full px-3 py-2 text-sm border border-input rounded-lg bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+              className={cn(
+                'w-full px-3 py-2 text-sm border rounded-lg bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-ring',
+                submitError && (!wantText.trim() || form.goal.trim().length < 10)
+                  ? 'border-destructive focus:ring-destructive'
+                  : 'border-input'
+              )}
             />
           </div>
 
@@ -400,11 +431,23 @@ export function IntakeForm({
             </label>
             <input
               id="obstacle-input"
+              ref={obstacleInputRef}
               type="text"
+              aria-required="true"
+              aria-invalid={submitError && !obstacleText.trim() ? 'true' : undefined}
+              aria-describedby={submitError ? 'intake-submit-error' : undefined}
               value={obstacleText}
-              onChange={(e) => handleObstacleChange(e.target.value)}
+              onChange={(e) => {
+                handleObstacleChange(e.target.value)
+                if (submitError) setSubmitError(null)
+              }}
               placeholder="Ví dụ: Thiếu ngủ, mệt mỏi và kiệt sức vào buổi chiều..."
-              className="w-full px-3 py-2 text-sm border border-input rounded-lg bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+              className={cn(
+                'w-full px-3 py-2 text-sm border rounded-lg bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-ring',
+                submitError && !obstacleText.trim()
+                  ? 'border-destructive focus:ring-destructive'
+                  : 'border-input'
+              )}
             />
           </div>
 
