@@ -13,7 +13,7 @@
  *   - cell_label tối đa 100 Unicode code points.
  */
 
-import type { Triz9WindowsSourceContext } from './types'
+import type { Triz9WindowsSourceContext, TrizNineWindowsLens } from './types'
 
 const CONTROL_CHAR_REGEX = /[\x00-\x1f\x7f-\x9f\u2028\u2029]/
 
@@ -26,7 +26,14 @@ const ALLOWED_KEYS = new Set([
   'cell_label',
 ])
 
-const VALID_LENSES = new Set(['engineering', 'business', 'everyday'])
+const VALID_LENSES = new Set([
+  'engineering',
+  'business',
+  'everyday',
+  'systems_thinking',
+  'design_thinking',
+  'lean_startup',
+])
 const VALID_LEVELS = new Set(['supersystem', 'system', 'subsystem'])
 const VALID_TIMES = new Set(['past', 'present', 'future'])
 
@@ -65,7 +72,11 @@ export function validateTriz9WindowsContext(input: unknown): ValidationResult {
 
   // 4. lens
   if (typeof record.lens !== 'string' || !VALID_LENSES.has(record.lens)) {
-    return { ok: false, error: 'lens phải là "engineering", "business" hoặc "everyday"' }
+    return {
+      ok: false,
+      error:
+        'lens phải là một trong 6 lăng kính hợp lệ: "engineering", "business", "everyday", "systems_thinking", "design_thinking", "lean_startup"',
+    }
   }
 
   // 5. level
@@ -107,7 +118,7 @@ export function validateTriz9WindowsContext(input: unknown): ValidationResult {
     data: {
       schema_version: 1,
       source_type: 'triz_9_windows',
-      lens: record.lens as 'engineering' | 'business' | 'everyday',
+      lens: record.lens as TrizNineWindowsLens,
       level: record.level as 'supersystem' | 'system' | 'subsystem',
       time: record.time as 'past' | 'present' | 'future',
       cell_label: record.cell_label,
