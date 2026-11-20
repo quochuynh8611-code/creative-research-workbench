@@ -18,7 +18,7 @@ import {
   ShieldAlert,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { ConfirmationModal } from '@/components/confirmation-modal'
+import { EditableDraftModal } from './editable-draft-modal'
 import {
   getAICoachSuggestions,
   createCandidateSolution,
@@ -99,15 +99,17 @@ export function AICoachPanel({
   const [dismissedIds, setDismissedIds] = useState<Set<string>>(new Set())
   const [actionSuccess, setActionSuccess] = useState<string | null>(null)
 
-  // Confirmation modal state
-  const [confirmModal, setConfirmModal] = useState<{
+  // Editable draft modal state
+  const [draftModal, setDraftModal] = useState<{
     isOpen: boolean
     type: 'solution' | 'note'
     suggestion: CoachSuggestion | null
+    errorMessage: string | null
   }>({
     isOpen: false,
     type: 'solution',
     suggestion: null,
+    errorMessage: null,
   })
 
   // Coach Analysis Mutation
@@ -122,48 +124,57 @@ export function AICoachPanel({
 
   // Save Candidate Solution Mutation
   const saveSolutionMutation = useMutation({
-    mutationFn: async (suggestion: CoachSuggestion) => {
-      const payload = suggestion.actionable_payload
-      const title = payload?.title?.trim() || suggestion.title
-      const mechanism = payload?.mechanism?.trim() || suggestion.description
+    mutationFn: async ({
+      payload,
+    }: {
+      suggestion: CoachSuggestion
+      payload: { title: string; mechanism: string }
+    }) => {
       return createCandidateSolution(sessionId, {
-        title,
-        mechanism,
+        title: payload.title,
+        mechanism: payload.mechanism,
         status: 'candidate',
       })
     },
-    onSuccess: (_, suggestion) => {
+    onSuccess: (_, { suggestion, payload }) => {
       queryClient.invalidateQueries({ queryKey: ['sessions', sessionId, 'solutions'] })
-      setActionSuccess(`Đã lưu "${suggestion.title}" thành Giải pháp thành công.`)
-      setConfirmModal({ isOpen: false, type: 'solution', suggestion: null })
+      setActionSuccess(`Đã lưu "${payload.title}" thành Giải pháp thành công.`)
+      setDraftModal({ isOpen: false, type: 'solution', suggestion: null, errorMessage: null })
       setDismissedIds((prev) => new Set(prev).add(suggestion.id))
+    },
+    onError: (err: unknown) => {
+      const msg =
+        (err as Error)?.message ||
+        'Không thể lưu giải pháp do sự cố mạng hoặc lỗi máy chủ. Vui lòng thử lại.'
+      setDraftModal((prev) => ({ ...prev, errorMessage: msg }))
     },
   })
 
   // Save Research Note Mutation
   const saveNoteMutation = useMutation({
-    mutationFn: async (suggestion: CoachSuggestion) => {
-      const payload = suggestion.actionable_payload
-      const content =
-        payload?.content?.trim() ||
-        `[${suggestion.title}]\n${suggestion.description}\n(Căn cứ: ${suggestion.source_grounding.source_reference})`
-      const noteType: NoteType =
-        (payload?.note_type as NoteType) ||
-        (suggestion.category === 'clarifying_question'
-          ? 'question'
-          : suggestion.category === 'possible_cause'
-          ? 'insight'
-          : 'hypothesis')
+    mutationFn: async ({
+      payload,
+    }: {
+      suggestion: CoachSuggestion
+      payload: { content: string; note_type: NoteType; tags?: string[] }
+    }) => {
       return createResearchNote(sessionId, {
-        content,
-        note_type: noteType,
+        content: payload.content,
+        note_type: payload.note_type,
+        tags: payload.tags,
       })
     },
-    onSuccess: (_, suggestion) => {
+    onSuccess: (_, { suggestion }) => {
       queryClient.invalidateQueries({ queryKey: ['sessions', sessionId, 'notes'] })
       setActionSuccess(`Đã lưu "${suggestion.title}" vào Sổ tay nghiên cứu.`)
-      setConfirmModal({ isOpen: false, type: 'note', suggestion: null })
+      setDraftModal({ isOpen: false, type: 'note', suggestion: null, errorMessage: null })
       setDismissedIds((prev) => new Set(prev).add(suggestion.id))
+    },
+    onError: (err: unknown) => {
+      const msg =
+        (err as Error)?.message ||
+        'Không thể lưu ghi chép do sự cố mạng hoặc lỗi máy chủ. Vui lòng thử lại.'
+      setDraftModal((prev) => ({ ...prev, errorMessage: msg }))
     },
   })
 
@@ -181,13 +192,33 @@ export function AICoachPanel({
     setDismissedIds((prev) => new Set(prev).add(id))
   }
 
-  const handleConfirmAction = () => {
-    if (!confirmModal.suggestion) return
-    if (confirmModal.type === 'solution') {
-      saveSolutionMutation.mutate(confirmModal.suggestion)
-    } else {
-      saveNoteMutation.mutate(confirmModal.suggestion)
-    }
+  const handleOpenDraftModal = (type: 'solution' | 'note', suggestion: CoachSuggestion) => {
+    setDraftModal({
+      isOpen: true,
+      type,
+      suggestion,
+      errorMessage: null,
+    })
+  }
+
+  const handleSaveSolution = (payload: { title: string; mechanism: string }) => {
+    if (!draftModal.suggestion) return
+    setDraftModal((prev) => ({ ...prev, errorMessage: null }))
+    saveSolutionMutation.mutate({ suggestion: draftModal.suggestion, payload })
+  }
+
+  const handleSaveNote = (payload: {
+    content: string
+    note_type: NoteType
+    tags?: string[]
+  }) => {
+    if (!draftModal.suggestion) return
+    setDraftModal((prev) => ({ ...prev, errorMessage: null }))
+    saveNoteMutation.mutate({ suggestion: draftModal.suggestion, payload })
+  }
+
+  const handleCancelModal = () => {
+    setDraftModal({ isOpen: false, type: 'solution', suggestion: null, errorMessage: null })
   }
 
   return (
@@ -396,13 +427,7 @@ export function AICoachPanel({
                       {isSolutionCandidate ? (
                         <button
                           type="button"
-                          onClick={() =>
-                            setConfirmModal({
-                              isOpen: true,
-                              type: 'solution',
-                              suggestion,
-                            })
-                          }
+                          onClick={() => handleOpenDraftModal('solution', suggestion)}
                           className="inline-flex items-center gap-1 px-3 py-1 text-xs font-medium bg-yellow-500/10 text-yellow-700 dark:text-yellow-400 hover:bg-yellow-500/20 rounded-md transition-colors cursor-pointer border border-yellow-500/30"
                         >
                           <Lightbulb className="w-3.5 h-3.5" />
@@ -411,13 +436,7 @@ export function AICoachPanel({
                       ) : (
                         <button
                           type="button"
-                          onClick={() =>
-                            setConfirmModal({
-                              isOpen: true,
-                              type: 'note',
-                              suggestion,
-                            })
-                          }
+                          onClick={() => handleOpenDraftModal('note', suggestion)}
                           className="inline-flex items-center gap-1 px-3 py-1 text-xs font-medium bg-primary/10 text-primary hover:bg-primary/20 rounded-md transition-colors cursor-pointer border border-primary/20"
                         >
                           <Bookmark className="w-3.5 h-3.5" />
@@ -433,27 +452,16 @@ export function AICoachPanel({
         </div>
       )}
 
-      {/* Confirmation Modal for Human-in-the-Loop Actions */}
-      <ConfirmationModal
-        isOpen={confirmModal.isOpen}
-        title={
-          confirmModal.type === 'solution'
-            ? 'Xác nhận lưu giải pháp'
-            : 'Xác nhận lưu ghi chép'
-        }
-        description={
-          confirmModal.type === 'solution'
-            ? `Bạn có chắc chắn muốn lưu gợi ý "${confirmModal.suggestion?.title}" thành một Candidate Solution trong phiên nghiên cứu này?`
-            : `Bạn có chắc chắn muốn lưu gợi ý "${confirmModal.suggestion?.title}" vào Sổ tay nghiên cứu (Notebook)?`
-        }
-        confirmLabel="Xác nhận lưu"
-        cancelLabel="Hủy"
-        destructive={false}
+      {/* Editable Draft Modal for Human-in-the-Loop Actions */}
+      <EditableDraftModal
+        isOpen={draftModal.isOpen}
+        type={draftModal.type}
+        suggestion={draftModal.suggestion}
         isLoading={saveSolutionMutation.isPending || saveNoteMutation.isPending}
-        onConfirm={handleConfirmAction}
-        onCancel={() =>
-          setConfirmModal({ isOpen: false, type: 'solution', suggestion: null })
-        }
+        errorMessage={draftModal.errorMessage}
+        onSaveSolution={handleSaveSolution}
+        onSaveNote={handleSaveNote}
+        onCancel={handleCancelModal}
       />
     </div>
   )
