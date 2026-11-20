@@ -303,6 +303,33 @@ created: "2026-07-03"
 - [x] **Lô 3: Extended-Lens Save** (PR #89 squash-merged vào `main` tại `be403dc`; verified: C38-GAP-03 lưu insight từ 3 extended lenses `systems_thinking`, `design_thinking`, `lean_startup` vào Research Notebook; mở rộng validation Pydantic và TypeScript hỗ trợ đủ 6 lenses; bảo toàn source context và xuất khẩu Markdown; fail-closed từ chối lens không hợp lệ với HTTP 422; zero database migration với Alembic head giữ nguyên 007; 10/10 backend integration tests PASS, 11/11 frontend validator & save tests PASS; full backend 652/652 PASS; full frontend 860/860 PASS; CI 3/3 PASS: `frontend-lint`, `backend-test`, `web-test`).
 - [x] **Lô 4: AI Coach Editable Draft** (PR #90 squash-merged vào `main` tại `deba237`; verified: C38-GAP-02 thay thế confirmation modal tĩnh bằng `EditableDraftModal`; cho phép Founder xem trước và chỉnh sửa tiêu đề, cơ chế, nội dung, loại ghi chú và tags trước khi lưu; bảo toàn bản nháp AI gốc; áp dụng Unsaved-Changes Guard khi form dirty; hợp đồng Append-Only Save không bao giờ ghi đè lên giải pháp, ghi chú hiện có hoặc Notebook draft; bảo toàn 100% dữ liệu nháp khi gặp sự cố mạng hoặc HTTP 500 kèm zero partial item; 10/10 AI Coach editable draft tests PASS; 13/13 AI Coach regression tests PASS; full backend 652/652 PASS; full frontend 870/870 PASS; CI 3/3 PASS: `frontend-lint`, `backend-test`, `web-test`).
 
-**Acceptance Gate:** Batch C38 COMPLETE 100% (Lô 1–4 COMPLETE: PR #87, PR #88, PR #89, PR #90 squash-merged, CI 3/3 PASS) ✅; chờ Founder review & close-out.
+**Acceptance Gate:** Batch C38 COMPLETE 100% ✅ (Đóng chính thức sau Founder close-out verification).
+- 5 GAPs COMPLETE:
+  - C38-GAP-01: Per-note tagging — COMPLETE (Lô 2, PR #88 → `82016dc`)
+  - C38-GAP-02: AI Coach editable draft form — COMPLETE (Lô 4, PR #90 → `deba237`)
+  - C38-GAP-03: Extended-lens save from 9-Windows — COMPLETE (Lô 3, PR #89 → `be403dc`)
+  - C38-GAP-04: Browser network failure simulation — COMPLETE (Lô 1, PR #87 → `63ad567`)
+  - C38-GAP-05: Form field accessibility improvements — COMPLETE (Lô 1, PR #87 → `63ad567`)
+- 4 PRs Squash-Merged:
+  - PR #87 → `63ad567` (Lô 1: Quality Foundation — Accessibility & Draft Preservation)
+  - PR #88 → `82016dc` (Lô 2: Notebook Tagging)
+  - PR #89 → `be403dc` (Lô 3: Extended-Lens Save from 9-Windows)
+  - PR #90 → `deba237` (Lô 4: AI Coach Editable Draft Form)
+- Close-Out Verification Evidence:
+  - Backend: 652/652 PASS (100% GREEN)
+  - Frontend: 870/870 PASS across 82 suites (100% GREEN)
+  - Migration & Runtime: 24/24 integration tests PASS (100% GREEN)
+  - Alembic Head: 007 (`007_create_tags_and_note_tags_tables.py`, zero migration in Lô 3 & 4)
+  - Secret Scan: 0 findings (Clean)
+  - Deferred items: 0
+
+---
+
+## Phase 22 — Batch C39: Next Horizons (Planning)
+**Status:** PLANNING PENDING — Chưa bắt đầu.
+**Goal:** Tiếp tục mở rộng trải nghiệm người dùng và năng lực nghiên cứu theo đề xuất backlog sau Batch C38.
+- [ ] C39 Backlog Definition & Scoping
+- [ ] ADR & Specification
+
 
 
