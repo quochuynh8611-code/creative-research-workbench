@@ -37,6 +37,8 @@ def get_alembic_config(engine: Engine) -> Config:
 def _clean_database(engine: Engine) -> None:
     """Hạ toàn bộ bảng và kiểu dữ liệu phục vụ test cô lập."""
     with engine.begin() as conn:
+        conn.execute(text("DROP TABLE IF EXISTS note_tags CASCADE"))
+        conn.execute(text("DROP TABLE IF EXISTS tags CASCADE"))
         conn.execute(text("DROP TABLE IF EXISTS background_jobs CASCADE"))
         conn.execute(text("DROP TABLE IF EXISTS candidate_solutions CASCADE"))
         conn.execute(text("DROP TABLE IF EXISTS research_notes CASCADE"))
@@ -103,13 +105,15 @@ def test_two_stage_alembic_migrations(sync_engine: Engine):
     assert "research_notes" not in tables_after_001, "research_notes không được xuất hiện ở 001"
     assert "candidate_solutions" not in tables_after_001, "candidate_solutions không được xuất hiện ở 001"
     assert "background_jobs" not in tables_after_001, "background_jobs không được xuất hiện ở 001"
+    assert "tags" not in tables_after_001, "tags không được xuất hiện ở 001"
+    assert "note_tags" not in tables_after_001, "note_tags không được xuất hiện ở 001"
 
-    # 2. UPGRADE ĐẾN HEAD (Bao gồm 002, 003, 004)
+    # 2. UPGRADE ĐẾN HEAD (Bao gồm 002, 003, 004, 005, 006, 007)
     command.upgrade(cfg, "head")
 
     inspector = inspect(sync_engine)
     tables_after_head = set(inspector.get_table_names())
-    expected_feature_tables = expected_baseline_tables.union({"research_notes", "candidate_solutions", "background_jobs"})
+    expected_feature_tables = expected_baseline_tables.union({"research_notes", "candidate_solutions", "background_jobs", "tags", "note_tags"})
     assert expected_feature_tables.issubset(tables_after_head), (
         f"upgrade head thiếu bảng: {expected_feature_tables - tables_after_head}"
     )
@@ -120,7 +124,7 @@ def test_two_stage_alembic_migrations(sync_engine: Engine):
     fks = inspector.get_foreign_keys("research_notes")
     assert any(fk["referred_table"] == "research_sessions" for fk in fks), "Thiếu FK tới research_sessions"
 
-    # 3. DOWNGRADE VỀ 001 (Rollback 002, 003, 004)
+    # 3. DOWNGRADE VỀ 001 (Rollback 002-007)
     command.downgrade(cfg, "001")
 
     inspector = inspect(sync_engine)
@@ -128,6 +132,8 @@ def test_two_stage_alembic_migrations(sync_engine: Engine):
     assert "research_notes" not in tables_after_downgrade_001, "research_notes phải bị gỡ khi rollback về 001"
     assert "candidate_solutions" not in tables_after_downgrade_001, "candidate_solutions phải bị gỡ khi rollback về 001"
     assert "background_jobs" not in tables_after_downgrade_001, "background_jobs phải bị gỡ khi rollback về 001"
+    assert "tags" not in tables_after_downgrade_001, "tags phải bị gỡ khi rollback về 001"
+    assert "note_tags" not in tables_after_downgrade_001, "note_tags phải bị gỡ khi rollback về 001"
     assert expected_baseline_tables.issubset(tables_after_downgrade_001), "5 bảng baseline phải còn nguyên vẹn"
 
     # 4. DOWNGRADE VỀ BASE (Rollback 001)
@@ -174,10 +180,15 @@ def test_alembic_version_tracked_accurately(sync_engine: Engine):
         rev = conn.execute(text("SELECT version_num FROM alembic_version")).scalar()
         assert rev == "005", f"Expected revision 005, got {rev}"
 
-    command.upgrade(cfg, "head")
+    command.upgrade(cfg, "006")
     with sync_engine.connect() as conn:
         rev = conn.execute(text("SELECT version_num FROM alembic_version")).scalar()
         assert rev == "006", f"Expected revision 006, got {rev}"
+
+    command.upgrade(cfg, "head")
+    with sync_engine.connect() as conn:
+        rev = conn.execute(text("SELECT version_num FROM alembic_version")).scalar()
+        assert rev == "007", f"Expected revision 007, got {rev}"
 
 
 

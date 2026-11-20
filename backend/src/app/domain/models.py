@@ -381,6 +381,9 @@ class ResearchNote(Base):
         "ResearchSession", back_populates="research_notes"
     )
     source_chunk: Mapped[Chunk | None] = relationship("Chunk")
+    tags: Mapped[list["Tag"]] = relationship(
+        "Tag", secondary="note_tags", back_populates="notes", lazy="selectin"
+    )
 
     __table_args__ = (
         Index("ix_research_notes_session_id", "session_id"),
@@ -389,6 +392,69 @@ class ResearchNote(Base):
 
     def __repr__(self) -> str:
         return f"<ResearchNote id={self.id} type={self.note_type} session={self.session_id}>"
+
+
+# ──────────────────────────────────────────────
+# Tag & NoteTag — Canonical Tags & Associations (Batch C38 Lô 2 Phương án B)
+# ──────────────────────────────────────────────
+
+class Tag(Base):
+    """
+    Tag chuẩn hóa (canonical tag) phục vụ phân loại ghi chú và tìm kiếm đa phiên.
+    Ref: Batch C38 Lô 2 (Phương án B: Bảng tags + note_tags).
+    """
+    __tablename__ = "tags"
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
+    )
+    canonical_slug: Mapped[str] = mapped_column(
+        String(50), nullable=False, unique=True, index=True
+    )
+    display_label: Mapped[str | None] = mapped_column(
+        String(100), nullable=True
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+
+    notes: Mapped[list["ResearchNote"]] = relationship(
+        "ResearchNote", secondary="note_tags", back_populates="tags"
+    )
+
+    def __repr__(self) -> str:
+        return f"<Tag id={self.id} slug={self.canonical_slug}>"
+
+
+class NoteTag(Base):
+    """
+    Bảng liên kết M:N giữa ResearchNote và Tag.
+    Ref: Batch C38 Lô 2 (Phương án B).
+    """
+    __tablename__ = "note_tags"
+
+    note_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("research_notes.id", ondelete="CASCADE"),
+        primary_key=True,
+        index=True,
+    )
+    tag_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("tags.id", ondelete="CASCADE"),
+        primary_key=True,
+        index=True,
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+
+    __table_args__ = (
+        UniqueConstraint("note_id", "tag_id", name="uq_note_tags_note_tag"),
+    )
+
+    def __repr__(self) -> str:
+        return f"<NoteTag note_id={self.note_id} tag_id={self.tag_id}>"
 
 
 # ──────────────────────────────────────────────

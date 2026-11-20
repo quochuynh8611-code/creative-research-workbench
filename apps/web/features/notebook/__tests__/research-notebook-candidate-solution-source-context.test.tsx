@@ -101,7 +101,7 @@ describe('Batch C7c-2f: ResearchNotebook candidate_solution Integration Tests', 
       </QueryClientProvider>
     )
 
-    const textarea = screen.getByRole('textbox')
+    const textarea = screen.getByRole('textbox', { name: /nội dung ghi chú/i })
     expect(textarea).toHaveValue(draft.content)
 
     const submitBtn = screen.getByRole('button', { name: /lưu ghi chú/i })
@@ -138,7 +138,7 @@ describe('Batch C7c-2f: ResearchNotebook candidate_solution Integration Tests', 
       </QueryClientProvider>
     )
 
-    const textarea = screen.getByRole('textbox')
+    const textarea = screen.getByRole('textbox', { name: /nội dung ghi chú/i })
     expect(textarea).toHaveValue(invalidDraft.content)
 
     const submitBtn = screen.getByRole('button', { name: /lưu ghi chú/i })
@@ -201,7 +201,7 @@ describe('Batch C7c-2f: ResearchNotebook candidate_solution Integration Tests', 
       </QueryClientProvider>
     )
 
-    const textarea = screen.getByRole('textbox')
+    const textarea = screen.getByRole('textbox', { name: /nội dung ghi chú/i })
     fireEvent.change(textarea, {
       target: { value: 'Ghi chú tự do do người dùng nhập thủ công' },
     })
