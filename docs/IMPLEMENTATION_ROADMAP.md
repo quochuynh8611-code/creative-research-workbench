@@ -287,7 +287,7 @@ created: "2026-07-03"
 **Acceptance Gate:** Batch C37 COMPLETE 100% (Error Recovery simulation DEFERRED; không tính là verified).
 
 ### C38 Backlog
-- C38-GAP-01: Per-note tagging — Product Gap (Lô 2: PENDING/PLANNED)
+- C38-GAP-01: Per-note tagging — Product Gap (Lô 2: COMPLETE)
 - C38-GAP-02: AI Coach editable draft form — Product Gap (Lô 4: PENDING/PLANNED)
 - C38-GAP-03: Extended-lens save from 9-Windows — Product Gap (Lô 3: PENDING/PLANNED)
 - C38-GAP-04: Browser network failure simulation — QA Debt (Lô 1: COMPLETE)
@@ -299,10 +299,10 @@ created: "2026-07-03"
 **Goal:** Hoàn thiện 5 hạng mục tinh chỉnh sản phẩm và xử lý nợ kỹ thuật theo phản hồi thực tế của Founder, thực hiện theo 4 lô nghiêm ngặt với kỷ luật Test-First, bảo toàn dữ liệu nháp và zero database schema mutation.
 
 - [x] **Lô 1: Quality Foundation (Accessibility & Network Failure Resilience)** (PR #87 squash-merged vào `main` tại `63ad56778f3e5ca8b7890cf2c62c2f6dbe6feef3`; verified: C38-GAP-05 form field accessibility theo chuẩn WCAG 2.1 AA với `role="alert"`, `aria-required`, `aria-invalid`, `aria-describedby` và focus management; C38-GAP-04 bảo toàn dữ liệu nháp Founder khi gặp sự cố mạng `TypeError: Failed to fetch` hoặc HTTP 500; 16/16 new tests PASS; CI 3/3 PASS: `frontend-lint`, `backend-test`, `web-test`).
-- [ ] **Lô 2: Notebook Tagging** (C38-GAP-01: Gắn tag độc lập cho từng ghi chú nghiên cứu; PENDING/PLANNED).
+- [x] **Lô 2: Notebook Tagging** (PR #88 squash-merged vào `main` tại `82016dc`; verified: C38-GAP-01 per-note tagging theo kiến trúc chuẩn hóa Phương án B với 2 bảng `tags` và `note_tags`; hỗ trợ tạo note có tag, lọc note theo tag, gỡ liên kết tag `DELETE .../notes/{id}/tags/{slug}`, cập nhật danh sách tag `PUT .../notes/{id}/tags`; bảo toàn canonical tags khi gỡ hoặc xóa note; migration 007 additive kèm safe downgrade; bảo toàn draft input khi gặp sự cố mạng hoặc HTTP 500; 11/11 backend tests PASS, 6/6 frontend tagging tests PASS; full backend 642/642 PASS; full frontend 849/849 PASS; CI 3/3 PASS: `frontend-lint`, `backend-test`, `web-test`).
 - [ ] **Lô 3: Extended-Lens Save** (C38-GAP-03: Lưu ghi chú trực tiếp từ 3 lăng kính mở rộng 9-Windows; PENDING/PLANNED).
 - [ ] **Lô 4: AI Coach Editable Draft** (C38-GAP-02: Modal biên tập trước khi lưu giải pháp từ gợi ý AI Coach; PENDING/PLANNED).
 
-**Acceptance Gate:** Đang tiến hành — Lô 1 COMPLETE 100% (PR #87 squash-merged, CI 3/3 PASS) ✅.
+**Acceptance Gate:** Đang tiến hành — Lô 1 & Lô 2 COMPLETE 100% (PR #87 & PR #88 squash-merged, CI 3/3 PASS) ✅.
 
 
