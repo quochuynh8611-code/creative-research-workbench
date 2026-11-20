@@ -288,7 +288,7 @@ created: "2026-07-03"
 
 ### C38 Backlog
 - C38-GAP-01: Per-note tagging — Product Gap (Lô 2: COMPLETE)
-- C38-GAP-02: AI Coach editable draft form — Product Gap (Lô 4: PENDING/PLANNED)
+- C38-GAP-02: AI Coach editable draft form — Product Gap (Lô 4: COMPLETE)
 - C38-GAP-03: Extended-lens save from 9-Windows — Product Gap (Lô 3: COMPLETE)
 - C38-GAP-04: Browser network failure simulation — QA Debt (Lô 1: COMPLETE)
 - C38-GAP-05: Form field accessibility improvements — Accessibility Polish (Lô 1: COMPLETE)
@@ -301,8 +301,8 @@ created: "2026-07-03"
 - [x] **Lô 1: Quality Foundation (Accessibility & Network Failure Resilience)** (PR #87 squash-merged vào `main` tại `63ad56778f3e5ca8b7890cf2c62c2f6dbe6feef3`; verified: C38-GAP-05 form field accessibility theo chuẩn WCAG 2.1 AA với `role="alert"`, `aria-required`, `aria-invalid`, `aria-describedby` và focus management; C38-GAP-04 bảo toàn dữ liệu nháp Founder khi gặp sự cố mạng `TypeError: Failed to fetch` hoặc HTTP 500; 16/16 new tests PASS; CI 3/3 PASS: `frontend-lint`, `backend-test`, `web-test`).
 - [x] **Lô 2: Notebook Tagging** (PR #88 squash-merged vào `main` tại `82016dc`; verified: C38-GAP-01 per-note tagging theo kiến trúc chuẩn hóa Phương án B với 2 bảng `tags` và `note_tags`; hỗ trợ tạo note có tag, lọc note theo tag, gỡ liên kết tag `DELETE .../notes/{id}/tags/{slug}`, cập nhật danh sách tag `PUT .../notes/{id}/tags`; bảo toàn canonical tags khi gỡ hoặc xóa note; migration 007 additive kèm safe downgrade; bảo toàn draft input khi gặp sự cố mạng hoặc HTTP 500; 11/11 backend tests PASS, 6/6 frontend tagging tests PASS; full backend 642/642 PASS; full frontend 849/849 PASS; CI 3/3 PASS: `frontend-lint`, `backend-test`, `web-test`).
 - [x] **Lô 3: Extended-Lens Save** (PR #89 squash-merged vào `main` tại `be403dc`; verified: C38-GAP-03 lưu insight từ 3 extended lenses `systems_thinking`, `design_thinking`, `lean_startup` vào Research Notebook; mở rộng validation Pydantic và TypeScript hỗ trợ đủ 6 lenses; bảo toàn source context và xuất khẩu Markdown; fail-closed từ chối lens không hợp lệ với HTTP 422; zero database migration với Alembic head giữ nguyên 007; 10/10 backend integration tests PASS, 11/11 frontend validator & save tests PASS; full backend 652/652 PASS; full frontend 860/860 PASS; CI 3/3 PASS: `frontend-lint`, `backend-test`, `web-test`).
-- [ ] **Lô 4: AI Coach Editable Draft** (C38-GAP-02: Modal biên tập trước khi lưu giải pháp từ gợi ý AI Coach; PENDING/PLANNED).
+- [x] **Lô 4: AI Coach Editable Draft** (PR #90 squash-merged vào `main` tại `deba237`; verified: C38-GAP-02 thay thế confirmation modal tĩnh bằng `EditableDraftModal`; cho phép Founder xem trước và chỉnh sửa tiêu đề, cơ chế, nội dung, loại ghi chú và tags trước khi lưu; bảo toàn bản nháp AI gốc; áp dụng Unsaved-Changes Guard khi form dirty; hợp đồng Append-Only Save không bao giờ ghi đè lên giải pháp, ghi chú hiện có hoặc Notebook draft; bảo toàn 100% dữ liệu nháp khi gặp sự cố mạng hoặc HTTP 500 kèm zero partial item; 10/10 AI Coach editable draft tests PASS; 13/13 AI Coach regression tests PASS; full backend 652/652 PASS; full frontend 870/870 PASS; CI 3/3 PASS: `frontend-lint`, `backend-test`, `web-test`).
 
-**Acceptance Gate:** Đang tiến hành — Lô 1, Lô 2 & Lô 3 COMPLETE 100% (PR #87, PR #88, PR #89 squash-merged, CI 3/3 PASS) ✅; Lô 4 PENDING/PLANNED.
+**Acceptance Gate:** Batch C38 COMPLETE 100% (Lô 1–4 COMPLETE: PR #87, PR #88, PR #89, PR #90 squash-merged, CI 3/3 PASS) ✅; chờ Founder review & close-out.
 
 
