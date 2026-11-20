@@ -256,19 +256,24 @@ export interface Triz9WindowsSourceContext {
 3. Thanh công cụ lọc (`Notebook Toolbar`):
    - Bổ sung bộ lọc Tag bên cạnh bộ lọc `Loại ghi chú` và `Nguồn gốc`.
 
-### 5.2 Luồng AI Coach Editable Draft Form (C38-GAP-02)
+### 5.2 Luồng AI Coach Editable Draft Form (C38-GAP-02) & Quy Tắc An Toàn Lưu Trữ
 1. Trong `AICoachPanel`, khi gợi ý xuất hiện:
-   - Với gợi ý loại `solution_candidate`: Nút bấm `"Biên tập & Lưu giải pháp"`.
-   - Với các gợi ý khác (`clarifying_question`, `possible_cause`, v.v.): Nút bấm `"Biên tập & Lưu ghi chép"`.
+   - Với gợi ý loại `solution_candidate`: Nút bấm `"Lưu thành Giải pháp"` (hoặc `"Biên tập & Lưu giải pháp"`).
+   - Với các gợi ý khác (`clarifying_question`, `possible_cause`, v.v.): Nút bấm `"Lưu vào Ghi chép"` (hoặc `"Biên tập & Lưu ghi chép"`).
 2. Khi người dùng bấm:
    - Mở modal biên tập `EditableDraftModal`:
      - Tiêu đề modal: `"Biên tập Giải pháp ứng viên"` hoặc `"Biên tập Ghi chép nghiên cứu"`.
      - Cho giải pháp: Điền sẵn `Tiêu đề` và `Cơ chế hoạt động`. Người dùng có thể tự do gõ sửa, thêm chi tiết, sửa lỗi chính tả.
-     - Cho ghi chép: Điền sẵn `Nội dung ghi chú` và `Loại ghi chú`.
+     - Cho ghi chép: Điền sẵn `Nội dung ghi chú`, `Loại ghi chú` và danh sách `Tags`.
      - Hiển thị thông tin tham chiếu căn cứ (`Căn cứ: Nguyên tắc TRIZ #35 - Chuyển đổi trạng thái`).
 3. Hành động trong Modal:
-   - Nút `"Hủy"`: Đóng modal, không tạo bất kỳ dữ liệu nào, giữ nguyên gợi ý trên bảng AI Coach.
-   - Nút `"Lưu giải pháp"` / `"Lưu ghi chép"`: Kiểm tra tính hợp lệ (báo lỗi nếu để trống), gọi API mutation tương ứng, đóng modal và đánh dấu gợi ý đã xử lý.
+   - Nút `"Hủy"`: Đóng modal, không tạo bất kỳ dữ liệu nào, giữ nguyên gợi ý ban đầu của AI trên bảng điều khiển.
+   - Nút `"Lưu giải pháp"` / `"Lưu ghi chép"`: Kiểm tra tính hợp lệ (báo lỗi nếu để trống trường bắt buộc), gọi API mutation tạo mới bản ghi, đóng modal và đánh dấu gợi ý đã xử lý.
+4. Hợp đồng Lưu Trữ An Toàn (Append-Only Contract; No Overwrite):
+   - **Append-Only Save**: Thao tác lưu từ AI Coach luôn tạo mới bản ghi (`POST /api/v1/sessions/{session_id}/solutions` hoặc `POST /api/v1/sessions/{session_id}/notes`). Hệ thống tuyệt đối KHÔNG có overwrite path đối với các Candidate Solutions hoặc Research Notes hiện có trong cơ sở dữ liệu.
+   - **Notebook Draft Isolation**: Bản nháp đang soạn thảo dở dang trong Sổ tay nghiên cứu (`ResearchNotebook`) của Founder hoàn toàn được bảo toàn độc lập, không bị ghi đè hay can thiệp.
+   - **Unsaved-Changes Guard (Dirty Form Guard)**: Khi người dùng đã chỉnh sửa form trong `EditableDraftModal` (`isDirty === true`), nếu nhấn phím Escape hoặc click ra ngoài backdrop, modal không đóng ngay mà hiển thị hộp thoại cảnh báo xác nhận bỏ thay đổi, ngăn ngừa mất chữ dở dang ngoài ý muốn.
+   - **Resilience & Zero Partial Item**: Khi gặp sự cố ngắt mạng (`TypeError: Failed to fetch`) hoặc HTTP 500, modal KHÔNG ĐƯỢC ĐÓNG, toàn bộ nội dung người dùng đã chỉnh sửa được bảo toàn 100%, hiển thị banner thông báo lỗi `role="alert"` kèm nút lưu khả dụng để thử lại, và không tạo bất kỳ partial item nào vào hệ thống.
 
 ### 5.3 Luồng 9-Windows Extended-Lens Save (C38-GAP-03)
 1. Người dùng chọn 1 trong 3 lăng kính mở rộng: `Tư duy Hệ thống`, `Tư duy Thiết kế`, `Khởi nghiệp Tinh gọn`.
