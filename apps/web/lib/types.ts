@@ -237,7 +237,7 @@ export interface SourceRef {
 export interface Triz9WindowsSourceContext {
   schema_version: 1
   source_type: 'triz_9_windows'
-  lens: 'engineering' | 'business' | 'everyday'
+  lens: TrizNineWindowsLens
   level: 'supersystem' | 'system' | 'subsystem'
   time: 'past' | 'present' | 'future'
   cell_label: string

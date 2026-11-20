@@ -61,10 +61,17 @@ class BaseNoteContext(BaseModel):
 
 
 class Triz9WindowsContext(BaseNoteContext):
-    """Nguồn 1: Lưới 9 Màn Hình TRIZ."""
+    """Nguồn 1: Lưới 9 Màn Hình TRIZ (Hỗ trợ 6 lăng kính)."""
     schema_version: Literal[1] = 1
     source_type: Literal["triz_9_windows"] = "triz_9_windows"
-    lens: Literal["engineering", "business", "everyday"]
+    lens: Literal[
+        "engineering",
+        "business",
+        "everyday",
+        "systems_thinking",
+        "design_thinking",
+        "lean_startup",
+    ]
     level: Literal["supersystem", "system", "subsystem"]
     time: Literal["past", "present", "future"]
     cell_label: str = Field(..., min_length=1, max_length=100)
