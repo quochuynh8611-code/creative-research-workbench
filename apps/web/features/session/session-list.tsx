@@ -21,6 +21,8 @@ import {
   Layers,
   Sparkles,
   HelpCircle,
+  Download,
+  CheckSquare,
 } from 'lucide-react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import {
@@ -38,6 +40,7 @@ import type { DomainType } from '@/lib/types'
 import { AIStatusBadge } from '@/features/system/ai-status-badge'
 import { OnboardingWorkflowBanner } from '@/features/session/onboarding-workflow-banner'
 import { WelcomeOnboardingModal } from '@/features/session/welcome-onboarding-modal'
+import { BatchExportModal } from '@/features/session/batch-export-modal'
 
 const STATUS_COLORS: Record<string, string> = {
   draft: 'bg-muted text-muted-foreground',
@@ -78,6 +81,11 @@ export function SessionList() {
     action?: { label: string; href: string }
   } | null>(null)
   const fileInputRef = useRef<HTMLInputElement | null>(null)
+
+  // C39-FEAT-02: Multi-Session Selection & Batch Export State
+  const [selectedSessionIds, setSelectedSessionIds] = useState<Set<string>>(new Set())
+  const [isBatchExportModalOpen, setIsBatchExportModalOpen] = useState(false)
+  const [batchExportMode, setBatchExportMode] = useState<'selected' | 'filter'>('selected')
 
   useEffect(() => {
     if (isTemplateModalOpen) {
@@ -244,6 +252,48 @@ export function SessionList() {
     return matchTitle || matchDesc || matchDomain || matchTags
   })
 
+  // C39-FEAT-02: Selection computed and handlers
+  const isAllSelected = filtered.length > 0 && filtered.every((s) => selectedSessionIds.has(s.id))
+
+  const toggleSelectSession = (id: string) => {
+    setSelectedSessionIds((prev) => {
+      const next = new Set(prev)
+      if (next.has(id)) {
+        next.delete(id)
+      } else {
+        next.add(id)
+      }
+      return next
+    })
+  }
+
+  const toggleSelectAllOnPage = () => {
+    setSelectedSessionIds((prev) => {
+      const next = new Set(prev)
+      if (isAllSelected) {
+        filtered.forEach((s) => next.delete(s.id))
+      } else {
+        filtered.forEach((s) => next.add(s.id))
+      }
+      return next
+    })
+  }
+
+  const handleClearSelection = () => {
+    setSelectedSessionIds(new Set())
+  }
+
+  const handleOpenBatchExport = (mode: 'selected' | 'filter') => {
+    setBatchExportMode(mode)
+    setIsBatchExportModalOpen(true)
+  }
+
+  const handleBatchExportSuccess = () => {
+    setIsBatchExportModalOpen(false)
+    setSelectedSessionIds(new Set())
+    queryClient.invalidateQueries({ queryKey: ['sessions'] })
+  }
+
   const sessionToArchive = sessions.find((s) => s.id === confirmArchiveId)
 
   // Auto-open Welcome Onboarding Modal for first-time visitors with empty sessions
@@ -369,6 +419,16 @@ export function SessionList() {
                 <Upload className="w-4 h-4" />
               )}
               Nhập JSON
+            </button>
+            <button
+              type="button"
+              onClick={() => handleOpenBatchExport('filter')}
+              className="inline-flex items-center gap-2 border border-input bg-background hover:bg-muted text-foreground px-3.5 py-2 rounded-md text-sm font-medium transition-colors"
+              title="Xuất lưu trữ hàng loạt"
+              aria-label="Xuất lưu trữ hàng loạt"
+            >
+              <Archive className="w-4 h-4" />
+              <span>Xuất lưu trữ</span>
             </button>
             <button
               type="button"
@@ -928,12 +988,47 @@ export function SessionList() {
       {/* 4. Success State — Session cards */}
       {!isLoading && !isError && filtered.length > 0 && (
         <div className="space-y-3">
+          {/* Master Select Bar */}
+          <div className="flex items-center justify-between px-1 py-1 text-xs text-muted-foreground">
+            <label className="inline-flex items-center gap-2 cursor-pointer select-none">
+              <input
+                type="checkbox"
+                aria-label="Chọn tất cả phiên trên trang"
+                checked={isAllSelected}
+                onChange={toggleSelectAllOnPage}
+                className="w-4 h-4 rounded border-input text-primary focus:ring-primary cursor-pointer"
+              />
+              <span className="font-medium text-foreground">
+                Chọn tất cả ({filtered.length})
+              </span>
+            </label>
+            {selectedSessionIds.size > 0 && (
+              <span className="text-xs">
+                Đã chọn {selectedSessionIds.size} / {filtered.length} phiên
+              </span>
+            )}
+          </div>
+
           {filtered.map((session) => (
             <div
               key={session.id}
-              className="group relative bg-card border border-border rounded-lg p-5 hover:border-primary/50 hover:shadow-sm transition-all"
+              className={cn(
+                'group relative bg-card border rounded-lg p-5 hover:border-primary/50 hover:shadow-sm transition-all',
+                selectedSessionIds.has(session.id)
+                  ? 'border-primary/70 bg-primary/[0.02] ring-1 ring-primary/20'
+                  : 'border-border'
+              )}
             >
               <div className="flex items-start justify-between gap-4">
+                <div onClick={(e) => e.stopPropagation()} className="pt-0.5 shrink-0">
+                  <input
+                    type="checkbox"
+                    aria-label={`Chọn phiên: ${session.title}`}
+                    checked={selectedSessionIds.has(session.id)}
+                    onChange={() => toggleSelectSession(session.id)}
+                    className="w-4 h-4 rounded border-input text-primary focus:ring-primary cursor-pointer"
+                  />
+                </div>
                 <Link
                   href={`/sessions/${session.id}`}
                   className="flex-1 min-w-0"
@@ -1037,6 +1132,58 @@ export function SessionList() {
           setIsCreating(true)
           setValidationError(null)
         }}
+      />
+
+      {/* Floating Batch Action Toolbar (C39-FEAT-02) */}
+      {selectedSessionIds.size > 0 && (
+        <div
+          data-testid="floating-batch-toolbar"
+          className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 bg-card/95 backdrop-blur-md border border-primary/30 shadow-2xl rounded-full px-5 py-2.5 flex items-center gap-4 animate-in slide-in-from-bottom-5"
+        >
+          <div
+            data-testid="batch-selection-counter"
+            aria-live="polite"
+            className="text-xs font-semibold text-foreground flex items-center gap-1.5"
+          >
+            <CheckSquare className="w-4 h-4 text-primary" />
+            <span>Đã chọn {selectedSessionIds.size} phiên</span>
+          </div>
+          <div className="h-4 w-px bg-border" />
+          <button
+            type="button"
+            onClick={() => handleOpenBatchExport('selected')}
+            className="inline-flex items-center gap-1.5 text-xs font-medium px-3.5 py-1.5 rounded-full bg-primary text-primary-foreground hover:opacity-90 transition-opacity"
+            aria-label="Xuất các phiên đã chọn"
+          >
+            <Download className="w-3.5 h-3.5" />
+            <span>Xuất các phiên đã chọn</span>
+          </button>
+          <button
+            type="button"
+            onClick={handleClearSelection}
+            className="text-xs text-muted-foreground hover:text-foreground transition-colors px-2 py-1"
+            aria-label="Bỏ chọn tất cả"
+          >
+            Bỏ chọn tất cả
+          </button>
+        </div>
+      )}
+
+      {/* Batch Export & Archive Modal (C39-FEAT-02) */}
+      <BatchExportModal
+        isOpen={isBatchExportModalOpen}
+        onClose={() => setIsBatchExportModalOpen(false)}
+        selectedSessionIds={batchExportMode === 'selected' ? Array.from(selectedSessionIds) : []}
+        initialFilters={
+          batchExportMode === 'filter'
+            ? {
+                status: activeTab === 'archived' ? 'archived' : 'active',
+                domain: filterDomain !== 'all' ? (filterDomain as DomainType) : undefined,
+                q: search.trim() || undefined,
+              }
+            : undefined
+        }
+        onSuccess={handleBatchExportSuccess}
       />
     </div>
   )
