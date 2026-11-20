@@ -569,7 +569,7 @@ describe('SessionList Lifecycle & Safe Deletion (Phase 5.9)', () => {
     })
 
     // Click tab "Đã lưu trữ"
-    const archivedTab = screen.getByRole('button', { name: /đã lưu trữ/i })
+    const archivedTab = screen.getByRole('tab', { name: /đã lưu trữ/i })
     fireEvent.click(archivedTab)
 
     await waitFor(() => {
@@ -579,7 +579,7 @@ describe('SessionList Lifecycle & Safe Deletion (Phase 5.9)', () => {
     expect(screen.queryByText('Session Hoạt Động')).not.toBeInTheDocument()
 
     // Click lại tab "Đang hoạt động"
-    const activeTab = screen.getByRole('button', { name: /đang hoạt động/i })
+    const activeTab = screen.getByRole('tab', { name: /đang hoạt động/i })
     fireEvent.click(activeTab)
 
     await waitFor(() => {
@@ -626,7 +626,7 @@ describe('SessionList Lifecycle & Safe Deletion (Phase 5.9)', () => {
     renderWithClient(<SessionList />)
 
     // Sang tab Đã lưu trữ
-    const archivedTab = screen.getByRole('button', { name: /đã lưu trữ/i })
+    const archivedTab = screen.getByRole('tab', { name: /đã lưu trữ/i })
     fireEvent.click(archivedTab)
 
     await waitFor(() => {
@@ -685,7 +685,7 @@ describe('SessionList Lifecycle & Safe Deletion (Phase 5.9)', () => {
     })
 
     // Sang tab Đã lưu trữ
-    const archivedTab = screen.getByRole('button', { name: /đã lưu trữ/i })
+    const archivedTab = screen.getByRole('tab', { name: /đã lưu trữ/i })
     fireEvent.click(archivedTab)
 
     await waitFor(() => {
@@ -1286,8 +1286,10 @@ describe('SessionList Lifecycle & Safe Deletion (Phase 5.9)', () => {
       const modalFilter = screen.getByLabelText(/lọc mẫu theo lĩnh vực/i)
       fireEvent.change(modalFilter, { target: { value: 'life' } })
 
-      // Bộ lọc session ngoài trang chính vẫn giữ nguyên 'business'
-      expect(sessionListFilter.value).toBe('business')
+      // Quay lại tab Đang hoạt động: bộ lọc session ngoài trang chính vẫn giữ nguyên 'business'
+      fireEvent.click(screen.getByRole('tab', { name: /đang hoạt động/i }))
+      const restoredSessionFilter = screen.getByLabelText(/^lọc theo lĩnh vực$/i) as HTMLSelectElement
+      expect(restoredSessionFilter.value).toBe('business')
 
       // Không phát sinh thêm bất kỳ call nào tới mockedListSessions hay getSessionTemplates, không gọi createSessionFromTemplate
       expect(mockedListSessions.mock.calls.length).toBe(callCountBeforeModal)

@@ -93,7 +93,7 @@ describe('C39 Lô 3: SessionList Multi-Select & Batch Export Integration', () =>
     window.URL.revokeObjectURL = jest.fn()
     mockedListSessions.mockResolvedValue({
       data: MOCK_SESSIONS,
-      meta: { total: 3, page: 1, limit: 10 },
+      meta: { total: 3 },
     })
   })
 
